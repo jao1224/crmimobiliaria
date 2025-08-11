@@ -11,8 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, UserPlus } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 
 type TeamMember = {
     id: string;
@@ -24,7 +25,7 @@ type TeamMember = {
 type Team = {
     id: string;
     name: string;
-    memberCount: number;
+    members: TeamMember[];
 };
 
 const initialTeamMembers: TeamMember[] = [
@@ -34,8 +35,8 @@ const initialTeamMembers: TeamMember[] = [
 ];
 
 const initialTeams: Team[] = [
-    { id: "T01", name: "Equipe Alpha", memberCount: 5 },
-    { id: "T02", name: "Equipe Beta", memberCount: 4 },
+    { id: "T01", name: "Equipe Alpha", members: [initialTeamMembers[0], initialTeamMembers[1]] },
+    { id: "T02", name: "Equipe Beta", members: [initialTeamMembers[2]] },
 ];
 
 const roles = [
@@ -47,8 +48,10 @@ const roles = [
 export default function SettingsPage() {
     const [teamMembers, setTeamMembers] = useState(initialTeamMembers);
     const [teams, setTeams] = useState(initialTeams);
+    const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
     const [isTeamMemberDialogOpen, setTeamMemberDialogOpen] = useState(false);
     const [isTeamDialogOpen, setTeamDialogOpen] = useState(false);
+    const [isManageMembersDialogOpen, setManageMembersDialogOpen] = useState(false);
     const { toast } = useToast();
 
     const handleAddTeamMember = (event: React.FormEvent<HTMLFormElement>) => {
@@ -71,11 +74,16 @@ export default function SettingsPage() {
         const newTeam: Team = {
             id: `T${String(teams.length + 1).padStart(2, '0')}`,
             name: formData.get("team-name") as string,
-            memberCount: 0,
+            members: [],
         };
         setTeams([...teams, newTeam]);
         setTeamDialogOpen(false);
         toast({ title: "Sucesso!", description: "Equipe criada com sucesso." });
+    };
+
+    const handleManageMembers = (team: Team) => {
+        setSelectedTeam(team);
+        setManageMembersDialogOpen(true);
     };
 
 
@@ -232,7 +240,7 @@ export default function SettingsPage() {
                                     {teams.map((team) => (
                                         <TableRow key={team.id}>
                                             <TableCell className="font-medium">{team.name}</TableCell>
-                                            <TableCell>{team.memberCount}</TableCell>
+                                            <TableCell>{team.members.length}</TableCell>
                                             <TableCell>
                                                  <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
@@ -240,7 +248,7 @@ export default function SettingsPage() {
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
                                                         <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                                                        <DropdownMenuItem>Gerenciar Membros</DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={() => handleManageMembers(team)}>Gerenciar Membros</DropdownMenuItem>
                                                         <DropdownMenuItem>Renomear</DropdownMenuItem>
                                                         <DropdownMenuItem className="text-destructive">Excluir</DropdownMenuItem>
                                                     </DropdownMenuContent>
@@ -265,6 +273,82 @@ export default function SettingsPage() {
                     </Card>
                 </TabsContent>
             </Tabs>
+            
+            <Dialog open={isManageMembersDialogOpen} onOpenChange={setManageMembersDialogOpen}>
+                <DialogContent className="sm:max-w-3xl">
+                    <DialogHeader>
+                        <DialogTitle>Gerenciar Membros da Equipe: {selectedTeam?.name}</DialogTitle>
+                        <DialogDescription>Adicione ou remova membros desta equipe.</DialogDescription>
+                    </DialogHeader>
+                    <div className="grid grid-cols-2 gap-8 py-4">
+                        <div className="space-y-4">
+                            <h3 className="font-semibold">Adicionar Novo Membro</h3>
+                             <form className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="new-member-name">Nome</Label>
+                                    <Input id="new-member-name" name="name" placeholder="Nome completo" required />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="new-member-email">E-mail</Label>
+                                    <Input id="new-member-email" name="email" type="email" placeholder="email@example.com" required />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="new-member-role">Função</Label>
+                                    <Select name="role" required>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Selecione uma função" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {roles.map(role => <SelectItem key={role} value={role}>{role}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <Button type="submit" className="w-full">
+                                    <UserPlus className="mr-2 h-4 w-4" />
+                                    Adicionar à Equipe
+                                </Button>
+                            </form>
+                        </div>
+                        <div className="space-y-4">
+                             <h3 className="font-semibold">Membros Atuais</h3>
+                            <Card>
+                                <CardContent className="p-0">
+                                     <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Nome</TableHead>
+                                                <TableHead>Função</TableHead>
+                                                <TableHead className="text-right">Ações</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {selectedTeam?.members.map(member => (
+                                                <TableRow key={member.id}>
+                                                    <TableCell className="font-medium">{member.name}</TableCell>
+                                                    <TableCell><Badge variant="secondary">{member.role}</Badge></TableCell>
+                                                    <TableCell className="text-right">
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
+                                                            <MoreHorizontal className="h-4 w-4" />
+                                                        </Button>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                             {selectedTeam?.members.length === 0 && (
+                                                <TableRow>
+                                                    <TableCell colSpan={3} className="text-center text-muted-foreground">
+                                                        Nenhum membro nesta equipe.
+                                                    </TableCell>
+                                                </TableRow>
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
         </div>
     )
 }
