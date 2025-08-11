@@ -1,3 +1,6 @@
+
+"use client";
+
 import Image from "next/image";
 import { MoreHorizontal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -25,8 +28,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PropertyMatcher } from "@/components/dashboard/property-matcher";
+import { useState } from "react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
 
-const properties = [
+const initialProperties = [
   {
     id: "1",
     name: "Apartamento Sunnyvale",
@@ -80,6 +89,29 @@ const properties = [
 ];
 
 export default function PropertiesPage() {
+  const [properties, setProperties] = useState(initialProperties);
+  const [isPropertyDialogOpen, setPropertyDialogOpen] = useState(false);
+  const { toast } = useToast();
+
+  const handleAddProperty = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const newProperty = {
+      id: String(properties.length + 1),
+      name: formData.get("name") as string,
+      address: formData.get("address") as string,
+      status: "Disponível",
+      price: Number(formData.get("price")),
+      commission: Number(formData.get("commission")),
+      imageUrl: "https://placehold.co/80x80.png",
+      imageHint: "novo imovel",
+    };
+    setProperties([...properties, newProperty]);
+    setPropertyDialogOpen(false);
+    toast({ title: "Sucesso!", description: "Imóvel adicionado com sucesso." });
+  };
+
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
@@ -89,7 +121,48 @@ export default function PropertiesPage() {
         </div>
         <div className="flex gap-2">
           <PropertyMatcher />
-          <Button>Adicionar Imóvel</Button>
+          <Dialog open={isPropertyDialogOpen} onOpenChange={setPropertyDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>Adicionar Imóvel</Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Adicionar Novo Imóvel</DialogTitle>
+                <DialogDescription>Preencha os detalhes abaixo para cadastrar um novo imóvel.</DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleAddProperty}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Nome do Imóvel</Label>
+                    <Input id="name" name="name" placeholder="Ex: Apartamento Vista Mar" required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="address">Endereço</Label>
+                    <Input id="address" name="address" placeholder="Rua, Número, Bairro, Cidade" required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="price">Preço (R$)</Label>
+                    <Input id="price" name="price" type="number" placeholder="750000" required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="commission">Comissão (%)</Label>
+                    <Input id="commission" name="commission" type="number" step="0.1" placeholder="2.5" required />
+                  </div>
+                  <div className="md:col-span-2 space-y-2">
+                     <Label htmlFor="description">Descrição</Label>
+                     <Textarea id="description" name="description" placeholder="Detalhes do imóvel, como número de quartos, banheiros, área, etc." />
+                  </div>
+                   <div className="md:col-span-2 space-y-2">
+                     <Label htmlFor="owner">Informações do Proprietário</Label>
+                     <Textarea id="owner" name="owner" placeholder="Nome, contato e outras informações do proprietário." />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="submit">Salvar Imóvel</Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
       <Card>
