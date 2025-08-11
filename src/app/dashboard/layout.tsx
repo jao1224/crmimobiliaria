@@ -12,6 +12,7 @@ import {
   Settings,
   Users,
   UserCircle,
+  Handshake,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -91,6 +92,19 @@ export default function DashboardLayout({
                 <Link href="/dashboard/crm">
                   <Users />
                   <span>CRM</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                href="/dashboard/negotiations"
+                isActive={pathname.startsWith("/dashboard/negotiations")}
+                tooltip="Negociações"
+                asChild
+              >
+                <Link href="/dashboard/negotiations">
+                  <Handshake />
+                  <span>Negociações</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

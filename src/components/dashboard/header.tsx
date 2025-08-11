@@ -10,6 +10,7 @@ const pathTranslations: { [key: string]: string } = {
     dashboard: 'Painel',
     properties: 'Imóveis',
     crm: 'CRM',
+    negotiations: 'Negociações',
     finance: 'Financeiro',
     reporting: 'Relatórios',
     settings: 'Configurações',
