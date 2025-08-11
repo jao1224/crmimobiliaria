@@ -120,6 +120,19 @@ export default function DashboardLayout({
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
+            <SidebarMenuItem>
+               <SidebarMenuButton
+                href="/dashboard/settings"
+                isActive={pathname.startsWith("/dashboard/settings")}
+                tooltip="Equipes"
+                asChild
+              >
+                <Link href="/dashboard/settings">
+                  <Users />
+                  <span>Equipes</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter>
