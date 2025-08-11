@@ -39,6 +39,16 @@ export function LoginForm() {
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
+
+    if (values.email === 'admin@example.com' && values.password === 'admin') {
+      toast({
+        title: "Login Successful",
+        description: "Redirecting to your dashboard...",
+      });
+      router.push("/dashboard");
+      return;
+    }
+
     // Simulate API call
     setTimeout(() => {
       // In a real app, you'd handle success/error from your auth provider
