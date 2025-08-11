@@ -20,8 +20,8 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
-  email: z.string().email({ message: "Please enter a valid email address." }),
-  password: z.string().min(1, { message: "Password is required." }),
+  email: z.string().email({ message: "Por favor, insira um endereço de e-mail válido." }),
+  password: z.string().min(1, { message: "A senha é obrigatória." }),
 });
 
 export function LoginForm() {
@@ -42,8 +42,8 @@ export function LoginForm() {
 
     if (values.email === 'admin@example.com' && values.password === 'admin') {
       toast({
-        title: "Login Successful",
-        description: "Redirecting to your dashboard...",
+        title: "Login bem-sucedido",
+        description: "Redirecionando para o seu painel...",
       });
       router.push("/dashboard");
       return;
@@ -53,8 +53,8 @@ export function LoginForm() {
     setTimeout(() => {
       // In a real app, you'd handle success/error from your auth provider
       toast({
-        title: "Login Successful",
-        description: "Redirecting to your dashboard...",
+        title: "Login bem-sucedido",
+        description: "Redirecionando para o seu painel...",
       });
       router.push("/dashboard");
     }, 1000);
@@ -69,9 +69,9 @@ export function LoginForm() {
             name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Email</FormLabel>
+                <FormLabel>E-mail</FormLabel>
                 <FormControl>
-                  <Input placeholder="name@example.com" {...field} />
+                  <Input placeholder="nome@example.com" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -83,9 +83,9 @@ export function LoginForm() {
             render={({ field }) => (
               <FormItem>
                 <div className="flex items-center justify-between">
-                  <FormLabel>Password</FormLabel>
+                  <FormLabel>Senha</FormLabel>
                   <Link href="#" className="text-sm font-medium text-primary hover:underline">
-                    Forgot password?
+                    Esqueceu a senha?
                   </Link>
                 </div>
                 <FormControl>
@@ -96,14 +96,14 @@ export function LoginForm() {
             )}
           />
           <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Signing In..." : "Sign In"}
+            {isLoading ? "Entrando..." : "Entrar"}
           </Button>
         </form>
       </Form>
       <p className="mt-6 text-center text-sm text-muted-foreground">
-        Don't have an account?{" "}
+        Não tem uma conta?{" "}
         <Link href="/register" className="font-semibold text-primary hover:underline">
-          Sign up
+          Cadastre-se
         </Link>
       </p>
     </div>

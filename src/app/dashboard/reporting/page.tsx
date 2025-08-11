@@ -9,12 +9,12 @@ export default function ReportingPage() {
         <div className="flex flex-col gap-6">
             <div className="flex items-start justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold">Reports & Analytics</h1>
-                    <p className="text-muted-foreground">Analyze performance with detailed reports and visualizations.</p>
+                    <h1 className="text-2xl font-bold">Relatórios & Análises</h1>
+                    <p className="text-muted-foreground">Analise o desempenho com relatórios e visualizações detalhadas.</p>
                 </div>
                 <Button>
                     <Download className="mr-2 h-4 w-4" />
-                    Export Report
+                    Exportar Relatório
                 </Button>
             </div>
             
@@ -22,28 +22,28 @@ export default function ReportingPage() {
                 <CardHeader>
                     <div className="flex flex-wrap items-center justify-between gap-4">
                         <div>
-                            <CardTitle>Sales Performance</CardTitle>
-                            <CardDescription>View sales data with custom filters.</CardDescription>
+                            <CardTitle>Desempenho de Vendas</CardTitle>
+                            <CardDescription>Visualize dados de vendas com filtros personalizados.</CardDescription>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
                              <Select>
                                 <SelectTrigger className="w-[180px]">
-                                    <SelectValue placeholder="Filter by Team" />
+                                    <SelectValue placeholder="Filtrar por Equipe" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="team-a">Team A</SelectItem>
-                                    <SelectItem value="team-b">Team B</SelectItem>
-                                    <SelectItem value="team-c">Team C</SelectItem>
+                                    <SelectItem value="team-a">Equipe A</SelectItem>
+                                    <SelectItem value="team-b">Equipe B</SelectItem>
+                                    <SelectItem value="team-c">Equipe C</SelectItem>
                                 </SelectContent>
                             </Select>
                             <Select>
                                 <SelectTrigger className="w-[180px]">
-                                    <SelectValue placeholder="Filter by Property Type" />
+                                    <SelectValue placeholder="Filtrar por Tipo de Imóvel" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="resale">Resale</SelectItem>
-                                    <SelectItem value="new">New Construction</SelectItem>
-                                    <SelectItem value="land">Land</SelectItem>
+                                    <SelectItem value="resale">Revenda</SelectItem>
+                                    <SelectItem value="new">Lançamento</SelectItem>
+                                    <SelectItem value="land">Terreno</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>

@@ -28,14 +28,14 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 
 const formSchema = z.object({
-  profileType: z.string({ required_error: "Please select a profile type." }),
-  name: z.string().min(2, { message: "Name must be at least 2 characters." }),
-  document: z.string().min(11, { message: "Please enter a valid CPF or CNPJ." }),
-  email: z.string().email({ message: "Please enter a valid email." }),
-  whatsapp: z.string().min(10, { message: "Please enter a valid WhatsApp number." }),
+  profileType: z.string({ required_error: "Por favor, selecione um tipo de perfil." }),
+  name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
+  document: z.string().min(11, { message: "Por favor, insira um CPF ou CNPJ válido." }),
+  email: z.string().email({ message: "Por favor, insira um e-mail válido." }),
+  whatsapp: z.string().min(10, { message: "Por favor, insira um número de WhatsApp válido." }),
   creci: z.string().optional(),
-  address: z.string().min(5, { message: "Please enter a valid address." }),
-  password: z.string().min(8, { message: "Password must be at least 8 characters." }),
+  address: z.string().min(5, { message: "Por favor, insira um endereço válido." }),
+  password: z.string().min(8, { message: "A senha deve ter pelo menos 8 caracteres." }),
 });
 
 export function RegisterForm() {
@@ -63,8 +63,8 @@ export function RegisterForm() {
     setTimeout(() => {
       setIsLoading(false);
       toast({
-        title: "Account Created!",
-        description: "Your account has been successfully created. Please log in.",
+        title: "Conta Criada!",
+        description: "Sua conta foi criada com sucesso. Por favor, faça o login.",
       });
       router.push("/");
     }, 1500);
@@ -80,18 +80,18 @@ export function RegisterForm() {
               name="profileType"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>I am a...</FormLabel>
+                  <FormLabel>Eu sou...</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select your profile type" />
+                        <SelectValue placeholder="Selecione seu tipo de perfil" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="real_estate_agency">Imobiliária (Real Estate Agency)</SelectItem>
-                      <SelectItem value="independent_broker">Corretor Autônomo (Independent Broker)</SelectItem>
-                      <SelectItem value="investor">Investidor (Investor)</SelectItem>
-                      <SelectItem value="construction_company">Construtora (Construction Company)</SelectItem>
+                      <SelectItem value="real_estate_agency">Imobiliária</SelectItem>
+                      <SelectItem value="independent_broker">Corretor Autônomo</SelectItem>
+                      <SelectItem value="investor">Investidor</SelectItem>
+                      <SelectItem value="construction_company">Construtora</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -104,9 +104,9 @@ export function RegisterForm() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Full Name / Company Name</FormLabel>
+                    <FormLabel>Nome Completo / Razão Social</FormLabel>
                     <FormControl>
-                      <Input placeholder="John Doe" {...field} />
+                      <Input placeholder="João da Silva" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -131,9 +131,9 @@ export function RegisterForm() {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel>E-mail</FormLabel>
                   <FormControl>
-                    <Input placeholder="name@example.com" {...field} />
+                    <Input placeholder="nome@exemplo.com" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -158,7 +158,7 @@ export function RegisterForm() {
                 name="creci"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>CRECI (Optional)</FormLabel>
+                    <FormLabel>CRECI (Opcional)</FormLabel>
                     <FormControl>
                       <Input placeholder="12345-F" {...field} />
                     </FormControl>
@@ -172,9 +172,9 @@ export function RegisterForm() {
               name="address"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Address</FormLabel>
+                  <FormLabel>Endereço</FormLabel>
                   <FormControl>
-                    <Input placeholder="123 Main St, Anytown" {...field} />
+                    <Input placeholder="Rua Principal, 123, Cidade" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -185,7 +185,7 @@ export function RegisterForm() {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Password</FormLabel>
+                  <FormLabel>Senha</FormLabel>
                   <FormControl>
                     <Input type="password" placeholder="••••••••" {...field} />
                   </FormControl>
@@ -196,12 +196,12 @@ export function RegisterForm() {
           </CardContent>
           <CardFooter className="flex flex-col items-stretch">
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Creating Account..." : "Create Account"}
+              {isLoading ? "Criando Conta..." : "Criar Conta"}
             </Button>
             <p className="mt-4 text-center text-sm text-muted-foreground">
-              Already have an account?{" "}
+              Já tem uma conta?{" "}
               <Link href="/" className="font-semibold text-primary hover:underline">
-                Sign In
+                Entrar
               </Link>
             </p>
           </CardFooter>

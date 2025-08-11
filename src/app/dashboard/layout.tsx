@@ -59,12 +59,12 @@ export default function DashboardLayout({
               <SidebarMenuButton
                 href="/dashboard"
                 isActive={pathname === "/dashboard"}
-                tooltip="Dashboard"
+                tooltip="Painel"
                 asChild
               >
                 <Link href="/dashboard">
                   <LayoutDashboard />
-                  <span>Dashboard</span>
+                  <span>Painel</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -72,12 +72,12 @@ export default function DashboardLayout({
               <SidebarMenuButton
                 href="/dashboard/properties"
                 isActive={pathname === "/dashboard/properties"}
-                tooltip="Properties"
+                tooltip="Imóveis"
                 asChild
               >
                 <Link href="/dashboard/properties">
                   <Building2 />
-                  <span>Properties</span>
+                  <span>Imóveis</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -98,12 +98,12 @@ export default function DashboardLayout({
               <SidebarMenuButton
                 href="/dashboard/finance"
                 isActive={pathname === "/dashboard/finance"}
-                tooltip="Finance"
+                tooltip="Financeiro"
                 asChild
               >
                 <Link href="/dashboard/finance">
                   <CircleDollarSign />
-                  <span>Finance</span>
+                  <span>Financeiro</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -111,12 +111,12 @@ export default function DashboardLayout({
               <SidebarMenuButton
                 href="/dashboard/reporting"
                 isActive={pathname.startsWith("/dashboard/reporting")}
-                tooltip="Reporting"
+                tooltip="Relatórios"
                 asChild
               >
                 <Link href="/dashboard/reporting">
                   <BarChart3 />
-                  <span>Reporting</span>
+                  <span>Relatórios</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -128,12 +128,12 @@ export default function DashboardLayout({
                <SidebarMenuButton
                 href="/dashboard/settings"
                 isActive={pathname.startsWith("/dashboard/settings")}
-                tooltip="Settings"
+                tooltip="Configurações"
                 asChild
               >
                 <Link href="/dashboard/settings">
                   <Settings />
-                  <span>Settings</span>
+                  <span>Configurações</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -142,28 +142,28 @@ export default function DashboardLayout({
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="h-12 w-full justify-start gap-2 px-2">
                        <Avatar className="h-8 w-8">
-                        <AvatarImage src="https://placehold.co/100x100.png" alt="User" />
+                        <AvatarImage src="https://placehold.co/100x100.png" alt="Usuário" />
                         <AvatarFallback>JD</AvatarFallback>
                       </Avatar>
                       <span className="truncate">Jane Doe</span>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent side="right" align="start" className="w-56">
-                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                    <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem>
                       <UserCircle className="mr-2 h-4 w-4" />
-                      <span>Profile</span>
+                      <span>Perfil</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem>
                       <Settings className="mr-2 h-4 w-4" />
-                      <span>Settings</span>
+                      <span>Configurações</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
                       <Link href="/">
                         <LogOut className="mr-2 h-4 w-4" />
-                        <span>Log out</span>
+                        <span>Sair</span>
                       </Link>
                     </DropdownMenuItem>
                   </DropdownMenuContent>

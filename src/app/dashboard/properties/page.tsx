@@ -29,53 +29,53 @@ import { PropertyMatcher } from "@/components/dashboard/property-matcher";
 const properties = [
   {
     id: "1",
-    name: "Sunnyvale Apartment",
-    address: "123 Main St, Sunnyvale, CA",
-    status: "Available",
+    name: "Apartamento Sunnyvale",
+    address: "Rua Principal, 123, Sunnyvale, CA",
+    status: "Disponível",
     price: 750000,
     commission: 18750,
     imageUrl: "https://placehold.co/80x80.png",
-    imageHint: "modern apartment",
+    imageHint: "apartamento moderno",
   },
   {
     id: "2",
-    name: "Greenfield House",
-    address: "456 Oak Ave, Greenfield, TX",
-    status: "Sold",
+    name: "Casa Greenfield",
+    address: "Avenida Oak, 456, Greenfield, TX",
+    status: "Vendido",
     price: 1200000,
     commission: 24000,
     imageUrl: "https://placehold.co/80x80.png",
-    imageHint: "suburban house",
+    imageHint: "casa suburbana",
   },
   {
     id: "3",
-    name: "Lakeside Villa",
-    address: "789 Lake Rd, Lakeside, FL",
-    status: "Pending",
+    name: "Vila Lakeside",
+    address: "Estrada do Lago, 789, Lakeside, FL",
+    status: "Pendente",
     price: 2500000,
     commission: 75000,
     imageUrl: "https://placehold.co/80x80.png",
-    imageHint: "luxury villa",
+    imageHint: "vila de luxo",
   },
   {
     id: "4",
-    name: "Downtown Loft",
-    address: "321 Center St, Metro, NY",
-    status: "Available",
+    name: "Loft no Centro",
+    address: "Rua do Centro, 321, Metro, NY",
+    status: "Disponível",
     price: 500000,
     commission: 12500,
     imageUrl: "https://placehold.co/80x80.png",
-    imageHint: "city loft",
+    imageHint: "loft na cidade",
   },
   {
     id: "5",
-    name: "Suburban Family Home",
-    address: "654 Pine Ln, Suburbia, WA",
-    status: "Available",
+    name: "Casa Familiar Suburbana",
+    address: "Alameda dos Pinheiros, 654, Suburbia, WA",
+    status: "Disponível",
     price: 850000,
     commission: 18700,
     imageUrl: "https://placehold.co/80x80.png",
-    imageHint: "family home",
+    imageHint: "casa de família",
   },
 ];
 
@@ -84,19 +84,19 @@ export default function PropertiesPage() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Property Listings</h1>
-          <p className="text-muted-foreground">Manage your properties and find matches for clients.</p>
+          <h1 className="text-2xl font-bold">Listagem de Imóveis</h1>
+          <p className="text-muted-foreground">Gerencie seus imóveis e encontre correspondências para clientes.</p>
         </div>
         <div className="flex gap-2">
           <PropertyMatcher />
-          <Button>Add Property</Button>
+          <Button>Adicionar Imóvel</Button>
         </div>
       </div>
       <Card>
         <CardHeader>
-          <CardTitle>Properties</CardTitle>
+          <CardTitle>Imóveis</CardTitle>
           <CardDescription>
-            A list of all properties in your portfolio.
+            Uma lista de todos os imóveis em seu portfólio.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -104,16 +104,16 @@ export default function PropertiesPage() {
             <TableHeader>
               <TableRow>
                 <TableHead className="hidden w-[100px] sm:table-cell">
-                  <span className="sr-only">Image</span>
+                  <span className="sr-only">Imagem</span>
                 </TableHead>
-                <TableHead>Name & Address</TableHead>
+                <TableHead>Nome & Endereço</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="hidden md:table-cell">Price</TableHead>
+                <TableHead className="hidden md:table-cell">Preço</TableHead>
                 <TableHead className="hidden md:table-cell">
-                  Commission
+                  Comissão
                 </TableHead>
                 <TableHead>
-                  <span className="sr-only">Actions</span>
+                  <span className="sr-only">Ações</span>
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -122,7 +122,7 @@ export default function PropertiesPage() {
                 <TableRow key={property.id}>
                   <TableCell className="hidden sm:table-cell">
                     <Image
-                      alt="Property image"
+                      alt="Imagem do imóvel"
                       className="aspect-square rounded-md object-cover"
                       height="64"
                       src={property.imageUrl}
@@ -135,30 +135,30 @@ export default function PropertiesPage() {
                     <div className="text-sm text-muted-foreground">{property.address}</div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={property.status === 'Available' ? 'secondary' : property.status === 'Sold' ? 'destructive' : 'outline'}>
+                    <Badge variant={property.status === 'Disponível' ? 'secondary' : property.status === 'Vendido' ? 'destructive' : 'outline'}>
                       {property.status}
                     </Badge>
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
-                    {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(property.price)}
+                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(property.price)}
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
-                    {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(property.commission)}
+                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(property.commission)}
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button aria-haspopup="true" size="icon" variant="ghost">
                           <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Toggle menu</span>
+                          <span className="sr-only">Alternar menu</span>
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem>Edit</DropdownMenuItem>
-                        <DropdownMenuItem>View Details</DropdownMenuItem>
+                        <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                        <DropdownMenuItem>Editar</DropdownMenuItem>
+                        <DropdownMenuItem>Ver Detalhes</DropdownMenuItem>
                         <DropdownMenuItem className="text-destructive">
-                          Delete
+                          Excluir
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

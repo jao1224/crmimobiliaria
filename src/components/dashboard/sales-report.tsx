@@ -7,23 +7,23 @@ import {
 } from "@/components/ui/chart"
 
 const chartData = [
-  { month: "January", sales: 186 },
-  { month: "February", sales: 305 },
-  { month: "March", sales: 237 },
-  { month: "April", sales: 273 },
-  { month: "May", sales: 209 },
-  { month: "June", sales: 214 },
-  { month: "July", sales: 250 },
-  { month: "August", sales: 180 },
-  { month: "September", sales: 310 },
-  { month: "October", sales: 280 },
-  { month: "November", sales: 320 },
-  { month: "December", sales: 350 },
+  { month: "Janeiro", sales: 186 },
+  { month: "Fevereiro", sales: 305 },
+  { month: "Março", sales: 237 },
+  { month: "Abril", sales: 273 },
+  { month: "Maio", sales: 209 },
+  { month: "Junho", sales: 214 },
+  { month: "Julho", sales: 250 },
+  { month: "Agosto", sales: 180 },
+  { month: "Setembro", sales: 310 },
+  { month: "Outubro", sales: 280 },
+  { month: "Novembro", sales: 320 },
+  { month: "Dezembro", sales: 350 },
 ]
 
 const chartConfig = {
   sales: {
-    label: "Sales",
+    label: "Vendas",
     color: "hsl(var(--primary))",
   },
 }
@@ -45,7 +45,7 @@ export function SalesReport() {
             tickLine={false}
             axisLine={false}
             fontSize={12}
-            tickFormatter={(value) => `$${value}`}
+            tickFormatter={(value) => `R$${value}`}
           />
           <Tooltip cursor={false} content={<ChartTooltipContent />} />
           <Bar dataKey="sales" fill="var(--color-sales)" radius={8} />

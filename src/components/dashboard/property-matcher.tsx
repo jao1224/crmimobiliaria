@@ -35,7 +35,7 @@ export function PropertyMatcher() {
     } else {
       toast({
         variant: "destructive",
-        title: "Error",
+        title: "Erro",
         description: result.error,
       });
     }
@@ -47,19 +47,19 @@ export function PropertyMatcher() {
       <DialogTrigger asChild>
         <Button variant="outline">
           <Wand2 className="mr-2 h-4 w-4" />
-          AI Property Matcher
+          Combinador de Imóveis IA
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[625px]">
         <DialogHeader>
-          <DialogTitle>AI Property Matcher</DialogTitle>
+          <DialogTitle>Combinador de Imóveis IA</DialogTitle>
           <DialogDescription>
-            Enter your client's requirements below. Our AI will suggest the best properties from your listings.
+            Insira os requisitos do seu cliente abaixo. Nossa IA irá sugerir os melhores imóveis de suas listagens.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <Textarea
-            placeholder="e.g., 'Looking for a 3-bedroom house with a large backyard and a modern kitchen, preferably in a quiet neighborhood. Budget is around $900,000.'"
+            placeholder="Ex: 'Procuro uma casa de 3 quartos com um quintal grande e cozinha moderna, de preferência em um bairro tranquilo. Orçamento em torno de R$ 900.000.'"
             value={requirements}
             onChange={(e) => setRequirements(e.target.value)}
             className="h-32"
@@ -68,7 +68,7 @@ export function PropertyMatcher() {
         {matches && (
           <Alert>
             <Terminal className="h-4 w-4" />
-            <AlertTitle>Matching Properties</AlertTitle>
+            <AlertTitle>Imóveis Correspondentes</AlertTitle>
             <AlertDescription>
                 <ScrollArea className="h-40">
                     <pre className="whitespace-pre-wrap font-sans text-sm">{matches}</pre>
@@ -78,7 +78,7 @@ export function PropertyMatcher() {
         )}
         <DialogFooter>
           <Button onClick={handleMatch} disabled={isLoading || !requirements}>
-            {isLoading ? "Finding Matches..." : "Find Matches"}
+            {isLoading ? "Encontrando..." : "Encontrar Imóveis"}
           </Button>
         </DialogFooter>
       </DialogContent>

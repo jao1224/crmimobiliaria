@@ -6,6 +6,20 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbP
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 
+const pathTranslations: { [key: string]: string } = {
+    dashboard: 'Painel',
+    properties: 'Imóveis',
+    crm: 'CRM',
+    finance: 'Financeiro',
+    reporting: 'Relatórios',
+    settings: 'Configurações',
+};
+
+function translatePath(path: string) {
+    return pathTranslations[path] || path;
+}
+
+
 export function Header() {
     const pathname = usePathname()
     const pathSegments = pathname.split('/').filter(Boolean)
@@ -18,7 +32,7 @@ export function Header() {
                     <BreadcrumbList>
                         <BreadcrumbItem>
                             <BreadcrumbLink asChild>
-                                <Link href="/dashboard">Dashboard</Link>
+                                <Link href="/dashboard">Painel</Link>
                             </BreadcrumbLink>
                         </BreadcrumbItem>
                         {pathSegments.slice(1).map((segment, index) => (
@@ -26,10 +40,10 @@ export function Header() {
                                 <BreadcrumbSeparator />
                                 <BreadcrumbItem>
                                     {index === pathSegments.length - 2 ? (
-                                        <BreadcrumbPage className="capitalize">{segment}</BreadcrumbPage>
+                                        <BreadcrumbPage className="capitalize">{translatePath(segment)}</BreadcrumbPage>
                                     ) : (
                                         <BreadcrumbLink asChild>
-                                            <Link href={`/${pathSegments.slice(0, index + 2).join('/')}`} className="capitalize">{segment}</Link>
+                                            <Link href={`/${pathSegments.slice(0, index + 2).join('/')}`} className="capitalize">{translatePath(segment)}</Link>
                                         </BreadcrumbLink>
                                     )}
                                 </BreadcrumbItem>

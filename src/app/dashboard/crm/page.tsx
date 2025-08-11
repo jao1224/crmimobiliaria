@@ -7,14 +7,14 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Badge } from "@/components/ui/badge";
 
 const leads = [
-    { id: "L001", name: "John Smith", source: "Website", status: "New", assignedTo: "Jane Doe" },
-    { id: "L002", name: "Maria Garcia", source: "Referral", status: "Contacted", assignedTo: "Jane Doe" },
-    { id: "L003", name: "David Johnson", source: "Ad Campaign", status: "Qualified", assignedTo: "John Roe" },
+    { id: "L001", name: "João Silva", source: "Website", status: "Novo", assignedTo: "Joana Doe" },
+    { id: "L002", name: "Maria Garcia", source: "Indicação", status: "Contactado", assignedTo: "Joana Doe" },
+    { id: "L003", name: "David Johnson", source: "Campanha", status: "Qualificado", assignedTo: "João Roe" },
 ];
 
 const deals = [
-    { id: "D001", property: "Sunnyvale Apartment", client: "Alice Williams", stage: "Proposal Sent", value: 750000, closeDate: "2024-08-15" },
-    { id: "D002", property: "Downtown Loft", client: "Bob Brown", stage: "Negotiation", value: 500000, closeDate: "2024-07-30" },
+    { id: "D001", property: "Apartamento Sunnyvale", client: "Alice Williams", stage: "Proposta Enviada", value: 750000, closeDate: "15/08/2024" },
+    { id: "D002", property: "Loft no Centro", client: "Bob Brown", stage: "Negociação", value: 500000, closeDate: "30/07/2024" },
 ];
 
 export default function CrmPage() {
@@ -22,35 +22,35 @@ export default function CrmPage() {
         <div className="flex flex-col gap-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold">Client & Lead Management</h1>
-                    <p className="text-muted-foreground">Oversee your leads, deals, and client relationships.</p>
+                    <h1 className="text-2xl font-bold">Gestão de Clientes e Leads</h1>
+                    <p className="text-muted-foreground">Supervisione seus leads, negócios e relacionamentos com clientes.</p>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="outline">Add Lead</Button>
-                    <Button>New Deal</Button>
+                    <Button variant="outline">Adicionar Lead</Button>
+                    <Button>Novo Negócio</Button>
                 </div>
             </div>
             <Tabs defaultValue="leads">
                 <TabsList>
                     <TabsTrigger value="leads">Leads</TabsTrigger>
-                    <TabsTrigger value="deals">Ongoing Deals</TabsTrigger>
-                    <TabsTrigger value="clients">Clients</TabsTrigger>
+                    <TabsTrigger value="deals">Negócios em Andamento</TabsTrigger>
+                    <TabsTrigger value="clients">Clientes</TabsTrigger>
                 </TabsList>
                 <TabsContent value="leads">
                     <Card>
                         <CardHeader>
-                            <CardTitle>New Leads</CardTitle>
-                            <CardDescription>Recently acquired leads that need to be contacted.</CardDescription>
+                            <CardTitle>Novos Leads</CardTitle>
+                            <CardDescription>Leads recém-adquiridos que precisam ser contatados.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>Name</TableHead>
-                                        <TableHead>Source</TableHead>
+                                        <TableHead>Nome</TableHead>
+                                        <TableHead>Fonte</TableHead>
                                         <TableHead>Status</TableHead>
-                                        <TableHead>Assigned To</TableHead>
-                                        <TableHead><span className="sr-only">Actions</span></TableHead>
+                                        <TableHead>Atribuído a</TableHead>
+                                        <TableHead><span className="sr-only">Ações</span></TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -66,9 +66,9 @@ export default function CrmPage() {
                                                         <Button aria-haspopup="true" size="icon" variant="ghost"><MoreHorizontal className="h-4 w-4" /></Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
-                                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                        <DropdownMenuItem>Convert to Deal</DropdownMenuItem>
-                                                        <DropdownMenuItem>Update Status</DropdownMenuItem>
+                                                        <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                                                        <DropdownMenuItem>Converter em Negócio</DropdownMenuItem>
+                                                        <DropdownMenuItem>Atualizar Status</DropdownMenuItem>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
                                             </TableCell>
@@ -82,18 +82,18 @@ export default function CrmPage() {
                 <TabsContent value="deals">
                 <Card>
                         <CardHeader>
-                            <CardTitle>Ongoing Deals</CardTitle>
-                            <CardDescription>Active negotiations and sales processes.</CardDescription>
+                            <CardTitle>Negócios em Andamento</CardTitle>
+                            <CardDescription>Negociações e processos de vendas ativos.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>Property</TableHead>
-                                        <TableHead>Client</TableHead>
-                                        <TableHead>Stage</TableHead>
-                                        <TableHead>Value</TableHead>
-                                        <TableHead>Est. Close Date</TableHead>
+                                        <TableHead>Imóvel</TableHead>
+                                        <TableHead>Cliente</TableHead>
+                                        <TableHead>Fase</TableHead>
+                                        <TableHead>Valor</TableHead>
+                                        <TableHead>Data Estimada</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -102,7 +102,7 @@ export default function CrmPage() {
                                             <TableCell className="font-medium">{deal.property}</TableCell>
                                             <TableCell>{deal.client}</TableCell>
                                             <TableCell><Badge variant="outline">{deal.stage}</Badge></TableCell>
-                                            <TableCell>{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(deal.value)}</TableCell>
+                                            <TableCell>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(deal.value)}</TableCell>
                                             <TableCell>{deal.closeDate}</TableCell>
                                         </TableRow>
                                     ))}
@@ -114,11 +114,11 @@ export default function CrmPage() {
                 <TabsContent value="clients">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Clients</CardTitle>
-                            <CardDescription>Your database of clients.</CardDescription>
+                            <CardTitle>Clientes</CardTitle>
+                            <CardDescription>Sua base de dados de clientes.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <p>Client list will be displayed here.</p>
+                            <p>A lista de clientes será exibida aqui.</p>
                         </CardContent>
                     </Card>
                 </TabsContent>

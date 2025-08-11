@@ -8,10 +8,10 @@ export default function RegisterPage() {
         <div className="flex flex-col items-center">
             <Logo className="h-12 w-12 text-primary" />
             <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-foreground">
-            Create your LeadFlow account
+            Crie sua conta LeadFlow
             </h2>
             <p className="mt-2 text-center text-sm text-muted-foreground">
-            Join the platform to streamline your real estate business.
+            Junte-se à plataforma para otimizar seu negócio imobiliário.
             </p>
         </div>
         <RegisterForm />

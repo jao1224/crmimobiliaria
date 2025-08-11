@@ -5,27 +5,27 @@ import { SalesReport } from "@/components/dashboard/sales-report";
 export default function DashboardPage() {
   const overviewCards = [
     {
-      title: "Total Revenue",
-      value: "$45,231.89",
-      change: "+20.1% from last month",
+      title: "Receita Total",
+      value: "R$45.231,89",
+      change: "+20.1% em relação ao mês passado",
       icon: CircleDollarSign,
     },
     {
-      title: "Active Deals",
+      title: "Negócios Ativos",
       value: "+23",
-      change: "+5 from last week",
+      change: "+5 desde a semana passada",
       icon: Users,
     },
     {
-      title: "Properties Sold",
+      title: "Imóveis Vendidos",
       value: "+12",
-      change: "+2 since last month",
+      change: "+2 desde o mês passado",
       icon: Building2,
     },
     {
-      title: "New Leads",
+      title: "Novos Leads",
       value: "+57",
-      change: "+15 this week",
+      change: "+15 esta semana",
       icon: BarChart3,
     },
   ];
@@ -49,7 +49,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
         <Card className="col-span-1 lg:col-span-7">
           <CardHeader>
-            <CardTitle>Sales Overview</CardTitle>
+            <CardTitle>Visão Geral de Vendas</CardTitle>
           </CardHeader>
           <CardContent className="pl-2">
             <SalesReport />

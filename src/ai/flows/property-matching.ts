@@ -2,11 +2,11 @@
 'use server';
 
 /**
- * @fileOverview An AI agent that matches properties to client requirements.
+ * @fileOverview Um agente de IA que combina imóveis com os requisitos do cliente.
  *
- * - matchProperties - A function that handles the property matching process.
- * - MatchPropertiesInput - The input type for the matchProperties function.
- * - MatchPropertiesOutput - The return type for the matchProperties function.
+ * - matchProperties - Uma função que lida com o processo de correspondência de imóveis.
+ * - MatchPropertiesInput - O tipo de entrada para a função matchProperties.
+ * - MatchPropertiesOutput - O tipo de retorno para a função matchProperties.
  */
 
 import {ai} from '@/ai/genkit';
@@ -15,10 +15,10 @@ import {z} from 'genkit';
 const MatchPropertiesInputSchema = z.object({
   clientRequirements: z
     .string()
-    .describe('The requirements of the client for a property.'),
+    .describe('Os requisitos do cliente para um imóvel.'),
   propertyDetails: z
     .string()
-    .describe('The details of available properties.'),
+    .describe('Os detalhes dos imóveis disponíveis.'),
 });
 export type MatchPropertiesInput = z.infer<typeof MatchPropertiesInputSchema>;
 
@@ -26,7 +26,7 @@ const MatchPropertiesOutputSchema = z.object({
   matchingProperties: z
     .string()
     .describe(
-      'A list of properties that match the client requirements, based on the property details.'
+      'Uma lista de imóveis que correspondem aos requisitos do cliente, com base nos detalhes do imóvel.'
     ),
 });
 export type MatchPropertiesOutput = z.infer<typeof MatchPropertiesOutputSchema>;
@@ -41,15 +41,15 @@ const prompt = ai.definePrompt({
   name: 'matchPropertiesPrompt',
   input: {schema: MatchPropertiesInputSchema},
   output: {schema: MatchPropertiesOutputSchema},
-  prompt: `You are an expert real estate agent specializing in matching clients with properties.
+  prompt: `Você é um corretor de imóveis especialista em combinar clientes com imóveis.
 
-You will receive the client's requirements and a list of property details. Based on these, you will identify properties that best match the client's needs.
+Você receberá os requisitos do cliente e uma lista de detalhes de imóveis. Com base nisso, você identificará os imóveis que melhor atendem às necessidades do cliente.
 
-Client Requirements: {{{clientRequirements}}}
+Requisitos do Cliente: {{{clientRequirements}}}
 
-Property Details: {{{propertyDetails}}}
+Detalhes dos Imóveis: {{{propertyDetails}}}
 
-Return a list of the properties that match the client requirements.`,
+Retorne uma lista dos imóveis que correspondem aos requisitos do cliente.`,
 });
 
 const matchPropertiesFlow = ai.defineFlow(

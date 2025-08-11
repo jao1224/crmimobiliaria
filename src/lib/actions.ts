@@ -3,20 +3,20 @@
 
 import { matchProperties as matchPropertiesFlow, type MatchPropertiesInput } from '@/ai/flows/property-matching';
 
-// A hardcoded list of properties for the AI to use.
+// Uma lista de imóveis hardcoded para a IA usar.
 const MOCK_PROPERTY_DETAILS = `
-1. Sunnyvale Apartment: 2 bed, 2 bath, 1200 sqft, modern kitchen, balcony, near downtown. Price: $750,000. Commission: 2.5%.
-2. Greenfield House: 4 bed, 3 bath, 2500 sqft, large backyard, swimming pool, quiet neighborhood. Price: $1,200,000. Commission: 2.0%.
-3. Lakeside Villa: 5 bed, 5 bath, 4000 sqft, lake view, private dock, home theater. Price: $2,500,000. Commission: 3.0%.
-4. Downtown Loft: 1 bed, 1 bath, 800 sqft, open concept, exposed brick, walking distance to cafes. Price: $500,000. Commission: 2.5%.
-5. Suburban Family Home: 3 bed, 2.5 bath, 2000 sqft, great school district, two-car garage. Price: $850,000. Commission: 2.2%.
-6. Penthouse Condo: 3 bed, 3 bath, 2200 sqft, panoramic city views, rooftop terrace, luxury amenities. Price: $1,800,000. Commission: 2.75%.
+1. Apartamento Sunnyvale: 2 quartos, 2 banheiros, 110 m², cozinha moderna, varanda, perto do centro. Preço: R$ 750.000. Comissão: 2.5%.
+2. Casa Greenfield: 4 quartos, 3 banheiros, 230 m², quintal grande, piscina, bairro tranquilo. Preço: R$ 1.200.000. Comissão: 2.0%.
+3. Vila Lakeside: 5 quartos, 5 banheiros, 370 m², vista para o lago, doca particular, home theater. Preço: R$ 2.500.000. Comissão: 3.0%.
+4. Loft no Centro: 1 quarto, 1 banheiro, 75 m², conceito aberto, tijolos aparentes, a uma curta distância de cafés. Preço: R$ 500.000. Comissão: 2.5%.
+5. Casa Familiar Suburbana: 3 quartos, 2.5 banheiros, 185 m², ótimo distrito escolar, garagem para dois carros. Preço: R$ 850.000. Comissão: 2.2%.
+6. Cobertura: 3 quartos, 3 banheiros, 200 m², vistas panorâmicas da cidade, terraço na cobertura, comodidades de luxo. Preço: R$ 1.800.000. Comissão: 2.75%.
 `;
 
 export async function findMatchingProperties(clientRequirements: string) {
   try {
     if (!clientRequirements) {
-      return { success: false, error: 'Client requirements cannot be empty.' };
+      return { success: false, error: 'Os requisitos do cliente não podem estar vazios.' };
     }
     
     const input: MatchPropertiesInput = {
@@ -26,7 +26,7 @@ export async function findMatchingProperties(clientRequirements: string) {
     const result = await matchPropertiesFlow(input);
     return { success: true, data: result.matchingProperties };
   } catch (error) {
-    console.error('Error in findMatchingProperties:', error);
-    return { success: false, error: 'Failed to find matching properties due to a server error.' };
+    console.error('Erro em findMatchingProperties:', error);
+    return { success: false, error: 'Falha ao encontrar imóveis correspondentes devido a um erro no servidor.' };
   }
 }

@@ -8,67 +8,67 @@ export default function SettingsPage() {
     return (
         <div className="flex flex-col gap-6">
             <div>
-                <h1 className="text-2xl font-bold">Settings</h1>
-                <p className="text-muted-foreground">Manage your account, team, and application settings.</p>
+                <h1 className="text-2xl font-bold">Configurações</h1>
+                <p className="text-muted-foreground">Gerencie sua conta, equipe e configurações do aplicativo.</p>
             </div>
 
             <Tabs defaultValue="profile">
                 <TabsList>
-                    <TabsTrigger value="profile">Profile</TabsTrigger>
-                    <TabsTrigger value="team">Team Members</TabsTrigger>
-                    <TabsTrigger value="permissions">Permissions</TabsTrigger>
+                    <TabsTrigger value="profile">Perfil</TabsTrigger>
+                    <TabsTrigger value="team">Membros da Equipe</TabsTrigger>
+                    <TabsTrigger value="permissions">Permissões</TabsTrigger>
                 </TabsList>
                 <TabsContent value="profile">
                     <Card>
                         <CardHeader>
-                            <CardTitle>My Profile</CardTitle>
-                            <CardDescription>Update your personal information and password.</CardDescription>
+                            <CardTitle>Meu Perfil</CardTitle>
+                            <CardDescription>Atualize suas informações pessoais e senha.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="space-y-2">
-                                <Label htmlFor="name">Name</Label>
+                                <Label htmlFor="name">Nome</Label>
                                 <Input id="name" defaultValue="Jane Doe" />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="email">Email</Label>
+                                <Label htmlFor="email">E-mail</Label>
                                 <Input id="email" type="email" defaultValue="jane.doe@example.com" />
                             </div>
                              <div className="space-y-2">
-                                <Label htmlFor="current-password">Current Password</Label>
+                                <Label htmlFor="current-password">Senha Atual</Label>
                                 <Input id="current-password" type="password" />
                             </div>
                              <div className="space-y-2">
-                                <Label htmlFor="new-password">New Password</Label>
+                                <Label htmlFor="new-password">Nova Senha</Label>
                                 <Input id="new-password" type="password" />
                             </div>
                         </CardContent>
                         <CardFooter>
-                            <Button>Save Changes</Button>
+                            <Button>Salvar Alterações</Button>
                         </CardFooter>
                     </Card>
                 </TabsContent>
                 <TabsContent value="team">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Team Members</CardTitle>
-                            <CardDescription>Manage your team and their roles.</CardDescription>
+                            <CardTitle>Membros da Equipe</CardTitle>
+                            <CardDescription>Gerencie sua equipe e suas funções.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <p>Team management interface will be here.</p>
+                            <p>A interface de gerenciamento da equipe estará aqui.</p>
                         </CardContent>
                         <CardFooter>
-                            <Button>Add Team Member</Button>
+                            <Button>Adicionar Membro</Button>
                         </CardFooter>
                     </Card>
                 </TabsContent>
                 <TabsContent value="permissions">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Permissions</CardTitle>
-                            <CardDescription>Configure access levels for different roles.</CardDescription>
+                            <CardTitle>Permissões</CardTitle>
+                            <CardDescription>Configure os níveis de acesso para diferentes funções.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <p>Permissions configuration interface will be here.</p>
+                            <p>A interface de configuração de permissões estará aqui.</p>
                         </CardContent>
                     </Card>
                 </TabsContent>
