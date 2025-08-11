@@ -1,10 +1,56 @@
+
+"use client";
+
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
+
+type TeamMember = {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+};
+
+const initialTeamMembers: TeamMember[] = [
+    { id: "TM001", name: "Carlos Pereira", email: "carlos.p@example.com", role: "Gerente de Vendas" },
+    { id: "TM002", name: "Sofia Lima", email: "sofia.l@example.com", role: "Corretor" },
+    { id: "TM003", name: "Ricardo Alves", email: "ricardo.a@example.com", role: "Administrativo" },
+];
+
+const roles = [
+    "Administrativo", "Financeiro", "Jurídico", "Correspondente Bancário",
+    "Locação", "Leilão", "Despachante", "Avaliador", "Gerente",
+    "Coordenador", "Corretor", "Secretária", "Viabilizador"
+];
 
 export default function SettingsPage() {
+    const [teamMembers, setTeamMembers] = useState(initialTeamMembers);
+    const [isTeamMemberDialogOpen, setTeamMemberDialogOpen] = useState(false);
+    const { toast } = useToast();
+
+    const handleAddTeamMember = (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        const formData = new FormData(event.currentTarget);
+        const newMember: TeamMember = {
+            id: `TM${String(teamMembers.length + 1).padStart(3, '0')}`,
+            name: formData.get("name") as string,
+            email: formData.get("email") as string,
+            role: formData.get("role") as string,
+        };
+        setTeamMembers([...teamMembers, newMember]);
+        setTeamMemberDialogOpen(false);
+        toast({ title: "Sucesso!", description: "Membro da equipe adicionado com sucesso." });
+    };
+
+
     return (
         <div className="flex flex-col gap-6">
             <div>
@@ -12,7 +58,7 @@ export default function SettingsPage() {
                 <p className="text-muted-foreground">Gerencie sua conta, equipe e configurações do aplicativo.</p>
             </div>
 
-            <Tabs defaultValue="profile">
+            <Tabs defaultValue="team">
                 <TabsList>
                     <TabsTrigger value="profile">Perfil</TabsTrigger>
                     <TabsTrigger value="team">Membros da Equipe</TabsTrigger>
@@ -54,10 +100,63 @@ export default function SettingsPage() {
                             <CardDescription>Gerencie sua equipe e suas funções.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <p>A interface de gerenciamento da equipe estará aqui.</p>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Nome</TableHead>
+                                        <TableHead>E-mail</TableHead>
+                                        <TableHead>Função</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {teamMembers.map((member) => (
+                                        <TableRow key={member.id}>
+                                            <TableCell className="font-medium">{member.name}</TableCell>
+                                            <TableCell>{member.email}</TableCell>
+                                            <TableCell>{member.role}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
                         </CardContent>
                         <CardFooter>
-                            <Button>Adicionar Membro</Button>
+                             <Dialog open={isTeamMemberDialogOpen} onOpenChange={setTeamMemberDialogOpen}>
+                                <DialogTrigger asChild>
+                                    <Button>Adicionar Membro</Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Adicionar Novo Membro</DialogTitle>
+                                        <DialogDescription>Preencha os detalhes para convidar um novo membro para a equipe.</DialogDescription>
+                                    </DialogHeader>
+                                    <form onSubmit={handleAddTeamMember}>
+                                        <div className="grid gap-4 py-4">
+                                            <div className="space-y-2">
+                                                <Label htmlFor="name">Nome</Label>
+                                                <Input id="name" name="name" placeholder="Nome completo" required />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="email">E-mail</Label>
+                                                <Input id="email" name="email" type="email" placeholder="email@example.com" required />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="role">Função</Label>
+                                                <Select name="role" required>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Selecione uma função" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {roles.map(role => <SelectItem key={role} value={role}>{role}</SelectItem>)}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        </div>
+                                        <DialogFooter>
+                                            <Button type="submit">Adicionar Membro</Button>
+                                        </DialogFooter>
+                                    </form>
+                                </DialogContent>
+                            </Dialog>
                         </CardFooter>
                     </Card>
                 </TabsContent>
