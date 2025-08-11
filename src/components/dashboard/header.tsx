@@ -1,5 +1,6 @@
 "use client"
 
+import React from "react"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb"
 import { usePathname } from "next/navigation"
@@ -43,6 +44,3 @@ export function Header() {
         </header>
     )
 }
-
-// React is needed for Fragment
-import React from "react"
