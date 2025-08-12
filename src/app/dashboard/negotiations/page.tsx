@@ -25,6 +25,7 @@ export const initialNegotiations = [
         stage: "Proposta Enviada",
         contractStatus: "Não Gerado",
         value: 750000,
+        commissionRate: 2.5,
         salesperson: "Joana Doe",
         realtor: "Carlos Pereira",
     },
@@ -35,6 +36,7 @@ export const initialNegotiations = [
         stage: "Negociação",
         contractStatus: "Não Gerado",
         value: 500000,
+        commissionRate: 2.5,
         salesperson: "João Roe",
         realtor: "Sofia Lima",
     },
@@ -45,6 +47,7 @@ export const initialNegotiations = [
         stage: "Contrato Gerado",
         contractStatus: "Pendente",
         value: 2500000,
+        commissionRate: 3.0,
         salesperson: "Joana Doe",
         realtor: "Carlos Pereira",
     },
@@ -55,6 +58,7 @@ export const initialNegotiations = [
         stage: "Visita Agendada",
         contractStatus: "Não Gerado",
         value: 1200000,
+        commissionRate: 2.0,
         salesperson: "Sofia Lima",
         realtor: "Sofia Lima",
     },
@@ -65,6 +69,7 @@ export const initialNegotiations = [
         stage: "Proposta Recebida",
         contractStatus: "Não Gerado",
         value: 850000,
+        commissionRate: 2.2,
         salesperson: "Sofia Lima",
         realtor: "Carlos Pereira",
     },
@@ -175,6 +180,7 @@ export default function NegotiationsPage() {
             stage: "Proposta Enviada",
             contractStatus: "Não Gerado",
             value: Number(proposalValue),
+            commissionRate: foundProperty.commission, // Assume commission in properties is the rate
             salesperson: "Joana Doe", // Placeholder
             realtor: "Carlos Pereira", // Placeholder
         };
