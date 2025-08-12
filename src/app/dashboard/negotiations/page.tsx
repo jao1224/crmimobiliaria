@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useContext } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/hooks/use-toast";
 import { initialProperties } from "../properties/page";
 import type { UserProfile } from "../layout";
+import { ProfileContext } from "@/contexts/ProfileContext";
 
 export const initialNegotiations = [
     {
@@ -87,11 +88,12 @@ const mockUsers: Record<UserProfile, string | null> = {
 };
 
 
-export default function NegotiationsPage({ activeProfile }: { activeProfile: UserProfile }) {
+export default function NegotiationsPage() {
     const router = useRouter();
     const [negotiations, setNegotiations] = useState(initialNegotiations);
     const [isNewNegotiationOpen, setNewNegotiationOpen] = useState(false);
     const { toast } = useToast();
+    const { activeProfile } = useContext(ProfileContext);
     
     // State for the new negotiation form
     const [propertyCode, setPropertyCode] = useState("");
@@ -341,7 +343,3 @@ export default function NegotiationsPage({ activeProfile }: { activeProfile: Use
         </div>
     );
 }
-
-    
-
-    
