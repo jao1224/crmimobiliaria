@@ -11,13 +11,10 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { db, storage } from "@/lib/firebase";
-import { doc, getDoc, updateDoc, setDoc } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 
-// Tipos para os dados do Firestore
+// Tipos para os dados simulados
 type Negotiation = { id: string; property: string; propertyId: string; client: string; clientId: string; value: number; realtor: string; commissionRate: number; contractDetails?: ContractDetails; contractUrl?: string; };
 type Property = { id: string; name: string; address: string; price: number; };
 type Client = { id: string; name: string; doc: string; address: string; };
@@ -36,105 +33,82 @@ type ContractDetails = {
     date: string;
 };
 
+// Dados simulados
+const mockNegotiation: Negotiation = {
+    id: "deal123",
+    property: "Apartamento Vista Mar",
+    propertyId: "prop456",
+    client: "João Comprador",
+    clientId: "client789",
+    value: 850000,
+    realtor: "Carlos Pereira",
+    commissionRate: 2.5,
+};
+
+const mockProperty: Property = {
+    id: "prop456",
+    name: "Apartamento Vista Mar",
+    address: "Avenida Beira Mar, 123, Meireles, Fortaleza",
+    price: 900000
+};
+
+const mockClient: Client = {
+    id: "client789",
+    name: "João Comprador",
+    doc: "123.456.789-00",
+    address: "Rua das Flores, 45, Aldeota, Fortaleza"
+};
 
 const mockRealtors = {
     "Carlos Pereira": { name: "Carlos Pereira", creci: "12345-F" },
     "Sofia Lima": { name: "Sofia Lima", creci: "67890-J" },
 }
 
+
 export default function ContractPage() {
     const params = useParams();
     const { toast } = useToast();
     const negotiationId = params.id as string;
 
-    const [negotiation, setNegotiation] = useState<Negotiation | null>(null);
-    const [property, setProperty] = useState<Property | null>(null);
-    const [client, setClient] = useState<Client | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+    const [negotiation, setNegotiation] = useState<Negotiation | null>(mockNegotiation);
+    const [property, setProperty] = useState<Property | null>(mockProperty);
+    const [client, setClient] = useState<Client | null>(mockClient);
+    const [isLoading, setIsLoading] = useState(false); // Simulando, sem carregamento real
     const [isSaving, setIsSaving] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
     const [contractData, setContractData] = useState<ContractDetails>({
-        sellerName: "",
-        sellerDoc: "",
-        sellerAddress: "",
-        propertyArea: "",
-        propertyRegistration: "",
-        propertyRegistryOffice: "",
-        paymentTerms: "",
-        commissionClause: "",
-        generalClauses: "",
+        sellerName: "Ana Vendedora",
+        sellerDoc: "987.654.321-00",
+        sellerAddress: "Rua dos Vendedores, 1010, Centro, Fortaleza",
+        propertyArea: "150",
+        propertyRegistration: "Matrícula 98765 do 2º CRI",
+        propertyRegistryOffice: "2º Cartório de Registro de Imóveis de Fortaleza",
+        paymentTerms: "a) Sinal de R$ 85.000,00 no ato da assinatura. b) O restante de R$ 765.000,00 será pago via financiamento bancário em até 60 dias.",
+        commissionClause: "", // Será preenchido abaixo
+        generalClauses: "O COMPRADOR(A) declara ter vistoriado o imóvel, recebendo-o no estado em que se encontra. Todas as despesas de transferência, como ITBI, escritura e registro, correrão por conta do COMPRADOR(A).",
         additionalClauses: "",
-        city: "São Paulo",
+        city: "Fortaleza",
         date: new Date().toISOString().split('T')[0],
     });
+    
+    // Preenche cláusula de comissão com base nos dados simulados
+    useEffect(() => {
+        if (negotiation?.value && negotiation.commissionRate) {
+            const commissionValue = negotiation.value * (negotiation.commissionRate / 100);
+            const defaultCommissionClause = `Os honorários devidos pela intermediação desta negociação, no montante de ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(commissionValue)}, correspondentes a ${negotiation.commissionRate}% do valor da venda, são de responsabilidade do VENDEDOR(ES), a serem pagos à INTERVENIENTE ANUENTE na data da compensação do sinal.`;
+            setContractData(prev => ({...prev, commissionClause: defaultCommissionClause}));
+        }
+    }, [negotiation]);
+
     
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { id, value } = e.target;
         setContractData(prev => ({ ...prev, [id]: value }));
     };
 
-    const fetchContractData = async () => {
-        if (!negotiationId) return;
-        setIsLoading(true);
-        try {
-            // Fetch Negotiation
-            const negotiationRef = doc(db, "deals", negotiationId);
-            const negotiationSnap = await getDoc(negotiationRef);
-
-            if (!negotiationSnap.exists()) {
-                notFound();
-                return;
-            }
-            const negotiationData = { id: negotiationSnap.id, ...negotiationSnap.data() } as Negotiation;
-            setNegotiation(negotiationData);
-            
-            // Fetch Property
-            if (negotiationData.propertyId) {
-                const propertyRef = doc(db, "properties", negotiationData.propertyId);
-                const propertySnap = await getDoc(propertyRef);
-                if(propertySnap.exists()) {
-                    setProperty({ id: propertySnap.id, ...propertySnap.data() } as Property);
-                }
-            }
-
-            // Fetch Client
-            if (negotiationData.clientId) {
-                const clientRef = doc(db, "clients", negotiationData.clientId);
-                const clientSnap = await getDoc(clientRef);
-                 if(clientSnap.exists()) {
-                    setClient({ id: clientSnap.id, ...clientSnap.data() } as Client);
-                }
-            }
-
-            // Pre-fill contract data if it exists or with defaults
-            if (negotiationData.value && negotiationData.commissionRate) {
-              const commissionValue = negotiationData.value * (negotiationData.commissionRate / 100);
-              const defaultCommissionClause = `Os honorários devidos pela intermediação desta negociação, no montante de ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(commissionValue)}, correspondentes a ${negotiationData.commissionRate}% do valor da venda, são de responsabilidade do VENDEDOR(ES), a serem pagos à INTERVENIENTE ANUENTE na data da compensação do sinal.`;
-               setContractData(prev => ({...prev, commissionClause: defaultCommissionClause}));
-            }
-            const defaultGeneralClauses = `O COMPRADOR(A) declara ter vistoriado o imóvel, recebendo-o no estado em que se encontra. Todas as despesas de transferência, como ITBI, escritura e registro, correrão por conta do COMPRADOR(A).`;
-
-            setContractData(prev => ({...prev, ...negotiationData.contractDetails, generalClauses: negotiationData.contractDetails?.generalClauses || defaultGeneralClauses, }));
-
-
-        } catch (error) {
-            console.error("Error fetching contract data:", error);
-            toast({ variant: "destructive", title: "Erro", description: "Falha ao carregar dados do contrato." });
-            notFound();
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-
-    useEffect(() => {
-        fetchContractData();
-    }, [negotiationId, toast]);
-
-
-    if (isLoading) {
+    if (isLoading) { // Embora falso, mantemos a estrutura para futura re-integração
         return (
             <div className="flex flex-col gap-6">
                 <div className="flex items-center justify-between">
@@ -165,14 +139,12 @@ export default function ContractPage() {
     }
     
     if (!negotiation || !property || !client) {
-        // A toast or a more specific message could be shown before notFound
         return notFound();
     }
     
     const realtor = (mockRealtors as any)[negotiation.realtor];
 
     if (!realtor) {
-        // This case should be handled, maybe with a default or an error message
         return notFound();
     }
     
@@ -182,18 +154,11 @@ export default function ContractPage() {
     
     const handleSave = async () => {
         setIsSaving(true);
-        try {
-            const negotiationRef = doc(db, "deals", negotiationId);
-            await updateDoc(negotiationRef, {
-                contractDetails: contractData
-            });
-            toast({ title: "Sucesso!", description: "Contrato salvo com sucesso no Firestore."});
-        } catch (error) {
-            console.error("Error saving contract:", error);
-            toast({ variant: "destructive", title: "Erro ao Salvar", description: "Não foi possível salvar os dados do contrato." });
-        } finally {
-            setIsSaving(false);
-        }
+        // Simula salvamento
+        setTimeout(() => {
+             toast({ title: "Sucesso!", description: "Contrato salvo (simulado)."});
+             setIsSaving(false);
+        }, 1000);
     }
     
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -208,26 +173,13 @@ export default function ContractPage() {
             return;
         }
         setIsUploading(true);
-        try {
-            const storageRef = ref(storage, `contracts/${negotiationId}/${selectedFile.name}`);
-            await uploadBytes(storageRef, selectedFile);
-            const downloadURL = await getDownloadURL(storageRef);
-
-            const negotiationRef = doc(db, "deals", negotiationId);
-            await updateDoc(negotiationRef, {
-                contractUrl: downloadURL
-            });
-            
-            // Re-fetch data to show the new link
-            fetchContractData();
-            
-            toast({ title: "Sucesso!", description: "Arquivo do contrato enviado com sucesso." });
-        } catch (error) {
-            console.error("Error uploading file:", error);
-            toast({ variant: "destructive", title: "Erro de Upload", description: "Não foi possível enviar o arquivo." });
-        } finally {
+        // Simula upload
+        setTimeout(() => {
+            const fakeUrl = URL.createObjectURL(selectedFile);
+            setNegotiation(prev => prev ? {...prev, contractUrl: fakeUrl} : null);
+            toast({ title: "Sucesso!", description: "Arquivo do contrato enviado (simulado)." });
             setIsUploading(false);
-        }
+        }, 1500);
     };
 
 

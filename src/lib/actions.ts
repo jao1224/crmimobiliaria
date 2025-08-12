@@ -2,32 +2,14 @@
 'use server';
 
 import { matchProperties as matchPropertiesFlow, type MatchPropertiesInput } from '@/ai/flows/property-matching';
-import { db } from '@/lib/firebase';
-import { collection, getDocs } from 'firebase/firestore';
 
-// Função para buscar imóveis do Firestore e formatá-los para a IA.
-async function getPropertyDetailsFromFirestore() {
-  try {
-    const propertiesCollection = collection(db, 'properties');
-    const querySnapshot = await getDocs(propertiesCollection);
-    
-    if (querySnapshot.empty) {
-      return 'Nenhum imóvel disponível na base de dados.';
-    }
-
-    const properties = querySnapshot.docs.map((doc, index) => {
-      const data = doc.data();
-      // Formata os detalhes de cada imóvel em uma string legível para a IA.
-      return `${index + 1}. (ID: ${doc.id}) ${data.name}: ${data.description || 'Sem descrição'}. Endereço: ${data.address}. Preço: R$ ${new Intl.NumberFormat('pt-BR').format(data.price)}. Comissão: ${data.commission}%. Status: ${data.status}.`;
-    });
-
-    return properties.join('\n');
-  } catch (error) {
-    console.error("Erro ao buscar imóveis do Firestore:", error);
-    // Retorna uma string de erro que pode ser passada para a IA ou tratada.
-    return "Erro ao acessar a lista de imóveis.";
-  }
-}
+// Dados simulados para a função da IA. Em um cenário real, isso viria do Firestore.
+const propertyDetails = `
+1. Apartamento Vista Mar: Lindo apartamento com 3 quartos, vista para o mar, cozinha moderna e 2 vagas de garagem. Preço: R$ 950.000.
+2. Casa com Piscina: Espaçosa casa com 4 suítes, piscina, área gourmet e grande quintal. Ideal para famílias. Preço: R$ 1.200.000.
+3. Terreno Comercial: Terreno de esquina em avenida movimentada, perfeito para construção de lojas. Preço: R$ 2.500.000.
+4. Loft Moderno: Loft no centro da cidade, com design industrial, 1 quarto, perfeito para solteiros ou casais. Preço: R$ 450.000.
+`;
 
 
 export async function findMatchingProperties(clientRequirements: string) {
@@ -36,9 +18,7 @@ export async function findMatchingProperties(clientRequirements: string) {
       return { success: false, error: 'Os requisitos do cliente não podem estar vazios.' };
     }
     
-    // Busca dinamicamente os detalhes dos imóveis do Firestore.
-    const propertyDetails = await getPropertyDetailsFromFirestore();
-
+    // Usa os detalhes dos imóveis simulados.
     const input: MatchPropertiesInput = {
       clientRequirements,
       propertyDetails,
@@ -51,5 +31,3 @@ export async function findMatchingProperties(clientRequirements: string) {
     return { success: false, error: 'Falha ao encontrar imóveis correspondentes devido a um erro no servidor.' };
   }
 }
-
-    

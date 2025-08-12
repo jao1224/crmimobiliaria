@@ -7,15 +7,25 @@ import {
   ChartContainer,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { db } from "@/lib/firebase";
-import { collection, getDocs, query, where } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-type Deal = {
-    value: number;
-    closeDate: string; // Esperamos uma string no formato 'YYYY-MM-DD'
-};
+// Dados simulados para o gráfico
+const chartData = [
+  { month: "Jan", sales: 186000 },
+  { month: "Fev", sales: 305000 },
+  { month: "Mar", sales: 237000 },
+  { month: "Abr", sales: 73000 },
+  { month: "Mai", sales: 209000 },
+  { month: "Jun", sales: 214000 },
+  { month: "Jul", sales: 450000 },
+  { month: "Ago", sales: 320000 },
+  { month: "Set", sales: 0 },
+  { month: "Out", sales: 0 },
+  { month: "Nov", sales: 0 },
+  { month: "Dez", sales: 0 },
+];
+
 
 const chartConfig = {
   sales: {
@@ -32,74 +42,6 @@ const formatCurrency = (value: number) => {
 
 
 export function SalesReport() {
-    const [chartData, setChartData] = useState<any[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-
-    useEffect(() => {
-        const fetchSalesData = async () => {
-            setIsLoading(true);
-            try {
-                const dealsQuery = query(collection(db, "deals"), where("stage", "==", "Contrato Gerado"));
-                const querySnapshot = await getDocs(dealsQuery);
-                const deals = querySnapshot.docs.map(doc => doc.data() as Deal);
-
-                const monthlySales: { [key: string]: number } = {
-                    "Jan": 0, "Fev": 0, "Mar": 0, "Abr": 0, "Mai": 0, "Jun": 0,
-                    "Jul": 0, "Ago": 0, "Set": 0, "Out": 0, "Nov": 0, "Dez": 0,
-                };
-                
-                const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-
-                deals.forEach(deal => {
-                    // Adiciona uma verificação para a data, pois pode ser inválida
-                    if (deal.closeDate && typeof deal.closeDate === 'string') {
-                        const date = new Date(deal.closeDate);
-                         if (!isNaN(date.getTime())) {
-                            const monthIndex = date.getUTCMonth(); // Usar getUTCMonth para evitar problemas de fuso horário
-                            const monthName = monthNames[monthIndex];
-                            if (monthName) {
-                                monthlySales[monthName] += deal.value;
-                            }
-                        }
-                    }
-                });
-
-                const formattedData = Object.keys(monthlySales).map(month => ({
-                    month,
-                    sales: monthlySales[month],
-                }));
-
-                setChartData(formattedData);
-
-            } catch (error) {
-                console.error("Failed to fetch sales data:", error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        fetchSalesData();
-    }, []);
-
-    if (isLoading) {
-        return (
-            <div className="h-[350px] w-full flex items-center justify-center">
-                <Skeleton className="h-full w-full" />
-            </div>
-        )
-    }
-    
-    // Verifica se há dados de vendas para exibir
-    const hasSalesData = chartData.some(data => data.sales > 0);
-
-    if (!hasSalesData) {
-        return (
-             <div className="h-[350px] flex items-center justify-center">
-               <p className="text-muted-foreground">Nenhum dado de venda encontrado para exibir o gráfico.</p>
-            </div>
-        )
-    }
-
     return (
         <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
             <ResponsiveContainer width="100%" height={350}>
@@ -137,5 +79,3 @@ export function SalesReport() {
         </ChartContainer>
     );
 }
-
-    

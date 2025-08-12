@@ -13,11 +13,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { db } from "@/lib/firebase";
-import { collection, addDoc, getDocs, doc, writeBatch } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
 
-// Tipos para os dados do Firestore
+// Tipos para os dados simulados
 type Lead = {
     id: string;
     name: string;
@@ -42,113 +40,75 @@ type Client = {
     assignedTo: string;
 };
 
+const initialLeads: Lead[] = [
+    { id: "lead1", name: "Ana Silva", source: "Website", status: "Novo", assignedTo: "Carlos Pereira" },
+    { id: "lead2", name: "Bruno Costa", source: "Indicação", status: "Contatado", assignedTo: "Sofia Lima" },
+];
+
+const initialDeals: Deal[] = [
+    { id: "deal1", property: "Apartamento Central", client: "Empresa X", stage: "Proposta Enviada", value: 750000, closeDate: "2024-08-15" },
+];
+
+const initialClients: Client[] = [
+    { id: "client1", name: "Empresa X", source: "Website", assignedTo: "Carlos Pereira" },
+];
+
 
 export default function CrmPage() {
-    const [leads, setLeads] = useState<Lead[]>([]);
-    const [deals, setDeals] = useState<Deal[]>([]);
-    const [clients, setClients] = useState<Client[]>([]);
+    const [leads, setLeads] = useState<Lead[]>(initialLeads);
+    const [deals, setDeals] = useState<Deal[]>(initialDeals);
+    const [clients, setClients] = useState<Client[]>(initialClients);
     const [isLeadDialogOpen, setLeadDialogOpen] = useState(false);
     const [isDealDialogOpen, setDealDialogOpen] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
-    const [isLoadingDeals, setIsLoadingDeals] = useState(true);
-    const [isLoadingClients, setIsLoadingClients] = useState(true);
     const { toast } = useToast();
 
-    const fetchAllData = async () => {
-        setIsLoading(true);
-        setIsLoadingDeals(true);
-        setIsLoadingClients(true);
-        try {
-            const leadsQuery = await getDocs(collection(db, "leads"));
-            setLeads(leadsQuery.docs.map(doc => ({ id: doc.id, ...doc.data() } as Lead)));
-
-            const dealsQuery = await getDocs(collection(db, "deals"));
-            setDeals(dealsQuery.docs.map(doc => ({ id: doc.id, ...doc.data() } as Deal)));
-            
-            const clientsQuery = await getDocs(collection(db, "clients"));
-            setClients(clientsQuery.docs.map(doc => ({ id: doc.id, ...doc.data() } as Client)));
-
-        } catch (error) {
-            console.error("Error fetching data: ", error);
-            toast({ variant: "destructive", title: "Erro", description: "Não foi possível carregar os dados do CRM." });
-        } finally {
-            setIsLoading(false);
-            setIsLoadingDeals(false);
-            setIsLoadingClients(false);
-        }
-    };
-    
-    useEffect(() => {
-        fetchAllData();
-    }, []);
-
-    const handleAddLead = async (event: React.FormEvent<HTMLFormElement>) => {
+    // Simula a adição de um novo lead
+    const handleAddLead = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         const formData = new FormData(event.currentTarget);
-        const newLeadData = {
+        const newLead: Lead = {
+            id: `lead${Date.now()}`,
             name: formData.get("name") as string,
             source: formData.get("source") as string,
             status: "Novo",
             assignedTo: formData.get("assignedTo") as string,
         };
-
-        try {
-            await addDoc(collection(db, "leads"), newLeadData);
-            toast({ title: "Sucesso!", description: "Lead adicionado com sucesso." });
-            setLeadDialogOpen(false);
-            fetchAllData(); // Re-fetch
-        } catch (error) {
-            toast({ variant: "destructive", title: "Erro", description: "Não foi possível salvar o lead." });
-        }
+        setLeads(prev => [...prev, newLead]);
+        toast({ title: "Sucesso!", description: "Lead adicionado com sucesso (simulado)." });
+        setLeadDialogOpen(false);
     };
     
-    const handleAddDeal = async (event: React.FormEvent<HTMLFormElement>) => {
+    // Simula a adição de um novo negócio
+    const handleAddDeal = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         const formData = new FormData(event.currentTarget);
-        const newDealData = {
+        const newDeal: Deal = {
+            id: `deal${Date.now()}`,
             property: formData.get("property") as string,
             client: formData.get("client") as string,
             stage: "Proposta Enviada",
             value: Number(formData.get("value")),
             closeDate: formData.get("closeDate") as string,
         };
-
-        try {
-            await addDoc(collection(db, "deals"), newDealData);
-            toast({ title: "Sucesso!", description: "Negócio adicionado com sucesso." });
-            setDealDialogOpen(false);
-            fetchAllData(); // Re-fetch
-        } catch (error) {
-            toast({ variant: "destructive", title: "Erro", description: "Não foi possível salvar o negócio." });
-        }
+        setDeals(prev => [...prev, newDeal]);
+        toast({ title: "Sucesso!", description: "Negócio adicionado com sucesso (simulado)." });
+        setDealDialogOpen(false);
     };
 
-    const handleConvertLeadToClient = async (lead: Lead) => {
-        try {
-            const batch = writeBatch(db);
-
-            // Adiciona a um novo cliente
-            const newClientRef = doc(collection(db, "clients"));
-            batch.set(newClientRef, {
-                name: lead.name,
-                source: lead.source,
-                assignedTo: lead.assignedTo,
-            });
-
-            // Remove o lead antigo
-            const leadRef = doc(db, "leads", lead.id);
-            batch.delete(leadRef);
-
-            await batch.commit();
-
-            toast({
-                title: "Conversão Realizada!",
-                description: `"${lead.name}" agora é um cliente.`
-            });
-            fetchAllData(); // Re-fetch
-        } catch (error) {
-             toast({ variant: "destructive", title: "Erro", description: "Falha ao converter o lead." });
-        }
+    // Simula a conversão de lead em cliente
+    const handleConvertLeadToClient = (lead: Lead) => {
+        const newClient: Client = {
+            id: `client${Date.now()}`,
+            name: lead.name,
+            source: lead.source,
+            assignedTo: lead.assignedTo,
+        };
+        setClients(prev => [...prev, newClient]);
+        setLeads(prev => prev.filter(l => l.id !== lead.id));
+        toast({
+            title: "Conversão Realizada!",
+            description: `"${lead.name}" agora é um cliente (simulado).`
+        });
     };
 
     return (
@@ -249,17 +209,7 @@ export default function CrmPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {isLoading ? (
-                                        Array.from({ length: 3 }).map((_, index) => (
-                                          <TableRow key={index}>
-                                            <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                                            <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                                            <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
-                                            <TableCell><Skeleton className="h-4 w-28" /></TableCell>
-                                            <TableCell><Skeleton className="h-8 w-8 rounded-md" /></TableCell>
-                                          </TableRow>
-                                        ))
-                                    ) : leads.length > 0 ? (
+                                    {leads.length > 0 ? (
                                         leads.map(lead => (
                                             <TableRow key={lead.id}>
                                                 <TableCell className="font-medium">{lead.name}</TableCell>
@@ -308,17 +258,7 @@ export default function CrmPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {isLoadingDeals ? (
-                                         Array.from({ length: 2 }).map((_, index) => (
-                                          <TableRow key={index}>
-                                            <TableCell><Skeleton className="h-4 w-40" /></TableCell>
-                                            <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                                            <TableCell><Skeleton className="h-6 w-24 rounded-full" /></TableCell>
-                                            <TableCell><Skeleton className="h-4 w-28" /></TableCell>
-                                            <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                                          </TableRow>
-                                        ))
-                                    ) : deals.length > 0 ? (
+                                    {deals.length > 0 ? (
                                         deals.map(deal => (
                                             <TableRow key={deal.id}>
                                                 <TableCell className="font-medium">{deal.property}</TableCell>
@@ -355,16 +295,7 @@ export default function CrmPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {isLoadingClients ? (
-                                         Array.from({ length: 2 }).map((_, index) => (
-                                          <TableRow key={index}>
-                                            <TableCell><Skeleton className="h-4 w-40" /></TableCell>
-                                            <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                                            <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                                            <TableCell><Skeleton className="h-8 w-8" /></TableCell>
-                                          </TableRow>
-                                        ))
-                                    ) : clients.length > 0 ? (
+                                    {clients.length > 0 ? (
                                         clients.map(client => (
                                             <TableRow key={client.id}>
                                                 <TableCell className="font-medium">{client.name}</TableCell>
@@ -397,5 +328,3 @@ export default function CrmPage() {
         </div>
     )
 }
-
-    

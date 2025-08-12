@@ -34,12 +34,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { db } from "@/lib/firebase";
-import { collection, addDoc, getDocs } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
 
-
-// Define o tipo para um imóvel, espelhando a estrutura do Firestore
+// Define o tipo para um imóvel
 type Property = {
   id: string;
   name: string;
@@ -51,63 +48,38 @@ type Property = {
   imageHint: string;
 };
 
+// Dados simulados para os imóveis
+const initialProperties: Property[] = [
+    { id: "prop1", name: "Apartamento Vista Mar", address: "Av. Beira Mar, 123", status: "Disponível", price: 950000, commission: 2.5, imageUrl: "https://placehold.co/80x80.png", imageHint: "apartamento luxo" },
+    { id: "prop2", name: "Casa com Piscina", address: "Rua das Flores, 456", status: "Vendido", price: 1200000, commission: 3.0, imageUrl: "https://placehold.co/80x80.png", imageHint: "casa piscina" },
+    { id: "prop3", name: "Terreno Comercial", address: "Av. das Américas, 789", status: "Disponível", price: 2500000, commission: 4.0, imageUrl: "https://placehold.co/80x80.png", imageHint: "terreno comercial" },
+    { id: "prop4", name: "Loft Moderno", address: "Centro, Rua Principal", status: "Alugado", price: 450000, commission: 1.5, imageUrl: "https://placehold.co/80x80.png", imageHint: "loft moderno" },
+];
+
+
 export default function PropertiesPage() {
-  const [properties, setProperties] = useState<Property[]>([]);
+  const [properties, setProperties] = useState<Property[]>(initialProperties);
   const [isPropertyDialogOpen, setPropertyDialogOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
-
-  const fetchProperties = async () => {
-    setIsLoading(true);
-    try {
-      const querySnapshot = await getDocs(collection(db, "properties"));
-      const propertiesList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Property));
-      setProperties(propertiesList);
-    } catch (error) {
-      console.error("Error fetching properties: ", error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao carregar imóveis",
-        description: "Não foi possível buscar os dados do Firestore.",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchProperties();
-  }, []);
 
   const handleAddProperty = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     
-    const newPropertyData = {
+    const newProperty: Property = {
+      id: `prop${Date.now()}`,
       name: formData.get("name") as string,
       address: formData.get("address") as string,
       status: "Disponível",
       price: Number(formData.get("price")),
-      commission: Number(formData.get("commission")), // Taxa %
-      description: formData.get("description") as string,
-      ownerInfo: formData.get("owner") as string,
+      commission: Number(formData.get("commission")),
       imageUrl: "https://placehold.co/80x80.png",
       imageHint: "novo imovel",
     };
 
-    try {
-      await addDoc(collection(db, "properties"), newPropertyData);
-      toast({ title: "Sucesso!", description: "Imóvel adicionado com sucesso." });
-      setPropertyDialogOpen(false);
-      fetchProperties(); // Re-fetch para atualizar a lista
-    } catch (error) {
-      console.error("Error adding document: ", error);
-       toast({
-        variant: "destructive",
-        title: "Erro ao salvar",
-        description: "Não foi possível adicionar o imóvel ao banco de dados.",
-      });
-    }
+    setProperties(prev => [...prev, newProperty]);
+    toast({ title: "Sucesso!", description: "Imóvel adicionado com sucesso (simulado)." });
+    setPropertyDialogOpen(false);
   };
 
 
@@ -190,31 +162,7 @@ export default function PropertiesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading ? (
-                Array.from({ length: 5 }).map((_, index) => (
-                  <TableRow key={index}>
-                    <TableCell className="hidden sm:table-cell">
-                      <Skeleton className="h-16 w-16 rounded-md" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-4 w-48" />
-                       <Skeleton className="h-3 w-64 mt-2" />
-                    </TableCell>
-                    <TableCell>
-                       <Skeleton className="h-6 w-24 rounded-full" />
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                       <Skeleton className="h-4 w-28" />
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                       <Skeleton className="h-4 w-12" />
-                    </TableCell>
-                     <TableCell>
-                       <Skeleton className="h-8 w-8 rounded-md" />
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : properties.map((property) => (
+              {properties.map((property) => (
                 <TableRow key={property.id}>
                   <TableCell className="hidden sm:table-cell">
                     <Image
@@ -261,7 +209,7 @@ export default function PropertiesPage() {
                   </TableCell>
                 </TableRow>
               ))}
-               {!isLoading && properties.length === 0 && (
+               {properties.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={6} className="h-24 text-center">
                     Nenhum imóvel encontrado. Comece adicionando um.
@@ -275,5 +223,3 @@ export default function PropertiesPage() {
     </div>
   );
 }
-
-    

@@ -9,86 +9,34 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { db } from "@/lib/firebase";
-import { collection, getDocs, doc, updateDoc, query, where } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
 
 type Commission = {
-    id: string; // Deal ID
-    deal: string; // Property Name
+    id: string;
+    deal: string;
     amount: number;
     status: 'Pago' | 'Pendente' | 'Vencido';
-    paymentDate: string; // Deal Close Date
+    paymentDate: string;
 };
 
-type Negotiation = {
-    id: string;
-    property: string;
-    value: number;
-    commissionRate: number;
-    stage: string;
-    closeDate: string;
-};
-
+const initialCommissions: Commission[] = [
+    { id: 'comm1', deal: 'Venda Apartamento Central', amount: 15000, status: 'Pendente', paymentDate: '2024-08-15' },
+    { id: 'comm2', deal: 'Venda Casa de Campo', amount: 22000, status: 'Pago', paymentDate: '2024-07-20' },
+    { id: 'comm3', deal: 'Aluguel Sala Comercial', amount: 1200, status: 'Vencido', paymentDate: '2024-06-10' },
+];
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount);
 
 export default function FinancePage() {
-    const [commissions, setCommissions] = useState<Commission[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [commissions, setCommissions] = useState<Commission[]>(initialCommissions);
+    const [isLoading, setIsLoading] = useState(false); // No longer loading from DB
     const { toast } = useToast();
-
-    const fetchCommissions = async () => {
-        setIsLoading(true);
-        try {
-            // Buscamos apenas negociações que já geraram contrato
-            const negotiationsQuery = query(collection(db, "deals"), where("stage", "==", "Contrato Gerado"));
-            const querySnapshot = await getDocs(negotiationsQuery);
-
-            const commissionsList = querySnapshot.docs.map(doc => {
-                const data = doc.data() as Negotiation;
-                // Simula o status da comissão com base na data de fechamento para demonstração
-                const closeDate = new Date(data.closeDate);
-                const today = new Date();
-                let status: Commission['status'] = 'Pendente';
-                if (data.stage === 'Contrato Gerado' && closeDate < today) {
-                    // Isso é uma simplificação. Uma lógica real teria um campo 'paid'
-                    // Aqui consideramos 'pago' se a data passou, o que não é real.
-                    // Para fins de exemplo, vamos manter alguns pendentes.
-                    // A lógica real para 'Vencido' também seria mais complexa.
-                }
-
-                return {
-                    id: doc.id,
-                    deal: data.property,
-                    amount: data.value * ((data.commissionRate || 2) / 100), // Fallback para commissionRate
-                    status: status,
-                    paymentDate: new Date(data.closeDate).toLocaleDateString('pt-BR', {timeZone: 'UTC'}),
-                };
-            });
-            setCommissions(commissionsList);
-
-        } catch (error) {
-            console.error(error);
-            toast({ variant: "destructive", title: "Erro", description: "Não foi possível carregar as comissões." });
-        } finally {
-            setIsLoading(false);
-        }
-    };
-    
-    useEffect(() => {
-        fetchCommissions();
-    }, []);
-
 
     const totalCommission = commissions.reduce((sum, item) => sum + item.amount, 0);
     const paidCommission = commissions.filter(c => c.status === 'Pago').reduce((sum, item) => sum + item.amount, 0);
     const pendingCommission = totalCommission - paidCommission;
     
-    // Esta função agora é apenas para UI, não salva no DB.
-     const handleStatusChange = (commissionId: string, newStatus: Commission['status']) => {
-        // NOTE: This function does not update Firestore. It's for UI demonstration only.
-        // A real implementation would require a 'status' field in the 'deals' or a separate 'commissions' collection.
+    const handleStatusChange = (commissionId: string, newStatus: Commission['status']) => {
         setCommissions(prevCommissions => 
             prevCommissions.map(c => 
                 c.id === commissionId ? { ...c, status: newStatus } : c
@@ -96,7 +44,7 @@ export default function FinancePage() {
         );
         toast({
             title: "Status Atualizado!",
-            description: `A comissão foi marcada como ${newStatus}. (Apenas visual)`
+            description: `A comissão foi marcada como ${newStatus}.`
         });
     };
 
@@ -110,15 +58,15 @@ export default function FinancePage() {
             <div className="grid gap-4 md:grid-cols-3">
                 <Card>
                     <CardHeader><CardTitle>Comissão Total (Ano)</CardTitle></CardHeader>
-                    <CardContent>{isLoading ? <Skeleton className="h-8 w-3/4" /> : <p className="text-2xl font-bold">{formatCurrency(totalCommission)}</p>}</CardContent>
+                    <CardContent><p className="text-2xl font-bold">{formatCurrency(totalCommission)}</p></CardContent>
                 </Card>
                 <Card>
                     <CardHeader><CardTitle>Total Pago</CardTitle></CardHeader>
-                    <CardContent>{isLoading ? <Skeleton className="h-8 w-3/4" /> : <p className="text-2xl font-bold">{formatCurrency(paidCommission)}</p>}</CardContent>
+                    <CardContent><p className="text-2xl font-bold">{formatCurrency(paidCommission)}</p></CardContent>
                 </Card>
                 <Card>
                     <CardHeader><CardTitle>Pendente & Vencido</CardTitle></CardHeader>
-                    <CardContent>{isLoading ? <Skeleton className="h-8 w-3/4" /> : <p className="text-2xl font-bold">{formatCurrency(pendingCommission)}</p>}</CardContent>
+                    <CardContent><p className="text-2xl font-bold">{formatCurrency(pendingCommission)}</p></CardContent>
                 </Card>
             </div>
 
@@ -138,17 +86,7 @@ export default function FinancePage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                             {isLoading ? (
-                                Array.from({ length: 3 }).map((_, index) => (
-                                    <TableRow key={index}>
-                                        <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                                        <TableCell><Skeleton className="h-4 w-28" /></TableCell>
-                                        <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
-                                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                                        <TableCell><Skeleton className="h-8 w-8" /></TableCell>
-                                    </TableRow>
-                                ))
-                            ) : commissions.length > 0 ? (
+                             {commissions.length > 0 ? (
                                 commissions.map(commission => (
                                     <TableRow key={commission.id}>
                                         <TableCell className="font-medium">{commission.deal}</TableCell>
@@ -194,5 +132,3 @@ export default function FinancePage() {
         </div>
     );
 }
-
-    

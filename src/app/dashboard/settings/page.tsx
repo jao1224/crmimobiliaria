@@ -14,8 +14,6 @@ import { useToast } from "@/hooks/use-toast";
 import { MoreHorizontal, UserPlus, Trash2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { db } from "@/lib/firebase";
-import { collection, getDocs, addDoc, doc, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { UserProfile } from "../layout";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -57,83 +55,68 @@ const menuConfig: Record<UserProfile, string[]> = {
     'Construtora': ['/dashboard', '/dashboard/properties', '/dashboard/negotiations', '/dashboard/finance'],
 };
 
+// Dados simulados
+const initialTeamMembers: TeamMember[] = [
+    { id: 'user1', name: 'Carlos Pereira', email: 'carlos@leadflow.com', role: 'Corretor' },
+    { id: 'user2', name: 'Sofia Lima', email: 'sofia@leadflow.com', role: 'Gerente' },
+    { id: 'user3', name: 'Admin User', email: 'admin@leadflow.com', role: 'Administrativo' },
+];
+
+const initialTeams: Team[] = [
+    { id: 'team1', name: 'Equipe de Vendas - Lançamentos', memberIds: ['user1'] },
+    { id: 'team2', name: 'Equipe de Vendas - Revenda', memberIds: ['user2'] },
+];
+
 
 export default function SettingsPage() {
-    const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-    const [teams, setTeams] = useState<Team[]>([]);
+    const [teamMembers, setTeamMembers] = useState<TeamMember[]>(initialTeamMembers);
+    const [teams, setTeams] = useState<Team[]>(initialTeams);
     const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
     const [isTeamMemberDialogOpen, setTeamMemberDialogOpen] = useState(false);
     const [isTeamDialogOpen, setTeamDialogOpen] = useState(false);
     const [isManageMembersDialogOpen, setManageMembersDialogOpen] = useState(false);
     const { toast } = useToast();
     
-    const [isLoadingMembers, setIsLoadingMembers] = useState(true);
-    const [isLoadingTeams, setIsLoadingTeams] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
 
-
-    const fetchData = async () => {
-        setIsLoadingMembers(true);
-        setIsLoadingTeams(true);
-        try {
-            const membersQuery = await getDocs(collection(db, "users"));
-            setTeamMembers(membersQuery.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeamMember)));
-            
-            const teamsQuery = await getDocs(collection(db, "teams"));
-            setTeams(teamsQuery.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team)));
-
-        } catch (error) {
-            toast({ variant: "destructive", title: "Erro", description: "Não foi possível carregar os dados." });
-        } finally {
-            setIsLoadingMembers(false);
-            setIsLoadingTeams(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchData();
-    }, []);
 
     const handleAddTeamMember = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         setIsSaving(true);
         const formData = new FormData(event.currentTarget);
-        const newMemberData = {
+        const newMemberData: TeamMember = {
+            id: `user${Date.now()}`,
             name: formData.get("name") as string,
             email: formData.get("email") as string,
             role: formData.get("role") as string,
         };
         
-        try {
-            await addDoc(collection(db, "users"), newMemberData);
+        // Simula salvamento
+        setTimeout(() => {
+            setTeamMembers(prev => [...prev, newMemberData]);
             setTeamMemberDialogOpen(false);
-            toast({ title: "Sucesso!", description: "Membro da equipe adicionado com sucesso." });
-            fetchData();
-        } catch(error) {
-             toast({ variant: "destructive", title: "Erro", description: "Falha ao adicionar membro." });
-        } finally {
+            toast({ title: "Sucesso!", description: "Membro da equipe adicionado (simulado)." });
             setIsSaving(false);
-        }
+        }, 500);
     };
 
     const handleAddTeam = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         setIsSaving(true);
         const formData = new FormData(event.currentTarget);
-        const newTeamData = {
+        const newTeamData: Team = {
+            id: `team${Date.now()}`,
             name: formData.get("team-name") as string,
             memberIds: [],
         };
-        try {
-            await addDoc(collection(db, "teams"), newTeamData);
+        
+        // Simula salvamento
+        setTimeout(() => {
+            setTeams(prev => [...prev, newTeamData]);
             setTeamDialogOpen(false);
-            toast({ title: "Sucesso!", description: "Equipe criada com sucesso." });
-            fetchData();
-        } catch(error) {
-            toast({ variant: "destructive", title: "Erro", description: "Falha ao criar equipe." });
-        } finally {
+            toast({ title: "Sucesso!", description: "Equipe criada com sucesso (simulado)." });
             setIsSaving(false);
-        }
+        }, 500);
     };
 
     const handleManageMembers = (team: Team) => {
@@ -155,37 +138,22 @@ export default function SettingsPage() {
             return;
         }
 
-        try {
-            const teamRef = doc(db, "teams", selectedTeam.id);
-            await updateDoc(teamRef, {
-                memberIds: arrayUnion(memberId)
-            });
-            toast({ title: "Sucesso!", description: "Membro adicionado à equipe." });
-            fetchData(); // Refresh all data
-            // Update selectedTeam state locally to reflect the change immediately in the dialog
-            setSelectedTeam(prev => prev ? { ...prev, memberIds: [...prev.memberIds, memberId] } : null);
-        } catch (error) {
-            toast({ variant: "destructive", title: "Erro", description: "Não foi possível adicionar o membro." });
-        } finally {
-            setIsSaving(false);
-        }
+        const updatedTeam = { ...selectedTeam, memberIds: [...selectedTeam.memberIds, memberId] };
+        setSelectedTeam(updatedTeam);
+        setTeams(prevTeams => prevTeams.map(t => t.id === updatedTeam.id ? updatedTeam : t));
+        
+        toast({ title: "Sucesso!", description: "Membro adicionado à equipe (simulado)." });
+        setIsSaving(false);
     };
 
     const handleRemoveMemberFromTeam = async (memberId: string) => {
         if (!selectedTeam) return;
 
-        try {
-            const teamRef = doc(db, "teams", selectedTeam.id);
-            await updateDoc(teamRef, {
-                memberIds: arrayRemove(memberId)
-            });
-            toast({ title: "Sucesso!", description: "Membro removido da equipe." });
-            fetchData(); // Refresh all data
-             // Update selectedTeam state locally
-            setSelectedTeam(prev => prev ? { ...prev, memberIds: prev.memberIds.filter(id => id !== memberId) } : null);
-        } catch (error) {
-            toast({ variant: "destructive", title: "Erro", description: "Não foi possível remover o membro." });
-        }
+        const updatedTeam = { ...selectedTeam, memberIds: selectedTeam.memberIds.filter(id => id !== memberId) };
+        setSelectedTeam(updatedTeam);
+        setTeams(prevTeams => prevTeams.map(t => t.id === updatedTeam.id ? updatedTeam : t));
+
+        toast({ title: "Sucesso!", description: "Membro removido da equipe (simulado)." });
     };
     
     const getMembersForTeam = (team: Team) => {
@@ -232,7 +200,7 @@ export default function SettingsPage() {
                             </div>
                         </CardContent>
                         <CardFooter>
-                            <Button>Salvar Alterações</Button>
+                            <Button onClick={() => toast({ title: 'Simulado', description: 'A funcionalidade de salvar perfil não está conectada.' })}>Salvar Alterações</Button>
                         </CardFooter>
                     </Card>
                 </TabsContent>
@@ -291,15 +259,7 @@ export default function SettingsPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {isLoadingMembers ? (
-                                        Array.from({ length: 3 }).map((_, i) => (
-                                            <TableRow key={i}>
-                                                <TableCell><Skeleton className="h-4 w-40" /></TableCell>
-                                                <TableCell><Skeleton className="h-4 w-60" /></TableCell>
-                                                <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                                            </TableRow>
-                                        ))
-                                    ) : teamMembers.length > 0 ? (
+                                    {teamMembers.length > 0 ? (
                                         teamMembers.map((member) => (
                                             <TableRow key={member.id}>
                                                 <TableCell className="font-medium">{member.name}</TableCell>
@@ -355,15 +315,7 @@ export default function SettingsPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {isLoadingTeams ? (
-                                        Array.from({ length: 2 }).map((_, i) => (
-                                             <TableRow key={i}>
-                                                <TableCell><Skeleton className="h-4 w-48" /></TableCell>
-                                                <TableCell><Skeleton className="h-4 w-10" /></TableCell>
-                                                <TableCell><Skeleton className="h-8 w-8" /></TableCell>
-                                            </TableRow>
-                                        ))
-                                    ) : teams.length > 0 ? (
+                                    {teams.length > 0 ? (
                                         teams.map((team) => (
                                             <TableRow key={team.id}>
                                                 <TableCell className="font-medium">{team.name}</TableCell>
@@ -498,5 +450,3 @@ export default function SettingsPage() {
         </div>
     )
 }
-
-    
