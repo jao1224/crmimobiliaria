@@ -1,3 +1,4 @@
+
 import { SalesReport } from "@/components/dashboard/sales-report";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,6 +7,8 @@ import { Download } from "lucide-react";
 import type { UserProfile } from "../layout";
 
 export default function ReportingPage({ activeProfile }: { activeProfile?: UserProfile }) {
+    // Os filtros ainda são visuais e não aplicam lógica de filtragem.
+    // A lógica de busca de dados está agora dentro do componente SalesReport.
     return (
         <div className="flex flex-col gap-6">
             <div className="flex items-start justify-between">
