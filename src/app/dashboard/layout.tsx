@@ -49,7 +49,7 @@ type UserProfile = 'Admin' | 'Imobiliária' | 'Corretor Autônomo' | 'Investidor
 const menuConfig: Record<UserProfile, string[]> = {
     'Admin': ['/dashboard', '/dashboard/properties', '/dashboard/crm', '/dashboard/negotiations', '/dashboard/finance', '/dashboard/reporting', '/dashboard/settings/team', '/dashboard/settings'],
     'Imobiliária': ['/dashboard', '/dashboard/properties', '/dashboard/crm', '/dashboard/negotiations', '/dashboard/finance', '/dashboard/reporting', '/dashboard/settings/team'],
-    'Corretor Autônomo': ['/dashboard', '/dashboard/properties', '/dashboard/negotiations', '/dashboard/reporting'],
+    'Corretor Autônomo': ['/dashboard', '/dashboard/properties', '/dashboard/crm', '/dashboard/negotiations', '/dashboard/reporting'],
     'Investidor': ['/dashboard', '/dashboard/properties', '/dashboard/finance'],
     'Construtora': ['/dashboard', '/dashboard/properties', '/dashboard/negotiations', '/dashboard/finance'],
 };
