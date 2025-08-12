@@ -106,9 +106,13 @@ export default function NegotiationsPage({ activeProfile }: { activeProfile: Use
         const currentUserName = activeProfile ? mockUsers[activeProfile] : null;
 
         if (!currentUserName) {
-            return negotiations; // Shows all for Admin/Imobiliária
+            return negotiations; // Shows all for Admin/Imobiliária or if no user is mapped
         }
         
+        if (activeProfile === 'Investidor') {
+             return negotiations.filter(neg => neg.client === currentUserName);
+        }
+
         return negotiations.filter(neg => 
             neg.salesperson === currentUserName || neg.realtor === currentUserName
         );
@@ -337,5 +341,7 @@ export default function NegotiationsPage({ activeProfile }: { activeProfile: Use
         </div>
     );
 }
+
+    
 
     
