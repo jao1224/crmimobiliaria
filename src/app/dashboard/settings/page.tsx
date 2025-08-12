@@ -376,10 +376,16 @@ export default function SettingsPage() {
                     <Card>
                         <CardHeader>
                             <CardTitle>Permissões</CardTitle>
-                            <CardDescription>Configure os níveis de acesso para diferentes funções.</CardDescription>
+                            <CardDescription>Configure os níveis de acesso para diferentes funções e perfis de usuário.</CardDescription>
                         </CardHeader>
-                        <CardContent>
-                            <p>A interface de configuração de permissões estará aqui.</p>
+                        <CardContent className="space-y-2">
+                             <p className="text-sm text-muted-foreground">
+                                A gestão de acesso no LeadFlow é baseada nos perfis de visualização ('Admin', 'Imobiliária', etc.).
+                                Atualmente, apenas os perfis de 'Admin' e 'Imobiliária' podem acessar esta tela de configurações para gerenciar equipes e membros.
+                            </p>
+                            <Button variant="link" asChild className="p-0">
+                                <Link href="#">Saber mais sobre as funções</Link>
+                            </Button>
                         </CardContent>
                     </Card>
                 </TabsContent>
