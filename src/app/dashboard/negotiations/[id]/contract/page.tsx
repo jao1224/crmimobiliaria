@@ -7,7 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { initialNegotiations } from "@/app/dashboard/negotiations/page";
 import { initialProperties } from "@/app/dashboard/properties/page";
 import { notFound, useParams } from "next/navigation";
-import { Printer, Save, FileUp } from "lucide-react";
+import { Printer, Save } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
