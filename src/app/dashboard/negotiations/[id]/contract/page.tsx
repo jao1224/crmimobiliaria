@@ -7,7 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { initialNegotiations } from "@/app/dashboard/negotiations/page";
 import { initialProperties } from "@/app/dashboard/properties/page";
 import { notFound, useParams } from "next/navigation";
-import { Printer, Save } from "lucide-react";
+import { Printer, Save, FileUp } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -57,13 +57,13 @@ export default function ContractPage() {
         <div className="flex flex-col gap-6">
             <div className="flex items-center justify-between print:hidden">
                 <div>
-                    <h1 className="text-2xl font-bold">Editor de Contrato de Compra e Venda</h1>
+                    <h1 className="text-2xl font-bold">Gestão de Contratos</h1>
                     <p className="text-muted-foreground">Negociação ID: {negotiation.id}</p>
                 </div>
                 <div className="flex gap-2">
                     <Button onClick={handleSave} variant="default">
                         <Save className="mr-2 h-4 w-4" />
-                        Salvar Contrato
+                        Salvar
                     </Button>
                     <Button onClick={handlePrint} variant="outline">
                         <Printer className="mr-2 h-4 w-4" />
@@ -72,7 +72,30 @@ export default function ContractPage() {
                 </div>
             </div>
 
+            <Card>
+                <CardHeader>
+                    <CardTitle>Anexar Contrato Externo</CardTitle>
+                </CardHeader>
+                 <CardContent className="space-y-4">
+                     <p className="text-sm text-muted-foreground">
+                        Se preferir, você pode anexar um arquivo de contrato (PDF, DOCX) diretamente do seu computador.
+                     </p>
+                    <div className="grid w-full max-w-sm items-center gap-1.5">
+                        <Label htmlFor="contract-file">Arquivo do Contrato</Label>
+                        <Input id="contract-file" type="file" />
+                    </div>
+                 </CardContent>
+            </Card>
+
+            <div className="relative">
+                <Separator />
+                <div className="absolute left-1/2 -translate-x-1/2 -top-3 bg-background px-2 text-sm text-muted-foreground">OU</div>
+            </div>
+            
             <Card className="print:shadow-none print:border-none">
+                <CardHeader>
+                    <CardTitle>Editor de Contrato de Compra e Venda</CardTitle>
+                </CardHeader>
                 <CardContent className="p-8">
                     <div className="space-y-6">
                         {/* Header */}
