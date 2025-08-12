@@ -7,6 +7,7 @@ import {
   BarChart3,
   Building2,
   CircleDollarSign,
+  Eye,
   LayoutDashboard,
   LogOut,
   Settings,
@@ -22,6 +23,10 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuPortal,
+  DropdownMenuSubContent
 } from "@/components/ui/dropdown-menu";
 import {
   Sidebar,
@@ -37,6 +42,7 @@ import {
 import { Logo } from "@/components/icons/logo";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/dashboard/header";
+import { useToast } from "@/hooks/use-toast";
 
 export default function DashboardLayout({
   children,
@@ -44,6 +50,14 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const { toast } = useToast();
+
+  const handleProfileSwitch = (profile: string) => {
+    toast({
+      title: "Visualização Alterada",
+      description: `Agora você está visualizando como ${profile}.`,
+    });
+  };
 
   return (
     <SidebarProvider>
@@ -172,7 +186,10 @@ export default function DashboardLayout({
                         <AvatarImage src="https://placehold.co/100x100.png" alt="Usuário" />
                         <AvatarFallback>JD</AvatarFallback>
                       </Avatar>
-                      <span className="truncate">Jane Doe</span>
+                      <div className="flex flex-col items-start truncate">
+                        <span className="truncate font-medium">Jane Doe</span>
+                        <span className="text-xs text-muted-foreground">Admin</span>
+                      </div>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent side="right" align="start" className="w-56">
@@ -182,6 +199,21 @@ export default function DashboardLayout({
                       <UserCircle className="mr-2 h-4 w-4" />
                       <span>Perfil</span>
                     </DropdownMenuItem>
+                     <DropdownMenuSub>
+                      <DropdownMenuSubTrigger>
+                        <Eye className="mr-2 h-4 w-4" />
+                        <span>Visualizar como</span>
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuPortal>
+                        <DropdownMenuSubContent>
+                          <DropdownMenuItem onClick={() => handleProfileSwitch('Admin')}>Admin</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleProfileSwitch('Imobiliária')}>Imobiliária</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleProfileSwitch('Corretor Autônomo')}>Corretor Autônomo</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleProfileSwitch('Investidor')}>Investidor</DropdownMenuItem>
+                           <DropdownMenuItem onClick={() => handleProfileSwitch('Construtora')}>Construtora</DropdownMenuItem>
+                        </DropdownMenuSubContent>
+                      </DropdownMenuPortal>
+                    </DropdownMenuSub>
                     <DropdownMenuItem>
                       <Settings className="mr-2 h-4 w-4" />
                       <span>Configurações</span>
