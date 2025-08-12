@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { MoreHorizontal, UserPlus } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
 
 type TeamMember = {
     id: string;
@@ -94,7 +95,7 @@ export default function SettingsPage() {
                 <p className="text-muted-foreground">Gerencie sua conta, equipes e permissões do aplicativo.</p>
             </div>
 
-            <Tabs defaultValue="team">
+            <Tabs defaultValue="profile" className="w-full">
                 <TabsList>
                     <TabsTrigger value="profile">Perfil</TabsTrigger>
                     <TabsTrigger value="team">Membros da Equipe</TabsTrigger>
@@ -352,4 +353,3 @@ export default function SettingsPage() {
         </div>
     )
 }
-

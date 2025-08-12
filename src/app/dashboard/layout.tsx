@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -44,6 +44,16 @@ import { Button } from "@/components/ui/button";
 import { Header } from "@/components/dashboard/header";
 import { useToast } from "@/hooks/use-toast";
 
+type UserProfile = 'Admin' | 'Imobiliária' | 'Corretor Autônomo' | 'Investidor' | 'Construtora';
+
+const menuConfig: Record<UserProfile, string[]> = {
+    'Admin': ['/dashboard', '/dashboard/properties', '/dashboard/crm', '/dashboard/negotiations', '/dashboard/finance', '/dashboard/reporting', '/dashboard/settings/team', '/dashboard/settings'],
+    'Imobiliária': ['/dashboard', '/dashboard/properties', '/dashboard/crm', '/dashboard/negotiations', '/dashboard/finance', '/dashboard/reporting', '/dashboard/settings/team'],
+    'Corretor Autônomo': ['/dashboard', '/dashboard/properties', '/dashboard/negotiations', '/dashboard/reporting'],
+    'Investidor': ['/dashboard', '/dashboard/properties', '/dashboard/finance'],
+    'Construtora': ['/dashboard', '/dashboard/properties', '/dashboard/negotiations', '/dashboard/finance'],
+};
+
 export default function DashboardLayout({
   children,
 }: {
@@ -51,13 +61,28 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const { toast } = useToast();
+  const [activeProfile, setActiveProfile] = useState<UserProfile>('Admin');
 
-  const handleProfileSwitch = (profile: string) => {
+  const handleProfileSwitch = (profile: UserProfile) => {
+    setActiveProfile(profile);
     toast({
       title: "Visualização Alterada",
       description: `Agora você está visualizando como ${profile}.`,
     });
   };
+
+  const menuItems = [
+      { href: "/dashboard", icon: LayoutDashboard, label: "Painel", tooltip: "Painel" },
+      { href: "/dashboard/properties", icon: Building2, label: "Imóveis", tooltip: "Imóveis" },
+      { href: "/dashboard/crm", icon: Users, label: "CRM", tooltip: "CRM" },
+      { href: "/dashboard/negotiations", icon: Handshake, label: "Negociações", tooltip: "Negociações" },
+      { href: "/dashboard/finance", icon: CircleDollarSign, label: "Financeiro", tooltip: "Financeiro" },
+      { href: "/dashboard/reporting", icon: BarChart3, label: "Relatórios", tooltip: "Relatórios" },
+      { href: "/dashboard/settings/team", icon: Users, label: "Equipes", tooltip: "Equipes" },
+  ];
+  
+  const visibleMenuItems = menuItems.filter(item => menuConfig[activeProfile].includes(item.href));
+
 
   return (
     <SidebarProvider>
@@ -70,97 +95,21 @@ export default function DashboardLayout({
         </SidebarHeader>
         <SidebarContent>
           <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                href="/dashboard"
-                isActive={pathname === "/dashboard"}
-                tooltip="Painel"
-                asChild
-              >
-                <Link href="/dashboard">
-                  <LayoutDashboard />
-                  <span>Painel</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                href="/dashboard/properties"
-                isActive={pathname === "/dashboard/properties"}
-                tooltip="Imóveis"
-                asChild
-              >
-                <Link href="/dashboard/properties">
-                  <Building2 />
-                  <span>Imóveis</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                href="/dashboard/crm"
-                isActive={pathname === "/dashboard/crm"}
-                tooltip="CRM"
-                asChild
-              >
-                <Link href="/dashboard/crm">
-                  <Users />
-                  <span>CRM</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                href="/dashboard/negotiations"
-                isActive={pathname.startsWith("/dashboard/negotiations")}
-                tooltip="Negociações"
-                asChild
-              >
-                <Link href="/dashboard/negotiations">
-                  <Handshake />
-                  <span>Negociações</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                href="/dashboard/finance"
-                isActive={pathname === "/dashboard/finance"}
-                tooltip="Financeiro"
-                asChild
-              >
-                <Link href="/dashboard/finance">
-                  <CircleDollarSign />
-                  <span>Financeiro</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                href="/dashboard/reporting"
-                isActive={pathname.startsWith("/dashboard/reporting")}
-                tooltip="Relatórios"
-                asChild
-              >
-                <Link href="/dashboard/reporting">
-                  <BarChart3 />
-                  <span>Relatórios</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-               <SidebarMenuButton
-                href="/dashboard/settings"
-                isActive={pathname.startsWith("/dashboard/settings")}
-                tooltip="Equipes"
-                asChild
-              >
-                <Link href="/dashboard/settings">
-                  <Users />
-                  <span>Equipes</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+            {visibleMenuItems.map(item => (
+                 <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                        href={item.href}
+                        isActive={pathname === item.href}
+                        tooltip={item.tooltip}
+                        asChild
+                    >
+                        <Link href={item.href}>
+                            <item.icon />
+                            <span>{item.label}</span>
+                        </Link>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+            ))}
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter>
@@ -188,7 +137,7 @@ export default function DashboardLayout({
                       </Avatar>
                       <div className="flex flex-col items-start truncate">
                         <span className="truncate font-medium">Jane Doe</span>
-                        <span className="text-xs text-muted-foreground">Admin</span>
+                        <span className="text-xs text-muted-foreground">{activeProfile}</span>
                       </div>
                     </Button>
                   </DropdownMenuTrigger>
