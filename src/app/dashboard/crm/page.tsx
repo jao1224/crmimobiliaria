@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,54 +14,142 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import type { UserProfile } from "../layout";
+import { db } from "@/lib/firebase";
+import { collection, addDoc, getDocs, doc, writeBatch } from "firebase/firestore";
+import { Skeleton } from "@/components/ui/skeleton";
 
-const initialLeads = [
-    { id: "L001", name: "João Silva", source: "Website", status: "Novo", assignedTo: "Joana Doe" },
-    { id: "L002", name: "Maria Garcia", source: "Indicação", status: "Contactado", assignedTo: "Joana Doe" },
-    { id: "L003", name: "David Johnson", source: "Campanha", status: "Qualificado", assignedTo: "João Roe" },
-];
+// Tipos para os dados do Firestore
+type Lead = {
+    id: string;
+    name: string;
+    source: string;
+    status: string;
+    assignedTo: string;
+};
 
-const initialDeals = [
-    { id: "D001", property: "Apartamento Sunnyvale", client: "Alice Williams", stage: "Proposta Enviada", value: 750000, closeDate: "15/08/2024" },
-    { id: "D002", property: "Loft no Centro", client: "Bob Brown", stage: "Negociação", value: 500000, closeDate: "30/07/2024" },
-];
+type Deal = {
+    id: string;
+    property: string;
+    client: string;
+    stage: string;
+    value: number;
+    closeDate: string;
+};
+
+type Client = {
+    id: string;
+    name: string;
+    source: string;
+    assignedTo: string;
+};
+
 
 export default function CrmPage({ activeProfile }: { activeProfile?: UserProfile }) {
-    const [leads, setLeads] = useState(initialLeads);
-    const [deals, setDeals] = useState(initialDeals);
+    const [leads, setLeads] = useState<Lead[]>([]);
+    const [deals, setDeals] = useState<Deal[]>([]);
+    const [clients, setClients] = useState<Client[]>([]);
     const [isLeadDialogOpen, setLeadDialogOpen] = useState(false);
     const [isDealDialogOpen, setDealDialogOpen] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isLoadingDeals, setIsLoadingDeals] = useState(true);
+    const [isLoadingClients, setIsLoadingClients] = useState(true);
     const { toast } = useToast();
 
-    const handleAddLead = (event: React.FormEvent<HTMLFormElement>) => {
+    const fetchAllData = async () => {
+        setIsLoading(true);
+        setIsLoadingDeals(true);
+        setIsLoadingClients(true);
+        try {
+            const leadsQuery = await getDocs(collection(db, "leads"));
+            setLeads(leadsQuery.docs.map(doc => ({ id: doc.id, ...doc.data() } as Lead)));
+
+            const dealsQuery = await getDocs(collection(db, "deals"));
+            setDeals(dealsQuery.docs.map(doc => ({ id: doc.id, ...doc.data() } as Deal)));
+            
+            const clientsQuery = await getDocs(collection(db, "clients"));
+            setClients(clientsQuery.docs.map(doc => ({ id: doc.id, ...doc.data() } as Client)));
+
+        } catch (error) {
+            console.error("Error fetching data: ", error);
+            toast({ variant: "destructive", title: "Erro", description: "Não foi possível carregar os dados do CRM." });
+        } finally {
+            setIsLoading(false);
+            setIsLoadingDeals(false);
+            setIsLoadingClients(false);
+        }
+    };
+    
+    useEffect(() => {
+        fetchAllData();
+    }, []);
+
+    const handleAddLead = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         const formData = new FormData(event.currentTarget);
-        const newLead = {
-            id: `L${String(leads.length + 1).padStart(3, '0')}`,
+        const newLeadData = {
             name: formData.get("name") as string,
             source: formData.get("source") as string,
             status: "Novo",
             assignedTo: formData.get("assignedTo") as string,
         };
-        setLeads([...leads, newLead]);
-        setLeadDialogOpen(false);
-        toast({ title: "Sucesso!", description: "Lead adicionado com sucesso." });
+
+        try {
+            await addDoc(collection(db, "leads"), newLeadData);
+            toast({ title: "Sucesso!", description: "Lead adicionado com sucesso." });
+            setLeadDialogOpen(false);
+            fetchAllData(); // Re-fetch
+        } catch (error) {
+            toast({ variant: "destructive", title: "Erro", description: "Não foi possível salvar o lead." });
+        }
     };
     
-    const handleAddDeal = (event: React.FormEvent<HTMLFormElement>) => {
+    const handleAddDeal = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         const formData = new FormData(event.currentTarget);
-        const newDeal = {
-            id: `D${String(deals.length + 1).padStart(3, '0')}`,
+        const newDealData = {
             property: formData.get("property") as string,
             client: formData.get("client") as string,
             stage: "Proposta Enviada",
             value: Number(formData.get("value")),
             closeDate: formData.get("closeDate") as string,
         };
-        setDeals([...deals, newDeal]);
-        setDealDialogOpen(false);
-        toast({ title: "Sucesso!", description: "Negócio adicionado com sucesso." });
+
+        try {
+            await addDoc(collection(db, "deals"), newDealData);
+            toast({ title: "Sucesso!", description: "Negócio adicionado com sucesso." });
+            setDealDialogOpen(false);
+            fetchAllData(); // Re-fetch
+        } catch (error) {
+            toast({ variant: "destructive", title: "Erro", description: "Não foi possível salvar o negócio." });
+        }
+    };
+
+    const handleConvertLeadToClient = async (lead: Lead) => {
+        try {
+            const batch = writeBatch(db);
+
+            // Adiciona a um novo cliente
+            const newClientRef = doc(collection(db, "clients"));
+            batch.set(newClientRef, {
+                name: lead.name,
+                source: lead.source,
+                assignedTo: lead.assignedTo,
+            });
+
+            // Remove o lead antigo
+            const leadRef = doc(db, "leads", lead.id);
+            batch.delete(leadRef);
+
+            await batch.commit();
+
+            toast({
+                title: "Conversão Realizada!",
+                description: `"${lead.name}" agora é um cliente.`
+            });
+            fetchAllData(); // Re-fetch
+        } catch (error) {
+             toast({ variant: "destructive", title: "Erro", description: "Falha ao converter o lead." });
+        }
     };
 
     return (
@@ -162,26 +250,42 @@ export default function CrmPage({ activeProfile }: { activeProfile?: UserProfile
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {leads.map(lead => (
-                                        <TableRow key={lead.id}>
-                                            <TableCell className="font-medium">{lead.name}</TableCell>
-                                            <TableCell>{lead.source}</TableCell>
-                                            <TableCell><Badge variant="secondary">{lead.status}</Badge></TableCell>
-                                            <TableCell>{lead.assignedTo}</TableCell>
-                                            <TableCell>
-                                                 <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button aria-haspopup="true" size="icon" variant="ghost"><MoreHorizontal className="h-4 w-4" /></Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                                                        <DropdownMenuItem onClick={() => toast({ description: `"${lead.name}" convertido em negócio.` })}>Converter em Negócio</DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => toast({ description: `Status de "${lead.name}" atualizado.` })}>Atualizar Status</DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            </TableCell>
+                                    {isLoading ? (
+                                        Array.from({ length: 3 }).map((_, index) => (
+                                          <TableRow key={index}>
+                                            <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                                            <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                                            <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                                            <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                                            <TableCell><Skeleton className="h-8 w-8 rounded-md" /></TableCell>
+                                          </TableRow>
+                                        ))
+                                    ) : leads.length > 0 ? (
+                                        leads.map(lead => (
+                                            <TableRow key={lead.id}>
+                                                <TableCell className="font-medium">{lead.name}</TableCell>
+                                                <TableCell>{lead.source}</TableCell>
+                                                <TableCell><Badge variant="secondary">{lead.status}</Badge></TableCell>
+                                                <TableCell>{lead.assignedTo}</TableCell>
+                                                <TableCell>
+                                                     <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button aria-haspopup="true" size="icon" variant="ghost"><MoreHorizontal className="h-4 w-4" /></Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                                                            <DropdownMenuItem onClick={() => handleConvertLeadToClient(lead)}>Converter em Cliente</DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => toast({ description: `Status de "${lead.name}" atualizado.` })}>Atualizar Status</DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    ) : (
+                                        <TableRow>
+                                            <TableCell colSpan={5} className="h-24 text-center">Nenhum lead encontrado.</TableCell>
                                         </TableRow>
-                                    ))}
+                                    )}
                                 </TableBody>
                             </Table>
                         </CardContent>
@@ -205,15 +309,31 @@ export default function CrmPage({ activeProfile }: { activeProfile?: UserProfile
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {deals.map(deal => (
-                                        <TableRow key={deal.id}>
-                                            <TableCell className="font-medium">{deal.property}</TableCell>
-                                            <TableCell>{deal.client}</TableCell>
-                                            <TableCell><Badge variant="outline">{deal.stage}</Badge></TableCell>
-                                            <TableCell>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(deal.value)}</TableCell>
-                                            <TableCell>{new Date(deal.closeDate).toLocaleDateString('pt-BR', {timeZone: 'UTC'})}</TableCell>
+                                    {isLoadingDeals ? (
+                                         Array.from({ length: 2 }).map((_, index) => (
+                                          <TableRow key={index}>
+                                            <TableCell><Skeleton className="h-4 w-40" /></TableCell>
+                                            <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                                            <TableCell><Skeleton className="h-6 w-24 rounded-full" /></TableCell>
+                                            <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                                            <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                                          </TableRow>
+                                        ))
+                                    ) : deals.length > 0 ? (
+                                        deals.map(deal => (
+                                            <TableRow key={deal.id}>
+                                                <TableCell className="font-medium">{deal.property}</TableCell>
+                                                <TableCell>{deal.client}</TableCell>
+                                                <TableCell><Badge variant="outline">{deal.stage}</Badge></TableCell>
+                                                <TableCell>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(deal.value)}</TableCell>
+                                                <TableCell>{new Date(deal.closeDate).toLocaleDateString('pt-BR', {timeZone: 'UTC'})}</TableCell>
+                                            </TableRow>
+                                        ))
+                                     ) : (
+                                        <TableRow>
+                                            <TableCell colSpan={5} className="h-24 text-center">Nenhum negócio em andamento.</TableCell>
                                         </TableRow>
-                                    ))}
+                                    )}
                                 </TableBody>
                             </Table>
                         </CardContent>
@@ -226,11 +346,54 @@ export default function CrmPage({ activeProfile }: { activeProfile?: UserProfile
                             <CardDescription>Sua base de dados de clientes.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <p>A lista de clientes será exibida aqui.</p>
+                             <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Nome</TableHead>
+                                        <TableHead>Fonte Original</TableHead>
+                                        <TableHead>Atribuído a</TableHead>
+                                        <TableHead><span className="sr-only">Ações</span></TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {isLoadingClients ? (
+                                         Array.from({ length: 2 }).map((_, index) => (
+                                          <TableRow key={index}>
+                                            <TableCell><Skeleton className="h-4 w-40" /></TableCell>
+                                            <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                                            <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                                            <TableCell><Skeleton className="h-8 w-8" /></TableCell>
+                                          </TableRow>
+                                        ))
+                                    ) : clients.length > 0 ? (
+                                        clients.map(client => (
+                                            <TableRow key={client.id}>
+                                                <TableCell className="font-medium">{client.name}</TableCell>
+                                                <TableCell>{client.source}</TableCell>
+                                                <TableCell>{client.assignedTo}</TableCell>
+                                                <TableCell>
+                                                     <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button aria-haspopup="true" size="icon" variant="ghost"><MoreHorizontal className="h-4 w-4" /></Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                                                            <DropdownMenuItem>Ver Histórico</DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                     ) : (
+                                        <TableRow>
+                                            <TableCell colSpan={4} className="h-24 text-center">Nenhum cliente cadastrado.</TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
                         </CardContent>
                     </Card>
                 </TabsContent>
             </Tabs>
         </div>
     )
-}
