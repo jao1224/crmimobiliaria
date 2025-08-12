@@ -1,26 +1,25 @@
 
 "use client";
 
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { initialNegotiations } from "@/app/dashboard/negotiations/page";
-import { initialProperties } from "@/app/dashboard/properties/page";
 import { notFound, useParams } from "next/navigation";
 import { Printer, Save } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { db } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
+import { Skeleton } from "@/components/ui/skeleton";
 
-// Mock data for clients
-const mockClients = [
-    { id: "L001", doc: "111.222.333-44", name: "João Silva", address: "Rua das Flores, 123, São Paulo, SP" },
-    { id: "L002", doc: "222.333.444-55", name: "Maria Garcia", address: "Avenida Central, 456, Rio de Janeiro, RJ" },
-    { id: "C001", doc: "333.444.555-66", name: "Alice Williams", address: "Praça da Sé, 789, São Paulo, SP" },
-    { id: "C002", doc: "444.555.666-77", name: "Bob Brown", address: "Rua Copacabana, 101, Rio de Janeiro, RJ"},
-    { id: "C003", doc: "555.666.777-88", name: "Charlie Davis", address: "Avenida Paulista, 1500, São Paulo, SP"},
-];
+// Tipos para os dados do Firestore
+type Negotiation = { id: string; property: string; propertyId: string; client: string; clientId: string; value: number; realtor: string; commissionRate: number; };
+type Property = { id: string; name: string; address: string; price: number; };
+type Client = { id: string; name: string; doc: string; address: string; };
+
 
 const mockRealtors = {
     "Carlos Pereira": { name: "Carlos Pereira", creci: "12345-F" },
@@ -32,17 +31,101 @@ export default function ContractPage() {
     const { toast } = useToast();
     const negotiationId = params.id as string;
 
-    const negotiation = initialNegotiations.find(n => n.id === negotiationId);
-    if (!negotiation) {
-        notFound();
-    }
+    const [negotiation, setNegotiation] = useState<Negotiation | null>(null);
+    const [property, setProperty] = useState<Property | null>(null);
+    const [client, setClient] = useState<Client | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
-    const property = initialProperties.find(p => p.name === negotiation.property);
-    const client = mockClients.find(c => c.name === negotiation.client);
+    useEffect(() => {
+        if (!negotiationId) return;
+
+        const fetchContractData = async () => {
+            setIsLoading(true);
+            try {
+                // Fetch Negotiation
+                const negotiationRef = doc(db, "deals", negotiationId);
+                const negotiationSnap = await getDoc(negotiationRef);
+
+                if (!negotiationSnap.exists()) {
+                    notFound();
+                    return;
+                }
+                const negotiationData = { id: negotiationSnap.id, ...negotiationSnap.data() } as Negotiation;
+                setNegotiation(negotiationData);
+                
+                // Fetch Property
+                if (negotiationData.propertyId) {
+                    const propertyRef = doc(db, "properties", negotiationData.propertyId);
+                    const propertySnap = await getDoc(propertyRef);
+                    if(propertySnap.exists()) {
+                        setProperty({ id: propertySnap.id, ...propertySnap.data() } as Property);
+                    }
+                }
+
+
+                // Fetch Client
+                if (negotiationData.clientId) {
+                    const clientRef = doc(db, "clients", negotiationData.clientId);
+                    const clientSnap = await getDoc(clientRef);
+                     if(clientSnap.exists()) {
+                        setClient({ id: clientSnap.id, ...clientSnap.data() } as Client);
+                    }
+                }
+
+
+            } catch (error) {
+                console.error("Error fetching contract data:", error);
+                toast({ variant: "destructive", title: "Erro", description: "Falha ao carregar dados do contrato." });
+                notFound();
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchContractData();
+    }, [negotiationId, toast]);
+
+
+    if (isLoading) {
+        return (
+            <div className="flex flex-col gap-6">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <Skeleton className="h-8 w-64 mb-2" />
+                        <Skeleton className="h-4 w-48" />
+                    </div>
+                    <div className="flex gap-2">
+                        <Skeleton className="h-10 w-24" />
+                        <Skeleton className="h-10 w-40" />
+                    </div>
+                </div>
+                <Skeleton className="h-40 w-full" />
+                <div className="relative">
+                    <Separator />
+                    <div className="absolute left-1/2 -translate-x-1/2 -top-3 bg-background px-2 text-sm text-muted-foreground">OU</div>
+                </div>
+                <Card>
+                    <CardHeader><Skeleton className="h-6 w-1/2" /></CardHeader>
+                    <CardContent className="p-8 space-y-6">
+                         <Skeleton className="h-10 w-full" />
+                         <Skeleton className="h-24 w-full" />
+                         <Skeleton className="h-24 w-full" />
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
+    
+    if (!negotiation || !property || !client) {
+        // A toast or a more specific message could be shown before notFound
+        return notFound();
+    }
+    
     const realtor = (mockRealtors as any)[negotiation.realtor];
 
-    if (!property || !client || !realtor) {
-         notFound();
+    if (!realtor) {
+        // This case should be handled, maybe with a default or an error message
+        return notFound();
     }
     
     const handlePrint = () => {
@@ -50,7 +133,7 @@ export default function ContractPage() {
     };
     
     const handleSave = () => {
-        toast({ title: "Sucesso!", description: "Contrato salvo com sucesso."});
+        toast({ title: "Sucesso!", description: "Contrato salvo com sucesso. (Função de salvamento não implementada)"});
     }
 
     return (
@@ -125,7 +208,7 @@ export default function ContractPage() {
                             <div>
                                 <h3 className="font-semibold mb-2">COMPRADOR(A):</h3>
                                 <p className="border p-4 rounded-md bg-muted/50">
-                                    <strong>Nome:</strong> {client.name}, <strong>CPF/CNPJ:</strong> {client.doc}, residente e domiciliado em {client.address}.
+                                    <strong>Nome:</strong> {client.name}, <strong>CPF/CNPJ:</strong> {client.doc || 'N/A'}, residente e domiciliado em {client.address || 'N/A'}.
                                 </p>
                             </div>
                              <div>
@@ -175,7 +258,7 @@ export default function ContractPage() {
                         <div className="space-y-2">
                              <h3 className="font-semibold">CLÁUSULA TERCEIRA - DA COMISSÃO DE CORRETAGEM</h3>
                              <Label htmlFor="commission-clause">Texto da Cláusula de Comissão</Label>
-                             <Textarea id="commission-clause" className="min-h-[120px]" defaultValue={`Os honorários devidos pela intermediação desta negociação, no montante de ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(property.commission)}, correspondentes a [PERCENTUAL]% do valor da venda, são de responsabilidade do VENDEDOR(ES), a serem pagos à INTERVENIENTE ANUENTE na data da compensação do sinal.`} />
+                             <Textarea id="commission-clause" className="min-h-[120px]" defaultValue={`Os honorários devidos pela intermediação desta negociação, no montante de ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(negotiation.value * (negotiation.commissionRate / 100))}, correspondentes a ${negotiation.commissionRate}% do valor da venda, são de responsabilidade do VENDEDOR(ES), a serem pagos à INTERVENIENTE ANUENTE na data da compensação do sinal.`} />
                         </div>
 
                         {/* General Clauses */}
@@ -212,3 +295,5 @@ export default function ContractPage() {
         </div>
     );
 }
+
+    
