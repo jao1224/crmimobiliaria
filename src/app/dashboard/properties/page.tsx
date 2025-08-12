@@ -35,7 +35,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 
-const initialProperties = [
+export const initialProperties = [
   {
     id: "1",
     name: "Apartamento Sunnyvale",
@@ -179,7 +179,7 @@ export default function PropertiesPage() {
                 <TableHead className="hidden w-[100px] sm:table-cell">
                   <span className="sr-only">Imagem</span>
                 </TableHead>
-                <TableHead>Nome & Endereço</TableHead>
+                <TableHead>Nome &amp; Endereço</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="hidden md:table-cell">Preço</TableHead>
                 <TableHead className="hidden md:table-cell">
@@ -245,3 +245,5 @@ export default function PropertiesPage() {
     </div>
   );
 }
+
+    

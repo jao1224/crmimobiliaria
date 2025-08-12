@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,9 +9,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, Search } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
+import { initialProperties } from "../properties/page";
+import { initialLeads } from "../crm/page";
 
 const initialNegotiations = [
     {
@@ -46,21 +48,83 @@ const initialNegotiations = [
     },
 ];
 
+// Mock data for clients
+const mockClients = [
+    { id: "L001", doc: "111.222.333-44", name: "João Silva", source: "Website", status: "Novo", assignedTo: "Joana Doe" },
+    { id: "L002", doc: "222.333.444-55", name: "Maria Garcia", source: "Indicação", status: "Contactado", assignedTo: "Joana Doe" },
+    { doc: "333.444.555-66", name: "David Johnson", source: "Campanha", status: "Qualificado", assignedTo: "João Roe" },
+];
+
+
 export default function NegotiationsPage() {
     const [negotiations, setNegotiations] = useState(initialNegotiations);
     const [isNewNegotiationOpen, setNewNegotiationOpen] = useState(false);
     const { toast } = useToast();
+    
+    // State for the new negotiation form
+    const [propertyCode, setPropertyCode] = useState("");
+    const [clientDoc, setClientDoc] = useState("");
+    const [foundProperty, setFoundProperty] = useState<any>(null);
+    const [foundClient, setFoundClient] = useState<any>(null);
+    const [proposalValue, setProposalValue] = useState("");
+    const [proposalDate, setProposalDate] = useState("");
+    const [isSearching, setIsSearching] = useState(false);
+
+
+    const handleSearch = () => {
+        setIsSearching(true);
+        // Simulate API call
+        setTimeout(() => {
+            const property = initialProperties.find(p => p.id === propertyCode);
+            const client = mockClients.find(c => c.doc === clientDoc);
+            
+            setFoundProperty(property || null);
+            setFoundClient(client || null);
+            
+            if (!property) {
+                toast({ variant: 'destructive', title: "Erro", description: "Imóvel não encontrado." });
+            }
+            if (!client) {
+                toast({ variant: 'destructive', title: "Erro", description: "Cliente não encontrado." });
+            }
+            if (property && client) {
+                 toast({ title: "Sucesso!", description: "Dados encontrados." });
+            }
+            setIsSearching(false);
+        }, 1000);
+    };
+
+    const resetForm = () => {
+        setPropertyCode("");
+        setClientDoc("");
+        setFoundProperty(null);
+        setFoundClient(null);
+        setProposalValue("");
+        setProposalDate("");
+    };
+
+    useEffect(() => {
+        if (!isNewNegotiationOpen) {
+            resetForm();
+        }
+    }, [isNewNegotiationOpen]);
+
 
     const handleAddNegotiation = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        const formData = new FormData(event.currentTarget);
+
+        if (!foundProperty || !foundClient) {
+            toast({ variant: 'destructive', title: "Erro", description: "Busque e confirme os dados do imóvel e do cliente antes de criar." });
+            return;
+        }
+
         const newNegotiation = {
             id: `NEG${String(negotiations.length + 1).padStart(3, '0')}`,
-            property: `Imóvel: ${formData.get("property-code") as string}`,
-            client: `Cliente: ${formData.get("client-doc") as string}`,
+            property: foundProperty.name,
+            client: foundClient.name,
             stage: "Proposta Enviada",
             contractStatus: "Não Gerado",
-            value: Number(formData.get("value")),
+            value: Number(proposalValue),
             salesperson: "Joana Doe", // Placeholder
             realtor: "Carlos Pereira", // Placeholder
         };
@@ -87,37 +151,70 @@ export default function NegotiationsPage() {
                     <DialogTrigger asChild>
                         <Button>Iniciar Nova Negociação</Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-xl">
+                    <DialogContent className="sm:max-w-2xl">
                         <DialogHeader>
                             <DialogTitle>Iniciar Nova Negociação</DialogTitle>
                             <DialogDescription>
-                                Preencha as informações abaixo para iniciar um novo processo de negociação.
-                                O sistema buscará os detalhes do imóvel e do cliente.
+                                Insira o código do imóvel e o documento do cliente para buscar os dados.
                             </DialogDescription>
                         </DialogHeader>
                         <form onSubmit={handleAddNegotiation}>
-                            <div className="grid gap-4 py-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="property-code">Imóvel (Código ou Matrícula)</Label>
-                                    <Input id="property-code" name="property-code" placeholder="Insira o código ou matrícula do imóvel" required />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="client-doc">Cliente (CPF ou CNPJ)</Label>
-                                    <Input id="client-doc" name="client-doc" placeholder="Insira o documento do cliente comprador" required />
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-4 py-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <Label htmlFor="value">Valor da Proposta (R$)</Label>
-                                        <Input id="value" name="value" type="number" placeholder="750000" required />
+                                        <Label htmlFor="property-code">Imóvel (Código)</Label>
+                                        <Input id="property-code" value={propertyCode} onChange={e => setPropertyCode(e.target.value)} placeholder="Insira o código do imóvel" required />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="date">Data da Proposta</Label>
-                                        <Input id="date" name="date" type="date" required />
+                                        <Label htmlFor="client-doc">Cliente (CPF ou CNPJ)</Label>
+                                        <Input id="client-doc" value={clientDoc} onChange={e => setClientDoc(e.target.value)} placeholder="Insira o documento do cliente" required />
+                                    </div>
+                                </div>
+
+                                {(foundProperty || foundClient) && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 rounded-lg border p-4">
+                                         <div className="space-y-2">
+                                            <h4 className="font-semibold text-sm">Imóvel Encontrado</h4>
+                                            {foundProperty ? (
+                                                <div className="text-sm text-muted-foreground">
+                                                    <p className="font-medium text-foreground">{foundProperty.name}</p>
+                                                    <p>{foundProperty.address}</p>
+                                                    <p>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(foundProperty.price)}</p>
+                                                </div>
+                                            ) : <p className="text-sm text-destructive">Nenhum imóvel encontrado.</p>}
+                                        </div>
+                                         <div className="space-y-2">
+                                            <h4 className="font-semibold text-sm">Cliente Encontrado</h4>
+                                            {foundClient ? (
+                                                <div className="text-sm text-muted-foreground">
+                                                    <p className="font-medium text-foreground">{foundClient.name}</p>
+                                                    <p>Doc: {foundClient.doc}</p>
+                                                </div>
+                                            ) : <p className="text-sm text-destructive">Nenhum cliente encontrado.</p>}
+                                        </div>
+                                    </div>
+                                )}
+
+
+                                <div className="border-t pt-4 space-y-4">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="value">Valor da Proposta (R$)</Label>
+                                            <Input id="value" name="value" type="number" placeholder="750000" required value={proposalValue} onChange={e => setProposalValue(e.target.value)} disabled={!foundProperty || !foundClient} />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="date">Data da Proposta</Label>
+                                            <Input id="date" name="date" type="date" required value={proposalDate} onChange={e => setProposalDate(e.target.value)} disabled={!foundProperty || !foundClient} />
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                            <DialogFooter>
-                                <Button type="submit">Criar Negociação</Button>
+                            <DialogFooter className="border-t pt-4 gap-2 sm:justify-between">
+                                <Button type="button" variant="outline" onClick={handleSearch} disabled={isSearching || !propertyCode || !clientDoc}>
+                                    <Search className="mr-2 h-4 w-4" />
+                                    {isSearching ? "Buscando..." : "Buscar Dados"}
+                                </Button>
+                                <Button type="submit" disabled={!foundProperty || !foundClient || !proposalValue || !proposalDate}>Criar Negociação</Button>
                             </DialogFooter>
                         </form>
                     </DialogContent>
@@ -173,7 +270,7 @@ export default function NegotiationsPage() {
                                                 <DropdownMenuLabel>Ações</DropdownMenuLabel>
                                                 <DropdownMenuItem>Ver Detalhes</DropdownMenuItem>
                                                 <DropdownMenuItem>Mover para Contrato</DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => handleGenerateContract(neg.id)}>
+                                                <DropdownMenuItem onClick={() => handleGenerateContract(neg.id)} disabled={neg.contractStatus !== 'Não Gerado'}>
                                                     Gerar Contrato
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>
@@ -188,3 +285,5 @@ export default function NegotiationsPage() {
         </div>
     );
 }
+
+    
