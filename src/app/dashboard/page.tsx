@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BarChart3, Building2, CircleDollarSign, Users } from "lucide-react";
 import { SalesReport } from "@/components/dashboard/sales-report";
 import type { UserProfile } from "./layout";
