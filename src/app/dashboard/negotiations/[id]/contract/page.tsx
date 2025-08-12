@@ -12,13 +12,27 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, setDoc } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // Tipos para os dados do Firestore
-type Negotiation = { id: string; property: string; propertyId: string; client: string; clientId: string; value: number; realtor: string; commissionRate: number; };
+type Negotiation = { id: string; property: string; propertyId: string; client: string; clientId: string; value: number; realtor: string; commissionRate: number; contractDetails?: ContractDetails;};
 type Property = { id: string; name: string; address: string; price: number; };
 type Client = { id: string; name: string; doc: string; address: string; };
+type ContractDetails = {
+    sellerName: string;
+    sellerDoc: string;
+    sellerAddress: string;
+    propertyArea: string;
+    propertyRegistration: string;
+    propertyRegistryOffice: string;
+    paymentTerms: string;
+    commissionClause: string;
+    generalClauses: string;
+    additionalClauses: string;
+    city: string;
+    date: string;
+};
 
 
 const mockRealtors = {
@@ -35,6 +49,27 @@ export default function ContractPage() {
     const [property, setProperty] = useState<Property | null>(null);
     const [client, setClient] = useState<Client | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+
+    const [contractData, setContractData] = useState<ContractDetails>({
+        sellerName: "",
+        sellerDoc: "",
+        sellerAddress: "",
+        propertyArea: "",
+        propertyRegistration: "",
+        propertyRegistryOffice: "",
+        paymentTerms: "",
+        commissionClause: "",
+        generalClauses: "",
+        additionalClauses: "",
+        city: "São Paulo",
+        date: new Date().toISOString().split('T')[0],
+    });
+    
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const { id, value } = e.target;
+        setContractData(prev => ({ ...prev, [id]: value }));
+    };
 
     useEffect(() => {
         if (!negotiationId) return;
@@ -62,7 +97,6 @@ export default function ContractPage() {
                     }
                 }
 
-
                 // Fetch Client
                 if (negotiationData.clientId) {
                     const clientRef = doc(db, "clients", negotiationData.clientId);
@@ -71,6 +105,17 @@ export default function ContractPage() {
                         setClient({ id: clientSnap.id, ...clientSnap.data() } as Client);
                     }
                 }
+
+                // Pre-fill contract data if it exists or with defaults
+                const commissionValue = negotiationData.value * (negotiationData.commissionRate / 100);
+                const defaultCommissionClause = `Os honorários devidos pela intermediação desta negociação, no montante de ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(commissionValue)}, correspondentes a ${negotiationData.commissionRate}% do valor da venda, são de responsabilidade do VENDEDOR(ES), a serem pagos à INTERVENIENTE ANUENTE na data da compensação do sinal.`;
+                const defaultGeneralClauses = `O COMPRADOR(A) declara ter vistoriado o imóvel, recebendo-o no estado em que se encontra. Todas as despesas de transferência, como ITBI, escritura e registro, correrão por conta do COMPRADOR(A).`;
+
+                setContractData(negotiationData.contractDetails || {
+                    ...contractData,
+                    commissionClause: defaultCommissionClause,
+                    generalClauses: defaultGeneralClauses,
+                });
 
 
             } catch (error) {
@@ -132,8 +177,20 @@ export default function ContractPage() {
         window.print();
     };
     
-    const handleSave = () => {
-        toast({ title: "Sucesso!", description: "Contrato salvo com sucesso. (Função de salvamento não implementada)"});
+    const handleSave = async () => {
+        setIsSaving(true);
+        try {
+            const negotiationRef = doc(db, "deals", negotiationId);
+            await updateDoc(negotiationRef, {
+                contractDetails: contractData
+            });
+            toast({ title: "Sucesso!", description: "Contrato salvo com sucesso no Firestore."});
+        } catch (error) {
+            console.error("Error saving contract:", error);
+            toast({ variant: "destructive", title: "Erro ao Salvar", description: "Não foi possível salvar os dados do contrato." });
+        } finally {
+            setIsSaving(false);
+        }
     }
 
     return (
@@ -144,9 +201,9 @@ export default function ContractPage() {
                     <p className="text-muted-foreground">Negociação ID: {negotiation.id}</p>
                 </div>
                 <div className="flex gap-2">
-                    <Button onClick={handleSave} variant="default">
+                    <Button onClick={handleSave} variant="default" disabled={isSaving}>
                         <Save className="mr-2 h-4 w-4" />
-                        Salvar
+                        {isSaving ? "Salvando..." : "Salvar"}
                     </Button>
                     <Button onClick={handlePrint} variant="outline">
                         <Printer className="mr-2 h-4 w-4" />
@@ -192,16 +249,16 @@ export default function ContractPage() {
                                 <h3 className="font-semibold mb-2">VENDEDOR(ES):</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border p-4 rounded-md">
                                     <div className="space-y-1">
-                                        <Label htmlFor="seller-name">Nome</Label>
-                                        <Input id="seller-name" placeholder="Nome do Proprietário" />
+                                        <Label htmlFor="sellerName">Nome</Label>
+                                        <Input id="sellerName" placeholder="Nome do Proprietário" value={contractData.sellerName} onChange={handleInputChange} />
                                     </div>
                                     <div className="space-y-1">
-                                        <Label htmlFor="seller-doc">CPF/CNPJ</Label>
-                                        <Input id="seller-doc" placeholder="Documento do Proprietário" />
+                                        <Label htmlFor="sellerDoc">CPF/CNPJ</Label>
+                                        <Input id="sellerDoc" placeholder="Documento do Proprietário" value={contractData.sellerDoc} onChange={handleInputChange} />
                                     </div>
                                     <div className="col-span-1 md:col-span-2 space-y-1">
-                                         <Label htmlFor="seller-address">Endereço</Label>
-                                        <Input id="seller-address" placeholder="Endereço Completo do Proprietário" />
+                                         <Label htmlFor="sellerAddress">Endereço</Label>
+                                        <Input id="sellerAddress" placeholder="Endereço Completo do Proprietário" value={contractData.sellerAddress} onChange={handleInputChange} />
                                     </div>
                                 </div>
                             </div>
@@ -230,16 +287,16 @@ export default function ContractPage() {
                             </p>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div className="space-y-1">
-                                    <Label htmlFor="property-area">Área (m²)</Label>
-                                    <Input id="property-area" placeholder="Ex: 120" />
+                                    <Label htmlFor="propertyArea">Área (m²)</Label>
+                                    <Input id="propertyArea" placeholder="Ex: 120" value={contractData.propertyArea} onChange={handleInputChange} />
                                 </div>
                                 <div className="space-y-1">
-                                    <Label htmlFor="property-registration">Matrícula do Imóvel</Label>
-                                    <Input id="property-registration" placeholder="Nº da Matrícula" />
+                                    <Label htmlFor="propertyRegistration">Matrícula do Imóvel</Label>
+                                    <Input id="propertyRegistration" placeholder="Nº da Matrícula" value={contractData.propertyRegistration} onChange={handleInputChange} />
                                 </div>
                                 <div className="space-y-1">
-                                    <Label htmlFor="property-registry-office">Cartório de Registro</Label>
-                                    <Input id="property-registry-office" placeholder="Ex: 1º Cartório de Registro de Imóveis de São Paulo" />
+                                    <Label htmlFor="propertyRegistryOffice">Cartório de Registro</Label>
+                                    <Input id="propertyRegistryOffice" placeholder="Ex: 1º Cartório de Registro de Imóveis de São Paulo" value={contractData.propertyRegistryOffice} onChange={handleInputChange} />
                                 </div>
                             </div>
                         </div>
@@ -250,28 +307,28 @@ export default function ContractPage() {
                             <p className="text-justify text-sm">
                                 O valor total da presente transação é de <strong>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(negotiation.value)}</strong>, a ser pago pelo COMPRADOR(A) ao VENDEDOR(ES).
                             </p>
-                             <Label htmlFor="payment-terms">Forma de Pagamento Detalhada</Label>
-                             <Textarea id="payment-terms" placeholder="Descreva os termos de pagamento. Ex: a) Sinal de R$ 50.000,00... b) O restante de R$ 700.000,00 será pago via financiamento bancário..." className="min-h-[100px]" />
+                             <Label htmlFor="paymentTerms">Forma de Pagamento Detalhada</Label>
+                             <Textarea id="paymentTerms" placeholder="Descreva os termos de pagamento. Ex: a) Sinal de R$ 50.000,00... b) O restante de R$ 700.000,00 será pago via financiamento bancário..." className="min-h-[100px]" value={contractData.paymentTerms} onChange={handleInputChange} />
                         </div>
 
                         {/* Commission */}
                         <div className="space-y-2">
                              <h3 className="font-semibold">CLÁUSULA TERCEIRA - DA COMISSÃO DE CORRETAGEM</h3>
-                             <Label htmlFor="commission-clause">Texto da Cláusula de Comissão</Label>
-                             <Textarea id="commission-clause" className="min-h-[120px]" defaultValue={`Os honorários devidos pela intermediação desta negociação, no montante de ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(negotiation.value * (negotiation.commissionRate / 100))}, correspondentes a ${negotiation.commissionRate}% do valor da venda, são de responsabilidade do VENDEDOR(ES), a serem pagos à INTERVENIENTE ANUENTE na data da compensação do sinal.`} />
+                             <Label htmlFor="commissionClause">Texto da Cláusula de Comissão</Label>
+                             <Textarea id="commissionClause" className="min-h-[120px]" value={contractData.commissionClause} onChange={handleInputChange} />
                         </div>
 
                         {/* General Clauses */}
                          <div className="space-y-2">
                              <h3 className="font-semibold">CLÁUSULA QUARTA - DAS DISPOSIÇÕES GERAIS</h3>
-                             <Label htmlFor="general-clauses">Texto das Disposições Gerais</Label>
-                             <Textarea id="general-clauses" className="min-h-[100px]" defaultValue={`O COMPRADOR(A) declara ter vistoriado o imóvel, recebendo-o no estado em que se encontra. Todas as despesas de transferência, como ITBI, escritura e registro, correrão por conta do COMPRADOR(A).`} />
+                             <Label htmlFor="generalClauses">Texto das Disposições Gerais</Label>
+                             <Textarea id="generalClauses" className="min-h-[100px]" value={contractData.generalClauses} onChange={handleInputChange} />
                         </div>
                         
                         <div className="space-y-2">
                              <h3 className="font-semibold">CLÁUSULAS ADICIONAIS</h3>
-                             <Label htmlFor="additional-clauses">Cláusulas Adicionais (Opcional)</Label>
-                             <Textarea id="additional-clauses" className="min-h-[100px]" placeholder="Adicione aqui outras cláusulas, se necessário." />
+                             <Label htmlFor="additionalClauses">Cláusulas Adicionais (Opcional)</Label>
+                             <Textarea id="additionalClauses" className="min-h-[100px]" placeholder="Adicione aqui outras cláusulas, se necessário." value={contractData.additionalClauses} onChange={handleInputChange} />
                         </div>
 
                         <Separator />
@@ -279,14 +336,14 @@ export default function ContractPage() {
                         {/* Signatures */}
                         <div className="pt-8 text-center space-y-8">
                              <div>_________________________<br/><strong>{client.name}</strong><br/>COMPRADOR(A)</div>
-                             <div>_________________________<br/><strong className="uppercase">[NOME DO PROPRIETÁRIO]</strong><br/>VENDEDOR(ES)</div>
+                             <div>_________________________<br/><strong className="uppercase">{contractData.sellerName || '[NOME DO PROPRIETÁRIO]'}</strong><br/>VENDEDOR(ES)</div>
                              <div>_________________________<br/><strong>{realtor.name} (CRECI: {realtor.creci})</strong><br/>INTERVENIENTE ANUENTE</div>
                         </div>
 
                         <div className="text-center text-sm text-muted-foreground pt-8">
                              <div className="grid grid-cols-2 gap-4 mx-auto max-w-sm">
-                                <Input placeholder="Cidade" defaultValue="São Paulo" />
-                                <Input type="date" defaultValue={new Date().toISOString().split('T')[0]} />
+                                <Input id="city" placeholder="Cidade" value={contractData.city} onChange={handleInputChange} />
+                                <Input id="date" type="date" value={contractData.date} onChange={handleInputChange} />
                             </div>
                         </div>
                     </div>
