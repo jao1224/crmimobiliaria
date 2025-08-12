@@ -1,7 +1,9 @@
 
+
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,9 +15,8 @@ import { MoreHorizontal, Search } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { initialProperties } from "../properties/page";
-import { initialLeads } from "../crm/page";
 
-const initialNegotiations = [
+export const initialNegotiations = [
     {
         id: "NEG001",
         property: "Apartamento Sunnyvale",
@@ -52,11 +53,14 @@ const initialNegotiations = [
 const mockClients = [
     { id: "L001", doc: "111.222.333-44", name: "João Silva", source: "Website", status: "Novo", assignedTo: "Joana Doe" },
     { id: "L002", doc: "222.333.444-55", name: "Maria Garcia", source: "Indicação", status: "Contactado", assignedTo: "Joana Doe" },
-    { doc: "333.444.555-66", name: "David Johnson", source: "Campanha", status: "Qualificado", assignedTo: "João Roe" },
+    { id: "C001", doc: "333.444.555-66", name: "Alice Williams", source: "Indicação", status: "Cliente", assignedTo: "Joana Doe" },
+    { id: "C002", doc: "444.555.666-77", name: "Bob Brown", source: "Website", status: "Cliente", assignedTo: "João Roe" },
+    { id: "C003", doc: "555.666.777-88", name: "Charlie Davis", source: "Campanha", status: "Cliente", assignedTo: "Joana Doe" },
 ];
 
 
 export default function NegotiationsPage() {
+    const router = useRouter();
     const [negotiations, setNegotiations] = useState(initialNegotiations);
     const [isNewNegotiationOpen, setNewNegotiationOpen] = useState(false);
     const { toast } = useToast();
@@ -137,7 +141,8 @@ export default function NegotiationsPage() {
         setNegotiations(negotiations.map(neg => 
             neg.id === negotiationId ? { ...neg, stage: "Contrato Gerado", contractStatus: "Pendente" } : neg
         ));
-        toast({ title: "Sucesso!", description: "Contrato gerado e enviado para assinatura." });
+        toast({ title: "Sucesso!", description: "Contrato gerado. Redirecionando..." });
+        router.push(`/dashboard/negotiations/${negotiationId}/contract`);
     }
 
     return (
@@ -268,7 +273,7 @@ export default function NegotiationsPage() {
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                                                <DropdownMenuItem>Ver Detalhes</DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => router.push(`/dashboard/negotiations/${neg.id}/contract`)}>Ver Detalhes</DropdownMenuItem>
                                                 <DropdownMenuItem>Mover para Contrato</DropdownMenuItem>
                                                 <DropdownMenuItem onClick={() => handleGenerateContract(neg.id)} disabled={neg.contractStatus !== 'Não Gerado'}>
                                                     Gerar Contrato
