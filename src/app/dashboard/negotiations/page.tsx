@@ -268,6 +268,11 @@ export default function NegotiationsPage() {
                                             <Input id="date" name="date" type="date" required value={proposalDate} onChange={e => setProposalDate(e.target.value)} disabled={!foundProperty || !foundClient} />
                                         </div>
                                     </div>
+                                    {(!foundProperty || !foundClient) && (
+                                        <p className="text-xs text-muted-foreground text-center">
+                                            Os campos de proposta serão liberados após a busca e confirmação dos dados do imóvel e do cliente.
+                                        </p>
+                                    )}
                                 </div>
                             </div>
                             <DialogFooter className="border-t pt-4 gap-2 sm:justify-between">
@@ -349,3 +354,5 @@ export default function NegotiationsPage() {
         </div>
     );
 }
+
+    
