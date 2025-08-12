@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -48,6 +47,26 @@ export const initialNegotiations = [
         salesperson: "Joana Doe",
         realtor: "Carlos Pereira",
     },
+    {
+        id: "NEG004",
+        property: "Casa Greenfield",
+        client: "David Johnson",
+        stage: "Visita Agendada",
+        contractStatus: "Não Gerado",
+        value: 1200000,
+        salesperson: "Sofia Lima",
+        realtor: "Sofia Lima",
+    },
+    {
+        id: "NEG005",
+        property: "Casa Familiar Suburbana",
+        client: "Maria Garcia",
+        stage: "Proposta Recebida",
+        contractStatus: "Não Gerado",
+        value: 850000,
+        salesperson: "Sofia Lima",
+        realtor: "Carlos Pereira",
+    },
 ];
 
 // Mock data for clients
@@ -59,8 +78,12 @@ const mockClients = [
     { id: "C003", doc: "555.666.777-88", name: "Charlie Davis", source: "Campanha", status: "Cliente", assignedTo: "Joana Doe" },
 ];
 
-const mockCurrentUser = {
-    name: "Joana Doe",
+const mockUsers: Record<UserProfile, string | null> = {
+    'Admin': null,
+    'Imobiliária': null,
+    'Corretor Autônomo': 'Sofia Lima', 
+    'Investidor': 'Bob Brown', 
+    'Construtora': null,
 };
 
 
@@ -80,13 +103,12 @@ export default function NegotiationsPage({ activeProfile }: { activeProfile: Use
     const [isSearching, setIsSearching] = useState(false);
 
     const filteredNegotiations = useMemo(() => {
-        if (!activeProfile || activeProfile === 'Admin' || activeProfile === 'Imobiliária') {
-            return negotiations;
+        const currentUserName = activeProfile ? mockUsers[activeProfile] : null;
+
+        if (!currentUserName) {
+            return negotiations; // Shows all for Admin/Imobiliária
         }
         
-        // Simulating different users. In a real app, this would be the logged-in user's ID/name.
-        const currentUserName = mockCurrentUser.name;
-
         return negotiations.filter(neg => 
             neg.salesperson === currentUserName || neg.realtor === currentUserName
         );
@@ -163,12 +185,14 @@ export default function NegotiationsPage({ activeProfile }: { activeProfile: Use
         router.push(`/dashboard/negotiations/${negotiationId}/contract`);
     }
 
+    const isFilteredView = activeProfile && mockUsers[activeProfile];
+
     return (
         <div className="flex flex-col gap-6">
             <div className="flex items-start justify-between">
                 <div>
                     <h1 className="text-2xl font-bold">
-                        {activeProfile === 'Admin' || activeProfile === 'Imobiliária' ? 'Processos de Negociação' : 'Meus Processos'}
+                        {isFilteredView ? 'Meus Processos' : 'Processos de Negociação'}
                     </h1>
                     <p className="text-muted-foreground">Acompanhe e gerencie todas as suas negociações ativas.</p>
                 </div>
@@ -313,3 +337,5 @@ export default function NegotiationsPage({ activeProfile }: { activeProfile: Use
         </div>
     );
 }
+
+    
