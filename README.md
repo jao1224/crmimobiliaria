@@ -46,17 +46,17 @@ Este é o repositório do seu projeto LeadFlow, desenvolvido no Firebase Studio.
     -   **Relatórios Financeiros Detalhados (❌):**
         -   Filtros para analisar comissões e despesas por corretor, equipe, período, tipo de imóvel, etc.
 
-- **4. Conectar Módulos ao Banco de Dados (Firestore):**
-    -   **Persistência de Dados (❌):** Conectar todas as funcionalidades (CRM, Imóveis, Finanças, Equipes, etc.) ao banco de dados para salvar e carregar as informações.
+- **4. Persistência de Dados (Conectar ao Banco de Dados):**
+    -   **Conectar Módulos ao Firestore (🟡):** A tarefa principal. Conectar todas as funcionalidades (CRM, Imóveis, Finanças, Equipes, etc.) ao banco de dados para salvar e carregar as informações de forma persistente.
 
 - **5. Sistema de Autenticação e Perfis:**
-    -   **Implementar Autenticação Real (❌):** Integrar o Firebase Authentication.
-    -   **Implementar Mudança de Senha (❌):** Conectar a funcionalidade na página de configurações.
-    -   **Conectar Perfis de Usuário (❌):** Salvar os dados do perfil do usuário no Firestore.
+    -   **Implementar Autenticação Real (🟡):** Integrar o Firebase Authentication para que o login e o cadastro funcionem com usuários reais.
+    -   **Implementar Mudança de Senha (🟡):** Conectar a funcionalidade na página de configurações.
+    -   **Conectar Perfis de Usuário (🟡):** Salvar os dados do perfil do usuário no Firestore.
 
 - **6. Relatórios e Filtros Avançados:**
     -   **Filtros em Módulos (❌):** Adicionar filtros avançados nas páginas de Negociação, Contratos, Processos e Comissões.
-    -   **Filtros de Relatórios (❌):** Implementar os filtros na página de relatórios para que funcionem com os dados reais.
+    -   **Filtros de Relatórios (🟡):** Implementar os filtros na página de relatórios para que funcionem com os dados reais.
 
 - **7. Sistema de Notificações:**
-    -   **Implementar Notificações (❌):** Enviar alertas para ações importantes no sistema (e-mail, WhatsApp, etc.).
+    -   **Implementar Notificações (🟡):** Enviar alertas para ações importantes no sistema (e-mail, WhatsApp, etc.).
