@@ -34,9 +34,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import type { UserProfile } from "../layout";
 import { db } from "@/lib/firebase";
-import { collection, addDoc, getDocs, DocumentData } from "firebase/firestore";
+import { collection, addDoc, getDocs } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
 
 
@@ -52,61 +51,7 @@ type Property = {
   imageHint: string;
 };
 
-export const initialProperties = [
-  {
-    id: "1",
-    name: "Apartamento Sunnyvale",
-    address: "Rua Principal, 123, Sunnyvale, CA",
-    status: "Disponível",
-    price: 750000,
-    commission: 18750,
-    imageUrl: "https://placehold.co/80x80.png",
-    imageHint: "apartamento moderno",
-  },
-  {
-    id: "2",
-    name: "Casa Greenfield",
-    address: "Avenida Oak, 456, Greenfield, TX",
-    status: "Vendido",
-    price: 1200000,
-    commission: 24000,
-    imageUrl: "https://placehold.co/80x80.png",
-    imageHint: "casa suburbana",
-  },
-  {
-    id: "3",
-    name: "Vila Lakeside",
-    address: "Estrada do Lago, 789, Lakeside, FL",
-    status: "Pendente",
-    price: 2500000,
-    commission: 75000,
-    imageUrl: "https://placehold.co/80x80.png",
-    imageHint: "vila de luxo",
-  },
-  {
-    id: "4",
-    name: "Loft no Centro",
-    address: "Rua do Centro, 321, Metro, NY",
-    status: "Disponível",
-    price: 500000,
-    commission: 12500,
-    imageUrl: "https://placehold.co/80x80.png",
-    imageHint: "loft na cidade",
-  },
-  {
-    id: "5",
-    name: "Casa Familiar Suburbana",
-    address: "Alameda dos Pinheiros, 654, Suburbia, WA",
-    status: "Disponível",
-    price: 850000,
-    commission: 18700,
-    imageUrl: "https://placehold.co/80x80.png",
-    imageHint: "casa de família",
-  },
-];
-
-
-export default function PropertiesPage({ activeProfile }: { activeProfile?: UserProfile }) {
+export default function PropertiesPage() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [isPropertyDialogOpen, setPropertyDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -330,3 +275,5 @@ export default function PropertiesPage({ activeProfile }: { activeProfile?: User
     </div>
   );
 }
+
+    

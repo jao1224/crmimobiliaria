@@ -5,12 +5,11 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BarChart3, Building2, CircleDollarSign, Users } from "lucide-react";
 import { SalesReport } from "@/components/dashboard/sales-report";
-import type { UserProfile } from "./layout";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, query, where, Timestamp } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
 
-export default function DashboardPage({ activeProfile }: { activeProfile?: UserProfile }) {
+export default function DashboardPage() {
   const [stats, setStats] = useState({
     totalRevenue: 0,
     activeDeals: 0,
@@ -133,3 +132,5 @@ export default function DashboardPage({ activeProfile }: { activeProfile?: UserP
     </div>
   );
 }
+
+    

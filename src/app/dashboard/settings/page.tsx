@@ -15,7 +15,7 @@ import { MoreHorizontal, UserPlus, Trash2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, addDoc, doc, updateDoc, arrayUnion, arrayRemove, DocumentReference } from "firebase/firestore";
+import { collection, getDocs, addDoc, doc, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { UserProfile } from "../layout";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -498,3 +498,5 @@ export default function SettingsPage() {
         </div>
     )
 }
+
+    

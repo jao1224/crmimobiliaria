@@ -51,11 +51,16 @@ export function SalesReport() {
                 const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
                 deals.forEach(deal => {
-                    const date = new Date(deal.closeDate);
-                    const monthIndex = date.getUTCMonth(); // Usar getUTCMonth para evitar problemas de fuso horário
-                    const monthName = monthNames[monthIndex];
-                    if (monthName) {
-                        monthlySales[monthName] += deal.value;
+                    // Adiciona uma verificação para a data, pois pode ser inválida
+                    if (deal.closeDate && typeof deal.closeDate === 'string') {
+                        const date = new Date(deal.closeDate);
+                         if (!isNaN(date.getTime())) {
+                            const monthIndex = date.getUTCMonth(); // Usar getUTCMonth para evitar problemas de fuso horário
+                            const monthName = monthNames[monthIndex];
+                            if (monthName) {
+                                monthlySales[monthName] += deal.value;
+                            }
+                        }
                     }
                 });
 
@@ -78,30 +83,20 @@ export function SalesReport() {
 
     if (isLoading) {
         return (
-            <Card className="col-span-1 lg:col-span-7">
-                <CardHeader>
-                    <CardTitle>Visão Geral de Vendas</CardTitle>
-                    <CardDescription>Carregando dados de vendas...</CardDescription>
-                </CardHeader>
-                <CardContent className="pl-2">
-                    <div className="h-[350px] w-full flex items-center justify-center">
-                        <Skeleton className="h-full w-full" />
-                    </div>
-                </CardContent>
-            </Card>
+            <div className="h-[350px] w-full flex items-center justify-center">
+                <Skeleton className="h-full w-full" />
+            </div>
         )
     }
     
-    if (chartData.length === 0) {
+    // Verifica se há dados de vendas para exibir
+    const hasSalesData = chartData.some(data => data.sales > 0);
+
+    if (!hasSalesData) {
         return (
-             <Card className="col-span-1 lg:col-span-7">
-                <CardHeader>
-                    <CardTitle>Visão Geral de Vendas</CardTitle>
-                </CardHeader>
-                <CardContent className="pl-2 h-[350px] flex items-center justify-center">
-                   <p className="text-muted-foreground">Nenhum dado de venda encontrado para exibir.</p>
-                </CardContent>
-            </Card>
+             <div className="h-[350px] flex items-center justify-center">
+               <p className="text-muted-foreground">Nenhum dado de venda encontrado para exibir o gráfico.</p>
+            </div>
         )
     }
 
@@ -142,3 +137,5 @@ export function SalesReport() {
         </ChartContainer>
     );
 }
+
+    

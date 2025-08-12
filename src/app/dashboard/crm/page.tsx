@@ -13,7 +13,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import type { UserProfile } from "../layout";
 import { db } from "@/lib/firebase";
 import { collection, addDoc, getDocs, doc, writeBatch } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -44,7 +43,7 @@ type Client = {
 };
 
 
-export default function CrmPage({ activeProfile }: { activeProfile?: UserProfile }) {
+export default function CrmPage() {
     const [leads, setLeads] = useState<Lead[]>([]);
     const [deals, setDeals] = useState<Deal[]>([]);
     const [clients, setClients] = useState<Client[]>([]);
@@ -397,3 +396,6 @@ export default function CrmPage({ activeProfile }: { activeProfile?: UserProfile
             </Tabs>
         </div>
     )
+}
+
+    

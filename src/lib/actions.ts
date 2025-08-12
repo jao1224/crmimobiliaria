@@ -1,4 +1,4 @@
-// This file uses server-side code.
+
 'use server';
 
 import { matchProperties as matchPropertiesFlow, type MatchPropertiesInput } from '@/ai/flows/property-matching';
@@ -18,7 +18,7 @@ async function getPropertyDetailsFromFirestore() {
     const properties = querySnapshot.docs.map((doc, index) => {
       const data = doc.data();
       // Formata os detalhes de cada imóvel em uma string legível para a IA.
-      return `${index + 1}. ${data.name}: ${data.description || 'Sem descrição'}. Endereço: ${data.address}. Preço: R$ ${new Intl.NumberFormat('pt-BR').format(data.price)}. Comissão: ${data.commission}%. Status: ${data.status}.`;
+      return `${index + 1}. (ID: ${doc.id}) ${data.name}: ${data.description || 'Sem descrição'}. Endereço: ${data.address}. Preço: R$ ${new Intl.NumberFormat('pt-BR').format(data.price)}. Comissão: ${data.commission}%. Status: ${data.status}.`;
     });
 
     return properties.join('\n');
@@ -51,3 +51,5 @@ export async function findMatchingProperties(clientRequirements: string) {
     return { success: false, error: 'Falha ao encontrar imóveis correspondentes devido a um erro no servidor.' };
   }
 }
+
+    

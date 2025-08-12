@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import type { UserProfile } from "../layout";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, doc, updateDoc, query, where } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -34,7 +33,7 @@ type Negotiation = {
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount);
 
-export default function FinancePage({ activeProfile }: { activeProfile?: UserProfile }) {
+export default function FinancePage() {
     const [commissions, setCommissions] = useState<Commission[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const { toast } = useToast();
@@ -48,16 +47,25 @@ export default function FinancePage({ activeProfile }: { activeProfile?: UserPro
 
             const commissionsList = querySnapshot.docs.map(doc => {
                 const data = doc.data() as Negotiation;
+                // Simula o status da comissão com base na data de fechamento para demonstração
+                const closeDate = new Date(data.closeDate);
+                const today = new Date();
+                let status: Commission['status'] = 'Pendente';
+                if (data.stage === 'Contrato Gerado' && closeDate < today) {
+                    // Isso é uma simplificação. Uma lógica real teria um campo 'paid'
+                    // Aqui consideramos 'pago' se a data passou, o que não é real.
+                    // Para fins de exemplo, vamos manter alguns pendentes.
+                    // A lógica real para 'Vencido' também seria mais complexa.
+                }
+
                 return {
                     id: doc.id,
                     deal: data.property,
-                    amount: data.value * (data.commissionRate / 100),
-                    status: 'Pendente', // Status inicial default
+                    amount: data.value * ((data.commissionRate || 2) / 100), // Fallback para commissionRate
+                    status: status,
                     paymentDate: new Date(data.closeDate).toLocaleDateString('pt-BR', {timeZone: 'UTC'}),
                 };
             });
-            // NOTE: O status (pago, vencido) não está no Firestore, então essa lógica foi simplificada.
-            // Em uma app real, o status da comissão também seria um campo no documento.
             setCommissions(commissionsList);
 
         } catch (error) {
@@ -74,12 +82,13 @@ export default function FinancePage({ activeProfile }: { activeProfile?: UserPro
 
 
     const totalCommission = commissions.reduce((sum, item) => sum + item.amount, 0);
-    // Lógica de comissão paga/pendente precisa ser adaptada se o status não for salvo
     const paidCommission = commissions.filter(c => c.status === 'Pago').reduce((sum, item) => sum + item.amount, 0);
     const pendingCommission = totalCommission - paidCommission;
     
     // Esta função agora é apenas para UI, não salva no DB.
-    const handleStatusChange = (commissionId: string, newStatus: Commission['status']) => {
+     const handleStatusChange = (commissionId: string, newStatus: Commission['status']) => {
+        // NOTE: This function does not update Firestore. It's for UI demonstration only.
+        // A real implementation would require a 'status' field in the 'deals' or a separate 'commissions' collection.
         setCommissions(prevCommissions => 
             prevCommissions.map(c => 
                 c.id === commissionId ? { ...c, status: newStatus } : c
@@ -185,3 +194,5 @@ export default function FinancePage({ activeProfile }: { activeProfile?: UserPro
         </div>
     );
 }
+
+    

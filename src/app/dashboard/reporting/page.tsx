@@ -1,12 +1,13 @@
 
+"use client";
+
 import { SalesReport } from "@/components/dashboard/sales-report";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Download } from "lucide-react";
-import type { UserProfile } from "../layout";
 
-export default function ReportingPage({ activeProfile }: { activeProfile?: UserProfile }) {
+export default function ReportingPage() {
     // Os filtros ainda são visuais e não aplicam lógica de filtragem.
     // A lógica de busca de dados está agora dentro do componente SalesReport.
     return (
@@ -60,3 +61,5 @@ export default function ReportingPage({ activeProfile }: { activeProfile?: UserP
         </div>
     )
 }
+
+    
