@@ -13,76 +13,29 @@ import { Label } from "@/components/ui/label";
 import { MoreHorizontal, Search } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { initialProperties } from "../properties/page";
 import type { UserProfile } from "../layout";
 import { ProfileContext } from "@/contexts/ProfileContext";
+import { db } from "@/lib/firebase";
+import { collection, addDoc, getDocs, doc, writeBatch, query, where } from "firebase/firestore";
+import { Skeleton } from "@/components/ui/skeleton";
 
-export const initialNegotiations = [
-    {
-        id: "NEG001",
-        property: "Apartamento Sunnyvale",
-        client: "Alice Williams",
-        stage: "Proposta Enviada",
-        contractStatus: "Não Gerado",
-        value: 750000,
-        commissionRate: 2.5,
-        salesperson: "Joana Doe",
-        realtor: "Carlos Pereira",
-    },
-    {
-        id: "NEG002",
-        property: "Loft no Centro",
-        client: "Bob Brown",
-        stage: "Negociação",
-        contractStatus: "Não Gerado",
-        value: 500000,
-        commissionRate: 2.5,
-        salesperson: "João Roe",
-        realtor: "Sofia Lima",
-    },
-     {
-        id: "NEG003",
-        property: "Vila Lakeside",
-        client: "Charlie Davis",
-        stage: "Contrato Gerado",
-        contractStatus: "Pendente",
-        value: 2500000,
-        commissionRate: 3.0,
-        salesperson: "Joana Doe",
-        realtor: "Carlos Pereira",
-    },
-    {
-        id: "NEG004",
-        property: "Casa Greenfield",
-        client: "David Johnson",
-        stage: "Visita Agendada",
-        contractStatus: "Não Gerado",
-        value: 1200000,
-        commissionRate: 2.0,
-        salesperson: "Sofia Lima",
-        realtor: "Sofia Lima",
-    },
-    {
-        id: "NEG005",
-        property: "Casa Familiar Suburbana",
-        client: "Maria Garcia",
-        stage: "Proposta Recebida",
-        contractStatus: "Não Gerado",
-        value: 850000,
-        commissionRate: 2.2,
-        salesperson: "Sofia Lima",
-        realtor: "Carlos Pereira",
-    },
-];
+// Tipos
+type Negotiation = {
+    id: string;
+    property: string;
+    propertyId: string;
+    client: string;
+    clientId: string;
+    stage: string;
+    value: number;
+    salesperson: string;
+    realtor: string;
+    contractStatus: string;
+    commissionRate: number;
+};
+type Property = { id: string; name: string; address: string; price: number; commission: number; };
+type Client = { id: string; name: string; doc: string; };
 
-// Mock data for clients
-const mockClients = [
-    { id: "L001", doc: "111.222.333-44", name: "João Silva", source: "Website", status: "Novo", assignedTo: "Joana Doe" },
-    { id: "L002", doc: "222.333.444-55", name: "Maria Garcia", source: "Indicação", status: "Contactado", assignedTo: "Joana Doe" },
-    { id: "C001", doc: "333.444.555-66", name: "Alice Williams", source: "Indicação", status: "Cliente", assignedTo: "Joana Doe" },
-    { id: "C002", doc: "444.555.666-77", name: "Bob Brown", source: "Website", status: "Cliente", assignedTo: "João Roe" },
-    { id: "C003", doc: "555.666.777-88", name: "Charlie Davis", source: "Campanha", status: "Cliente", assignedTo: "Joana Doe" },
-];
 
 const mockUsers: Record<UserProfile, string | null> = {
     'Admin': null,
@@ -95,25 +48,42 @@ const mockUsers: Record<UserProfile, string | null> = {
 
 export default function NegotiationsPage() {
     const router = useRouter();
-    const [negotiations, setNegotiations] = useState(initialNegotiations);
+    const [negotiations, setNegotiations] = useState<Negotiation[]>([]);
     const [isNewNegotiationOpen, setNewNegotiationOpen] = useState(false);
     const { toast } = useToast();
     const { activeProfile } = useContext(ProfileContext);
     
-    // State for the new negotiation form
     const [propertyCode, setPropertyCode] = useState("");
     const [clientDoc, setClientDoc] = useState("");
-    const [foundProperty, setFoundProperty] = useState<any>(null);
-    const [foundClient, setFoundClient] = useState<any>(null);
+    const [foundProperty, setFoundProperty] = useState<Property | null>(null);
+    const [foundClient, setFoundClient] = useState<Client | null>(null);
     const [proposalValue, setProposalValue] = useState("");
     const [proposalDate, setProposalDate] = useState("");
     const [isSearching, setIsSearching] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+
+    const fetchNegotiations = async () => {
+        setIsLoading(true);
+        try {
+            const querySnapshot = await getDocs(collection(db, "deals"));
+            const negotiationsList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Negotiation));
+            setNegotiations(negotiationsList);
+        } catch (error) {
+            toast({ variant: "destructive", title: "Erro", description: "Não foi possível carregar as negociações." });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
+    useEffect(() => {
+        fetchNegotiations();
+    }, []);
 
     const filteredNegotiations = useMemo(() => {
         const currentUserName = activeProfile ? mockUsers[activeProfile] : null;
 
         if (!currentUserName) {
-            return negotiations; // Shows all for Admin/Imobiliária or if no user is mapped
+            return negotiations;
         }
         
         if (activeProfile === 'Investidor') {
@@ -126,15 +96,21 @@ export default function NegotiationsPage() {
     }, [negotiations, activeProfile]);
 
 
-    const handleSearch = () => {
+    const handleSearch = async () => {
         setIsSearching(true);
-        // Simulate API call
-        setTimeout(() => {
-            const property = initialProperties.find(p => p.id === propertyCode);
-            const client = mockClients.find(c => c.doc === clientDoc);
+        try {
+            // Busca de Imóvel
+            const propertiesQuery = query(collection(db, "properties"), where("id", "==", propertyCode));
+            const propertySnap = await getDocs(propertiesQuery);
+            const property = propertySnap.docs.length > 0 ? { id: propertySnap.docs[0].id, ...propertySnap.docs[0].data() } as Property : null;
             
-            setFoundProperty(property || null);
-            setFoundClient(client || null);
+            // Busca de Cliente
+            const clientsQuery = query(collection(db, "clients"), where("doc", "==", clientDoc));
+            const clientSnap = await getDocs(clientsQuery);
+            const client = clientSnap.docs.length > 0 ? { id: clientSnap.docs[0].id, ...clientSnap.docs[0].data() } as Client : null;
+
+            setFoundProperty(property);
+            setFoundClient(client);
             
             if (!property) {
                 toast({ variant: 'destructive', title: "Erro", description: "Imóvel não encontrado." });
@@ -145,8 +121,10 @@ export default function NegotiationsPage() {
             if (property && client) {
                  toast({ title: "Sucesso!", description: "Dados encontrados." });
             }
-            setIsSearching(false);
-        }, 1000);
+        } catch (error) {
+            toast({ variant: 'destructive', title: "Erro", description: "Ocorreu um erro ao buscar os dados." });
+        }
+        setIsSearching(false);
     };
 
     const resetForm = () => {
@@ -165,7 +143,7 @@ export default function NegotiationsPage() {
     }, [isNewNegotiationOpen]);
 
 
-    const handleAddNegotiation = (event: React.FormEvent<HTMLFormElement>) => {
+    const handleAddNegotiation = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
         if (!foundProperty || !foundClient) {
@@ -173,28 +151,42 @@ export default function NegotiationsPage() {
             return;
         }
 
-        const newNegotiation = {
-            id: `NEG${String(negotiations.length + 1).padStart(3, '0')}`,
+        const newNegotiationData = {
             property: foundProperty.name,
+            propertyId: foundProperty.id,
             client: foundClient.name,
+            clientId: foundClient.id,
             stage: "Proposta Enviada",
             contractStatus: "Não Gerado",
             value: Number(proposalValue),
-            commissionRate: foundProperty.commission, // Assume commission in properties is the rate
+            commissionRate: foundProperty.commission,
             salesperson: "Joana Doe", // Placeholder
             realtor: "Carlos Pereira", // Placeholder
+            closeDate: proposalDate,
         };
-        setNegotiations([newNegotiation, ...negotiations]);
-        setNewNegotiationOpen(false);
-        toast({ title: "Sucesso!", description: "Nova negociação iniciada." });
+
+        try {
+            await addDoc(collection(db, "deals"), newNegotiationData);
+            setNewNegotiationOpen(false);
+            toast({ title: "Sucesso!", description: "Nova negociação iniciada." });
+            fetchNegotiations(); // Re-fetch
+        } catch (error) {
+             toast({ variant: 'destructive', title: "Erro", description: "Não foi possível criar a negociação." });
+        }
     };
     
     const handleGenerateContract = (negotiationId: string) => {
-        setNegotiations(negotiations.map(neg => 
-            neg.id === negotiationId ? { ...neg, stage: "Contrato Gerado", contractStatus: "Pendente" } : neg
-        ));
-        toast({ title: "Sucesso!", description: "Contrato gerado. Redirecionando..." });
-        router.push(`/dashboard/negotiations/${negotiationId}/contract`);
+        const dealDocRef = doc(db, "deals", negotiationId);
+        const batch = writeBatch(db);
+        batch.update(dealDocRef, { stage: "Contrato Gerado", contractStatus: "Pendente" });
+        
+        batch.commit().then(() => {
+            toast({ title: "Sucesso!", description: "Contrato gerado. Redirecionando..." });
+            fetchNegotiations();
+            router.push(`/dashboard/negotiations/${negotiationId}/contract`);
+        }).catch(() => {
+            toast({ variant: 'destructive', title: "Erro", description: "Falha ao atualizar o status do contrato." });
+        });
     }
 
     const isFilteredView = activeProfile && mockUsers[activeProfile];
@@ -224,7 +216,7 @@ export default function NegotiationsPage() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="property-code">Imóvel (Código)</Label>
-                                        <Input id="property-code" value={propertyCode} onChange={e => setPropertyCode(e.target.value)} placeholder="Insira o código do imóvel" required />
+                                        <Input id="property-code" value={propertyCode} onChange={e => setPropertyCode(e.target.value)} placeholder="Insira o código do imóvel (Ex: 1, 2)" required />
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="client-doc">Cliente (CPF ou CNPJ)</Label>
@@ -291,9 +283,10 @@ export default function NegotiationsPage() {
                 <CardHeader>
                     <CardTitle>Negociações em Andamento</CardTitle>
                     <CardDescription>
-                        {filteredNegotiations.length > 0 
+                        {isLoading ? "Carregando..." : 
+                            filteredNegotiations.length > 0 
                             ? `Uma lista de ${filteredNegotiations.length} processo(s) de negociação.`
-                            : "Nenhum processo de negociação encontrado para este perfil."
+                            : "Nenhum processo de negociação encontrado."
                         }
                     </CardDescription>
                 </CardHeader>
@@ -314,7 +307,21 @@ export default function NegotiationsPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {filteredNegotiations.map((neg) => (
+                            {isLoading ? (
+                                Array.from({ length: 3 }).map((_, index) => (
+                                    <TableRow key={index}>
+                                        <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                                        <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                                        <TableCell><Skeleton className="h-6 w-24 rounded-full" /></TableCell>
+                                        <TableCell><Skeleton className="h-6 w-24 rounded-full" /></TableCell>
+                                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                                        <TableCell><Skeleton className="h-8 w-8" /></TableCell>
+                                    </TableRow>
+                                ))
+                            ) : filteredNegotiations.length > 0 ? (
+                                filteredNegotiations.map((neg) => (
                                 <TableRow key={neg.id}>
                                     <TableCell className="font-medium">{neg.property}</TableCell>
                                     <TableCell>{neg.client}</TableCell>
@@ -346,7 +353,12 @@ export default function NegotiationsPage() {
                                         </DropdownMenu>
                                     </TableCell>
                                 </TableRow>
-                            ))}
+                            ))
+                            ) : (
+                                 <TableRow>
+                                    <TableCell colSpan={8} className="h-24 text-center">Nenhum processo de negociação encontrado.</TableCell>
+                                </TableRow>
+                            )}
                         </TableBody>
                     </Table>
                 </CardContent>
