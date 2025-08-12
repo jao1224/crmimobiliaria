@@ -19,6 +19,7 @@ const initialNegotiations = [
         property: "Apartamento Sunnyvale",
         client: "Alice Williams",
         stage: "Proposta Enviada",
+        contractStatus: "Não Gerado",
         value: 750000,
         salesperson: "Joana Doe",
         realtor: "Carlos Pereira",
@@ -28,6 +29,7 @@ const initialNegotiations = [
         property: "Loft no Centro",
         client: "Bob Brown",
         stage: "Negociação",
+        contractStatus: "Não Gerado",
         value: 500000,
         salesperson: "João Roe",
         realtor: "Sofia Lima",
@@ -37,6 +39,7 @@ const initialNegotiations = [
         property: "Vila Lakeside",
         client: "Charlie Davis",
         stage: "Contrato Gerado",
+        contractStatus: "Pendente",
         value: 2500000,
         salesperson: "Joana Doe",
         realtor: "Carlos Pereira",
@@ -56,6 +59,7 @@ export default function NegotiationsPage() {
             property: `Imóvel: ${formData.get("property-code") as string}`,
             client: `Cliente: ${formData.get("client-doc") as string}`,
             stage: "Proposta Enviada",
+            contractStatus: "Não Gerado",
             value: Number(formData.get("value")),
             salesperson: "Joana Doe", // Placeholder
             realtor: "Carlos Pereira", // Placeholder
@@ -64,6 +68,13 @@ export default function NegotiationsPage() {
         setNewNegotiationOpen(false);
         toast({ title: "Sucesso!", description: "Nova negociação iniciada." });
     };
+    
+    const handleGenerateContract = (negotiationId: string) => {
+        setNegotiations(negotiations.map(neg => 
+            neg.id === negotiationId ? { ...neg, stage: "Contrato Gerado", contractStatus: "Pendente" } : neg
+        ));
+        toast({ title: "Sucesso!", description: "Contrato gerado e enviado para assinatura." });
+    }
 
     return (
         <div className="flex flex-col gap-6">
@@ -128,6 +139,7 @@ export default function NegotiationsPage() {
                                 <TableHead>Cliente</TableHead>
                                 <TableHead>Valor</TableHead>
                                 <TableHead>Fase</TableHead>
+                                <TableHead>Contrato</TableHead>
                                 <TableHead>Vendedor</TableHead>
                                 <TableHead>Captador</TableHead>
                                 <TableHead>
@@ -144,6 +156,9 @@ export default function NegotiationsPage() {
                                     <TableCell>
                                         <Badge variant="outline">{neg.stage}</Badge>
                                     </TableCell>
+                                     <TableCell>
+                                        <Badge variant={neg.contractStatus === "Não Gerado" ? "secondary" : "default"}>{neg.contractStatus}</Badge>
+                                    </TableCell>
                                     <TableCell>{neg.salesperson}</TableCell>
                                     <TableCell>{neg.realtor}</TableCell>
                                     <TableCell>
@@ -157,8 +172,10 @@ export default function NegotiationsPage() {
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuLabel>Ações</DropdownMenuLabel>
                                                 <DropdownMenuItem>Ver Detalhes</DropdownMenuItem>
-                                                <DropdownMenuItem>Avançar Fase</DropdownMenuItem>
-                                                <DropdownMenuItem>Gerar Contrato</DropdownMenuItem>
+                                                <DropdownMenuItem>Mover para Contrato</DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => handleGenerateContract(neg.id)}>
+                                                    Gerar Contrato
+                                                </DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     </TableCell>
