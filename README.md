@@ -25,15 +25,15 @@ Este é o repositório do seu projeto LeadFlow, desenvolvido no Firebase Studio.
 
 5. Persistência de Dados (Conectar ao Banco de Dados):
 
-❌ Conectar Módulos ao Firestore: A tarefa principal. Conectar todas as funcionalidades (CRM, Imóveis, Finanças, Equipes, etc.) ao banco de dados para salvar e carregar as informações de forma persistente.
+🟡 Conectar Módulos ao Firestore: A tarefa principal. Conectar todas as funcionalidades (CRM, Imóveis, Finanças, Equipes, etc.) ao banco de dados para salvar e carregar as informações de forma persistente.
 
 6. Sistema de Autenticação e Perfis:
 
-❌ Implementar Autenticação Real: Integrar o Firebase Authentication para que o login e o cadastro funcionem com usuários reais.
-❌ Implementar Mudança de Senha: Conectar a funcionalidade na página de configurações para permitir que os usuários alterem suas senhas de forma segura.
-❌ Conectar Perfis de Usuário: Salvar os dados do perfil do usuário no Firestore durante o cadastro e carregá-los dinamicamente no painel.
+🟡 Implementar Autenticação Real: Integrar o Firebase Authentication para que o login e o cadastro funcionem com usuários reais.
+🟡 Implementar Mudança de Senha: Conectar a funcionalidade na página de configurações para permitir que os usuários alterem suas senhas de forma segura.
+🟡 Conectar Perfis de Usuário: Salvar os dados do perfil do usuário no Firestore durante o cadastro e carregá-los dinamicamente no painel.
 
 7. Relatórios e Notificações:
 
-❌ Filtros Dinâmicos nos Relatórios: Implementar os filtros na página de relatórios para que funcionem com os dados reais do Firestore.
-❌ Sistema de Notificações: Implementar o envio de alertas para ações importantes no sistema (e-mail, WhatsApp, etc.).
+🟡 Filtros Dinâmicos nos Relatórios: Implementar os filtros na página de relatórios para que funcionem com os dados reais do Firestore.
+🟡 Sistema de Notificações: Implementar o envio de alertas para ações importantes no sistema (e-mail, WhatsApp, etc.).
