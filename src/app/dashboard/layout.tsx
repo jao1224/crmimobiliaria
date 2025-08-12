@@ -51,7 +51,7 @@ const menuConfig: Record<UserProfile, string[]> = {
     'Admin': ['/dashboard', '/dashboard/properties', '/dashboard/crm', '/dashboard/negotiations', '/dashboard/finance', '/dashboard/reporting', '/dashboard/settings'],
     'Imobiliária': ['/dashboard', '/dashboard/properties', '/dashboard/crm', '/dashboard/negotiations', '/dashboard/finance', '/dashboard/reporting', '/dashboard/settings'],
     'Corretor Autônomo': ['/dashboard', '/dashboard/properties', '/dashboard/crm', '/dashboard/negotiations', '/dashboard/reporting'],
-    'Investidor': ['/dashboard', '/dashboard/properties', '/dashboard/finance'],
+    'Investidor': ['/dashboard', '/dashboard/properties', '/dashboard/finance', '/dashboard/negotiations'],
     'Construtora': ['/dashboard', '/dashboard/properties', '/dashboard/negotiations', '/dashboard/finance'],
 };
 
@@ -79,7 +79,6 @@ export default function DashboardLayout({
       { href: "/dashboard/negotiations", icon: Handshake, label: "Negociações", tooltip: "Negociações" },
       { href: "/dashboard/finance", icon: CircleDollarSign, label: "Financeiro", tooltip: "Financeiro" },
       { href: "/dashboard/reporting", icon: BarChart3, label: "Relatórios", tooltip: "Relatórios" },
-      { href: "/dashboard/settings", icon: Settings, label: "Configurações", tooltip: "Configurações"},
   ];
   
   const visibleMenuItems = menuItems.filter(item => menuConfig[activeProfile].includes(item.href));

@@ -15,6 +15,7 @@ import { MoreHorizontal, UserPlus } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
+import type { UserProfile } from "../layout";
 
 type TeamMember = {
     id: string;
@@ -46,7 +47,7 @@ const roles = [
     "Coordenador", "Corretor", "Secretária", "Viabilizador"
 ];
 
-export default function SettingsPage() {
+export default function SettingsPage({ activeProfile }: { activeProfile?: UserProfile }) {
     const [teamMembers, setTeamMembers] = useState(initialTeamMembers);
     const [teams, setTeams] = useState(initialTeams);
     const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);

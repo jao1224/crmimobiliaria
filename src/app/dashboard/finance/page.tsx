@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import type { UserProfile } from "../layout";
 
 const commissions = [
     { id: 'C001', deal: 'Venda da Casa Greenfield', amount: 24000, status: 'Pago', paymentDate: '15/06/2024' },
@@ -11,7 +12,7 @@ const commissions = [
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount);
 
-export default function FinancePage() {
+export default function FinancePage({ activeProfile }: { activeProfile?: UserProfile }) {
     const totalCommission = commissions.reduce((sum, item) => sum + item.amount, 0);
     const paidCommission = commissions.filter(c => c.status === 'Pago').reduce((sum, item) => sum + item.amount, 0);
     const pendingCommission = totalCommission - paidCommission;

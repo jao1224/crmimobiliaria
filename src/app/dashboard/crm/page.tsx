@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -12,6 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import type { UserProfile } from "../layout";
 
 const initialLeads = [
     { id: "L001", name: "João Silva", source: "Website", status: "Novo", assignedTo: "Joana Doe" },
@@ -24,7 +26,7 @@ const initialDeals = [
     { id: "D002", property: "Loft no Centro", client: "Bob Brown", stage: "Negociação", value: 500000, closeDate: "30/07/2024" },
 ];
 
-export default function CrmPage() {
+export default function CrmPage({ activeProfile }: { activeProfile?: UserProfile }) {
     const [leads, setLeads] = useState(initialLeads);
     const [deals, setDeals] = useState(initialDeals);
     const [isLeadDialogOpen, setLeadDialogOpen] = useState(false);

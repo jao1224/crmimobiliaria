@@ -1,8 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart3, Building2, CircleDollarSign, Users } from "lucide-react";
 import { SalesReport } from "@/components/dashboard/sales-report";
+import type { UserProfile } from "./layout";
 
-export default function DashboardPage() {
+export default function DashboardPage({ activeProfile }: { activeProfile?: UserProfile }) {
   const overviewCards = [
     {
       title: "Receita Total",

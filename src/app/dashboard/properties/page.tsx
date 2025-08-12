@@ -34,6 +34,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import type { UserProfile } from "../layout";
 
 export const initialProperties = [
   {
@@ -88,7 +89,7 @@ export const initialProperties = [
   },
 ];
 
-export default function PropertiesPage() {
+export default function PropertiesPage({ activeProfile }: { activeProfile?: UserProfile }) {
   const [properties, setProperties] = useState(initialProperties);
   const [isPropertyDialogOpen, setPropertyDialogOpen] = useState(false);
   const { toast } = useToast();
@@ -245,5 +246,3 @@ export default function PropertiesPage() {
     </div>
   );
 }
-
-    
