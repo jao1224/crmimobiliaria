@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import { MoreHorizontal, Search } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { initialProperties } from "../properties/page";
+import type { UserProfile } from "../layout";
 
 export const initialNegotiations = [
     {
@@ -58,8 +59,12 @@ const mockClients = [
     { id: "C003", doc: "555.666.777-88", name: "Charlie Davis", source: "Campanha", status: "Cliente", assignedTo: "Joana Doe" },
 ];
 
+const mockCurrentUser = {
+    name: "Joana Doe",
+};
 
-export default function NegotiationsPage() {
+
+export default function NegotiationsPage({ activeProfile }: { activeProfile: UserProfile }) {
     const router = useRouter();
     const [negotiations, setNegotiations] = useState(initialNegotiations);
     const [isNewNegotiationOpen, setNewNegotiationOpen] = useState(false);
@@ -73,6 +78,19 @@ export default function NegotiationsPage() {
     const [proposalValue, setProposalValue] = useState("");
     const [proposalDate, setProposalDate] = useState("");
     const [isSearching, setIsSearching] = useState(false);
+
+    const filteredNegotiations = useMemo(() => {
+        if (!activeProfile || activeProfile === 'Admin' || activeProfile === 'Imobiliária') {
+            return negotiations;
+        }
+        
+        // Simulating different users. In a real app, this would be the logged-in user's ID/name.
+        const currentUserName = mockCurrentUser.name;
+
+        return negotiations.filter(neg => 
+            neg.salesperson === currentUserName || neg.realtor === currentUserName
+        );
+    }, [negotiations, activeProfile]);
 
 
     const handleSearch = () => {
@@ -149,7 +167,9 @@ export default function NegotiationsPage() {
         <div className="flex flex-col gap-6">
             <div className="flex items-start justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold">Processos de Negociação</h1>
+                    <h1 className="text-2xl font-bold">
+                        {activeProfile === 'Admin' || activeProfile === 'Imobiliária' ? 'Processos de Negociação' : 'Meus Processos'}
+                    </h1>
                     <p className="text-muted-foreground">Acompanhe e gerencie todas as suas negociações ativas.</p>
                 </div>
                 <Dialog open={isNewNegotiationOpen} onOpenChange={setNewNegotiationOpen}>
@@ -230,7 +250,10 @@ export default function NegotiationsPage() {
                 <CardHeader>
                     <CardTitle>Negociações em Andamento</CardTitle>
                     <CardDescription>
-                        Uma lista de todos os processos de negociação.
+                        {filteredNegotiations.length > 0 
+                            ? `Uma lista de ${filteredNegotiations.length} processo(s) de negociação.`
+                            : "Nenhum processo de negociação encontrado para este perfil."
+                        }
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -250,7 +273,7 @@ export default function NegotiationsPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {negotiations.map((neg) => (
+                            {filteredNegotiations.map((neg) => (
                                 <TableRow key={neg.id}>
                                     <TableCell className="font-medium">{neg.property}</TableCell>
                                     <TableCell>{neg.client}</TableCell>
@@ -290,5 +313,3 @@ export default function NegotiationsPage() {
         </div>
     );
 }
-
-    

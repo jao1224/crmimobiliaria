@@ -45,11 +45,11 @@ import { Button } from "@/components/ui/button";
 import { Header } from "@/components/dashboard/header";
 import { useToast } from "@/hooks/use-toast";
 
-type UserProfile = 'Admin' | 'Imobiliária' | 'Corretor Autônomo' | 'Investidor' | 'Construtora';
+export type UserProfile = 'Admin' | 'Imobiliária' | 'Corretor Autônomo' | 'Investidor' | 'Construtora';
 
 const menuConfig: Record<UserProfile, string[]> = {
-    'Admin': ['/dashboard', '/dashboard/properties', '/dashboard/crm', '/dashboard/negotiations', '/dashboard/finance', '/dashboard/reporting', '/dashboard/settings/team', '/dashboard/settings'],
-    'Imobiliária': ['/dashboard', '/dashboard/properties', '/dashboard/crm', '/dashboard/negotiations', '/dashboard/finance', '/dashboard/reporting', '/dashboard/settings/team'],
+    'Admin': ['/dashboard', '/dashboard/properties', '/dashboard/crm', '/dashboard/negotiations', '/dashboard/finance', '/dashboard/reporting', '/dashboard/settings'],
+    'Imobiliária': ['/dashboard', '/dashboard/properties', '/dashboard/crm', '/dashboard/negotiations', '/dashboard/finance', '/dashboard/reporting', '/dashboard/settings'],
     'Corretor Autônomo': ['/dashboard', '/dashboard/properties', '/dashboard/crm', '/dashboard/negotiations', '/dashboard/reporting'],
     'Investidor': ['/dashboard', '/dashboard/properties', '/dashboard/finance'],
     'Construtora': ['/dashboard', '/dashboard/properties', '/dashboard/negotiations', '/dashboard/finance'],
@@ -79,7 +79,7 @@ export default function DashboardLayout({
       { href: "/dashboard/negotiations", icon: Handshake, label: "Negociações", tooltip: "Negociações" },
       { href: "/dashboard/finance", icon: CircleDollarSign, label: "Financeiro", tooltip: "Financeiro" },
       { href: "/dashboard/reporting", icon: BarChart3, label: "Relatórios", tooltip: "Relatórios" },
-      { href: "/dashboard/settings/team", icon: Users, label: "Equipes", tooltip: "Equipes" },
+      { href: "/dashboard/settings", icon: Settings, label: "Configurações", tooltip: "Configurações"},
   ];
   
   const visibleMenuItems = menuItems.filter(item => menuConfig[activeProfile].includes(item.href));
@@ -115,6 +115,7 @@ export default function DashboardLayout({
         </SidebarContent>
         <SidebarFooter>
           <SidebarMenu>
+            {menuConfig[activeProfile].includes('/dashboard/settings') && (
             <SidebarMenuItem>
                <SidebarMenuButton
                 href="/dashboard/settings"
@@ -128,6 +129,7 @@ export default function DashboardLayout({
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
+             )}
             <SidebarMenuItem>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -183,7 +185,9 @@ export default function DashboardLayout({
       </Sidebar>
       <SidebarInset>
         <Header />
-        <main className="flex-1 p-4 md:p-6">{children}</main>
+        <main className="flex-1 p-4 md:p-6">
+          {React.cloneElement(children as React.ReactElement, { activeProfile })}
+        </main>
       </SidebarInset>
     </SidebarProvider>
   );
