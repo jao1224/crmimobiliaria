@@ -14,11 +14,11 @@ import { useToast } from "@/hooks/use-toast";
 import { MoreHorizontal, UserPlus, Trash2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import Link from "next/link";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, addDoc, doc, updateDoc, arrayUnion, arrayRemove, DocumentReference } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
-
+import type { UserProfile } from "../layout";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type TeamMember = {
     id: string;
@@ -38,6 +38,25 @@ const roles = [
     "Locação", "Leilão", "Despachante", "Avaliador", "Gerente",
     "Coordenador", "Corretor", "Secretária", "Viabilizador"
 ];
+
+const allModules = [
+    { id: "/dashboard", label: "Painel" },
+    { id: "/dashboard/properties", label: "Imóveis" },
+    { id: "/dashboard/crm", label: "CRM" },
+    { id: "/dashboard/negotiations", label: "Negociações" },
+    { id: "/dashboard/finance", label: "Financeiro" },
+    { id: "/dashboard/reporting", label: "Relatórios" },
+    { id: "/dashboard/settings", label: "Configurações" },
+];
+
+const menuConfig: Record<UserProfile, string[]> = {
+    'Admin': ['/dashboard', '/dashboard/properties', '/dashboard/crm', '/dashboard/negotiations', '/dashboard/finance', '/dashboard/reporting', '/dashboard/settings'],
+    'Imobiliária': ['/dashboard', '/dashboard/properties', '/dashboard/crm', '/dashboard/negotiations', '/dashboard/finance', '/dashboard/reporting', '/dashboard/settings'],
+    'Corretor Autônomo': ['/dashboard', '/dashboard/properties', '/dashboard/crm', '/dashboard/negotiations', '/dashboard/reporting'],
+    'Investidor': ['/dashboard', '/dashboard/properties', '/dashboard/finance', '/dashboard/negotiations'],
+    'Construtora': ['/dashboard', '/dashboard/properties', '/dashboard/negotiations', '/dashboard/finance'],
+};
+
 
 export default function SettingsPage() {
     const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
@@ -375,18 +394,36 @@ export default function SettingsPage() {
                 <TabsContent value="permissions">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Permissões</CardTitle>
-                            <CardDescription>Configure os níveis de acesso para diferentes funções e perfis de usuário.</CardDescription>
+                            <CardTitle>Gerenciador de Permissões por Perfil</CardTitle>
+                            <CardDescription>
+                                Controle o acesso de cada perfil aos módulos do sistema.
+                                <span className="block text-xs mt-1"> (Observação: Esta interface é apenas para visualização. As permissões reais ainda são definidas no código.)</span>
+                            </CardDescription>
                         </CardHeader>
-                        <CardContent className="space-y-2">
-                             <p className="text-sm text-muted-foreground">
-                                A gestão de acesso no LeadFlow é baseada nos perfis de visualização ('Admin', 'Imobiliária', etc.).
-                                Atualmente, apenas os perfis de 'Admin' e 'Imobiliária' podem acessar esta tela de configurações para gerenciar equipes e membros.
-                            </p>
-                            <Button variant="link" asChild className="p-0">
-                                <Link href="#">Saber mais sobre as funções</Link>
-                            </Button>
+                        <CardContent className="space-y-6">
+                            {Object.keys(menuConfig).map(profile => (
+                                <div key={profile}>
+                                    <h3 className="text-lg font-semibold mb-2">{profile}</h3>
+                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 rounded-md border p-4">
+                                        {allModules.map(module => (
+                                            <div key={module.id} className="flex items-center space-x-2">
+                                                <Checkbox
+                                                    id={`${profile}-${module.id}`}
+                                                    checked={menuConfig[profile as UserProfile].includes(module.id)}
+                                                    disabled
+                                                />
+                                                <Label htmlFor={`${profile}-${module.id}`} className="font-normal">
+                                                    {module.label}
+                                                </Label>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
                         </CardContent>
+                         <CardFooter>
+                            <Button disabled>Salvar Permissões</Button>
+                         </CardFooter>
                     </Card>
                 </TabsContent>
             </Tabs>
