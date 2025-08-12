@@ -28,13 +28,29 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PropertyMatcher } from "@/components/dashboard/property-matcher";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import type { UserProfile } from "../layout";
+import { db } from "@/lib/firebase";
+import { collection, addDoc, getDocs, DocumentData } from "firebase/firestore";
+import { Skeleton } from "@/components/ui/skeleton";
+
+
+// Define o tipo para um imóvel, espelhando a estrutura do Firestore
+type Property = {
+  id: string;
+  name: string;
+  address: string;
+  status: string;
+  price: number;
+  commission: number; // Armazenado como taxa percentual, ex: 2.5
+  imageUrl: string;
+  imageHint: string;
+};
 
 export const initialProperties = [
   {
@@ -89,27 +105,64 @@ export const initialProperties = [
   },
 ];
 
+
 export default function PropertiesPage({ activeProfile }: { activeProfile?: UserProfile }) {
-  const [properties, setProperties] = useState(initialProperties);
+  const [properties, setProperties] = useState<Property[]>([]);
   const [isPropertyDialogOpen, setPropertyDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  const handleAddProperty = (event: React.FormEvent<HTMLFormElement>) => {
+  const fetchProperties = async () => {
+    setIsLoading(true);
+    try {
+      const querySnapshot = await getDocs(collection(db, "properties"));
+      const propertiesList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Property));
+      setProperties(propertiesList);
+    } catch (error) {
+      console.error("Error fetching properties: ", error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao carregar imóveis",
+        description: "Não foi possível buscar os dados do Firestore.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProperties();
+  }, []);
+
+  const handleAddProperty = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
-    const newProperty = {
-      id: String(properties.length + 1),
+    
+    const newPropertyData = {
       name: formData.get("name") as string,
       address: formData.get("address") as string,
       status: "Disponível",
       price: Number(formData.get("price")),
-      commission: Number(formData.get("commission")),
+      commission: Number(formData.get("commission")), // Taxa %
+      description: formData.get("description") as string,
+      ownerInfo: formData.get("owner") as string,
       imageUrl: "https://placehold.co/80x80.png",
       imageHint: "novo imovel",
     };
-    setProperties([...properties, newProperty]);
-    setPropertyDialogOpen(false);
-    toast({ title: "Sucesso!", description: "Imóvel adicionado com sucesso." });
+
+    try {
+      await addDoc(collection(db, "properties"), newPropertyData);
+      toast({ title: "Sucesso!", description: "Imóvel adicionado com sucesso." });
+      setPropertyDialogOpen(false);
+      fetchProperties(); // Re-fetch para atualizar a lista
+    } catch (error) {
+      console.error("Error adding document: ", error);
+       toast({
+        variant: "destructive",
+        title: "Erro ao salvar",
+        description: "Não foi possível adicionar o imóvel ao banco de dados.",
+      });
+    }
   };
 
 
@@ -184,7 +237,7 @@ export default function PropertiesPage({ activeProfile }: { activeProfile?: User
                 <TableHead>Status</TableHead>
                 <TableHead className="hidden md:table-cell">Preço</TableHead>
                 <TableHead className="hidden md:table-cell">
-                  Comissão
+                  Comissão (%)
                 </TableHead>
                 <TableHead>
                   <span className="sr-only">Ações</span>
@@ -192,7 +245,31 @@ export default function PropertiesPage({ activeProfile }: { activeProfile?: User
               </TableRow>
             </TableHeader>
             <TableBody>
-              {properties.map((property) => (
+              {isLoading ? (
+                Array.from({ length: 5 }).map((_, index) => (
+                  <TableRow key={index}>
+                    <TableCell className="hidden sm:table-cell">
+                      <Skeleton className="h-16 w-16 rounded-md" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-4 w-48" />
+                       <Skeleton className="h-3 w-64 mt-2" />
+                    </TableCell>
+                    <TableCell>
+                       <Skeleton className="h-6 w-24 rounded-full" />
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                       <Skeleton className="h-4 w-28" />
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                       <Skeleton className="h-4 w-12" />
+                    </TableCell>
+                     <TableCell>
+                       <Skeleton className="h-8 w-8 rounded-md" />
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : properties.map((property) => (
                 <TableRow key={property.id}>
                   <TableCell className="hidden sm:table-cell">
                     <Image
@@ -217,7 +294,7 @@ export default function PropertiesPage({ activeProfile }: { activeProfile?: User
                     {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(property.price)}
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
-                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(property.commission)}
+                    {`${property.commission}%`}
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>
@@ -239,6 +316,13 @@ export default function PropertiesPage({ activeProfile }: { activeProfile?: User
                   </TableCell>
                 </TableRow>
               ))}
+               {!isLoading && properties.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-24 text-center">
+                    Nenhum imóvel encontrado. Comece adicionando um.
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>
