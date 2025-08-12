@@ -7,7 +7,11 @@ import { Separator } from "@/components/ui/separator";
 import { initialNegotiations } from "@/app/dashboard/negotiations/page";
 import { initialProperties } from "@/app/dashboard/properties/page";
 import { notFound, useParams } from "next/navigation";
-import { Printer } from "lucide-react";
+import { Printer, Save } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
 
 // Mock data for clients
 const mockClients = [
@@ -25,6 +29,7 @@ const mockRealtors = {
 
 export default function ContractPage() {
     const params = useParams();
+    const { toast } = useToast();
     const negotiationId = params.id as string;
 
     const negotiation = initialNegotiations.find(n => n.id === negotiationId);
@@ -43,23 +48,33 @@ export default function ContractPage() {
     const handlePrint = () => {
         window.print();
     };
+    
+    const handleSave = () => {
+        toast({ title: "Sucesso!", description: "Contrato salvo com sucesso."});
+    }
 
     return (
         <div className="flex flex-col gap-6">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between print:hidden">
                 <div>
-                    <h1 className="text-2xl font-bold">Contrato de Compra e Venda</h1>
+                    <h1 className="text-2xl font-bold">Editor de Contrato de Compra e Venda</h1>
                     <p className="text-muted-foreground">Negociação ID: {negotiation.id}</p>
                 </div>
-                <Button onClick={handlePrint} variant="outline">
-                    <Printer className="mr-2 h-4 w-4" />
-                    Imprimir Contrato
-                </Button>
+                <div className="flex gap-2">
+                    <Button onClick={handleSave} variant="default">
+                        <Save className="mr-2 h-4 w-4" />
+                        Salvar Contrato
+                    </Button>
+                    <Button onClick={handlePrint} variant="outline">
+                        <Printer className="mr-2 h-4 w-4" />
+                        Imprimir / Gerar PDF
+                    </Button>
+                </div>
             </div>
 
             <Card className="print:shadow-none print:border-none">
                 <CardContent className="p-8">
-                    <div className="space-y-8">
+                    <div className="space-y-6">
                         {/* Header */}
                         <div className="text-center">
                             <h2 className="text-xl font-semibold">CONTRATO PARTICULAR DE PROMESSA DE COMPRA E VENDA DE IMÓVEL</h2>
@@ -69,16 +84,33 @@ export default function ContractPage() {
                         <div className="space-y-4">
                             <div>
                                 <h3 className="font-semibold mb-2">VENDEDOR(ES):</h3>
-                                <p><strong>Nome:</strong> [NOME DO PROPRIETÁRIO], <strong>CPF/CNPJ:</strong> [DOCUMENTO DO PROPRIETÁRIO], residente e domiciliado em [ENDEREÇO DO PROPRIETÁRIO].</p>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border p-4 rounded-md">
+                                    <div className="space-y-1">
+                                        <Label htmlFor="seller-name">Nome</Label>
+                                        <Input id="seller-name" placeholder="Nome do Proprietário" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label htmlFor="seller-doc">CPF/CNPJ</Label>
+                                        <Input id="seller-doc" placeholder="Documento do Proprietário" />
+                                    </div>
+                                    <div className="col-span-1 md:col-span-2 space-y-1">
+                                         <Label htmlFor="seller-address">Endereço</Label>
+                                        <Input id="seller-address" placeholder="Endereço Completo do Proprietário" />
+                                    </div>
+                                </div>
                             </div>
                             <div>
                                 <h3 className="font-semibold mb-2">COMPRADOR(A):</h3>
-                                <p><strong>Nome:</strong> {client.name}, <strong>CPF/CNPJ:</strong> {client.doc}, residente e domiciliado em {client.address}.</p>
+                                <p className="border p-4 rounded-md bg-muted/50">
+                                    <strong>Nome:</strong> {client.name}, <strong>CPF/CNPJ:</strong> {client.doc}, residente e domiciliado em {client.address}.
+                                </p>
                             </div>
                              <div>
                                 <h3 className="font-semibold mb-2">INTERVENIENTE ANUENTE (IMOBILIÁRIA):</h3>
-                                <p><strong>Razão Social:</strong> LeadFlow Imobiliária Ltda., <strong>CNPJ:</strong> 00.123.456/0001-00, com sede em [Endereço da Imobiliária], representada por seu corretor responsável.</p>
-                                <p><strong>Corretor Responsável:</strong> {realtor.name}, <strong>CRECI:</strong> {realtor.creci}.</p>
+                                 <p className="border p-4 rounded-md bg-muted/50">
+                                    <strong>Razão Social:</strong> LeadFlow Imobiliária Ltda., <strong>CNPJ:</strong> 00.123.456/0001-00, com sede em [Endereço da Imobiliária], representada por seu corretor responsável.<br/>
+                                    <strong>Corretor Responsável:</strong> {realtor.name}, <strong>CRECI:</strong> {realtor.creci}.
+                                </p>
                             </div>
                         </div>
 
@@ -87,37 +119,53 @@ export default function ContractPage() {
                         {/* Object */}
                         <div className="space-y-2">
                             <h3 className="font-semibold">CLÁUSULA PRIMEIRA - DO OBJETO</h3>
-                            <p className="text-justify">
-                                O presente contrato tem por objeto a promessa de compra e venda do imóvel a seguir descrito: {property.name}, localizado na {property.address}, com área total de [ÁREA] m², matrícula nº [MATRÍCULA DO IMÓVEL] do [Nº] Cartório de Registro de Imóveis de [CIDADE].
+                            <p className="text-justify text-sm">
+                                O presente contrato tem por objeto a promessa de compra e venda do imóvel a seguir descrito: <strong>{property.name}</strong>, localizado na <strong>{property.address}</strong>.
                             </p>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="space-y-1">
+                                    <Label htmlFor="property-area">Área (m²)</Label>
+                                    <Input id="property-area" placeholder="Ex: 120" />
+                                </div>
+                                <div className="space-y-1">
+                                    <Label htmlFor="property-registration">Matrícula do Imóvel</Label>
+                                    <Input id="property-registration" placeholder="Nº da Matrícula" />
+                                </div>
+                                <div className="space-y-1">
+                                    <Label htmlFor="property-registry-office">Cartório de Registro</Label>
+                                    <Input id="property-registry-office" placeholder="Ex: 1º Cartório de Registro de Imóveis de São Paulo" />
+                                </div>
+                            </div>
                         </div>
                         
                         {/* Price and Payment */}
                         <div className="space-y-2">
                             <h3 className="font-semibold">CLÁUSULA SEGUNDA - DO PREÇO E DA FORMA DE PAGAMENTO</h3>
-                            <p className="text-justify">
-                                O valor total da presente transação é de <strong>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(negotiation.value)}</strong>, a ser pago pelo COMPRADOR(A) ao VENDEDOR(ES) da seguinte forma:
+                            <p className="text-justify text-sm">
+                                O valor total da presente transação é de <strong>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(negotiation.value)}</strong>, a ser pago pelo COMPRADOR(A) ao VENDEDOR(ES).
                             </p>
-                             <p className="text-justify pl-4">
-                                a) Sinal de <strong>R$ [VALOR DO SINAL]</strong>, pago neste ato através de [FORMA DE PAGAMENTO DO SINAL].<br/>
-                                b) O restante de <strong>R$ [VALOR RESTANTE]</strong> será pago em [NÚMERO DE PARCELAS] parcelas ou através de financiamento bancário até a data de [DATA LIMITE].
-                            </p>
+                             <Label htmlFor="payment-terms">Forma de Pagamento Detalhada</Label>
+                             <Textarea id="payment-terms" placeholder="Descreva os termos de pagamento. Ex: a) Sinal de R$ 50.000,00... b) O restante de R$ 700.000,00 será pago via financiamento bancário..." className="min-h-[100px]" />
                         </div>
 
                         {/* Commission */}
                         <div className="space-y-2">
                              <h3 className="font-semibold">CLÁUSULA TERCEIRA - DA COMISSÃO DE CORRETAGEM</h3>
-                             <p className="text-justify">
-                                Os honorários devidos pela intermediação desta negociação, no montante de <strong>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(property.commission)}</strong>, correspondentes a [PERCENTUAL]% do valor da venda, são de responsabilidade do VENDEDOR(ES), a serem pagos à INTERVENIENTE ANUENTE na data da compensação do sinal.
-                             </p>
+                             <Label htmlFor="commission-clause">Texto da Cláusula de Comissão</Label>
+                             <Textarea id="commission-clause" className="min-h-[120px]" defaultValue={`Os honorários devidos pela intermediação desta negociação, no montante de ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(property.commission)}, correspondentes a [PERCENTUAL]% do valor da venda, são de responsabilidade do VENDEDOR(ES), a serem pagos à INTERVENIENTE ANUENTE na data da compensação do sinal.`} />
                         </div>
 
                         {/* General Clauses */}
                          <div className="space-y-2">
                              <h3 className="font-semibold">CLÁUSULA QUARTA - DAS DISPOSIÇÕES GERAIS</h3>
-                             <p className="text-justify">
-                                 O COMPRADOR(A) declara ter vistoriado o imóvel, recebendo-o no estado em que se encontra. Todas as despesas de transferência, como ITBI, escritura e registro, correrão por conta do COMPRADOR(A).
-                             </p>
+                             <Label htmlFor="general-clauses">Texto das Disposições Gerais</Label>
+                             <Textarea id="general-clauses" className="min-h-[100px]" defaultValue={`O COMPRADOR(A) declara ter vistoriado o imóvel, recebendo-o no estado em que se encontra. Todas as despesas de transferência, como ITBI, escritura e registro, correrão por conta do COMPRADOR(A).`} />
+                        </div>
+                        
+                        <div className="space-y-2">
+                             <h3 className="font-semibold">CLÁUSULAS ADICIONAIS</h3>
+                             <Label htmlFor="additional-clauses">Cláusulas Adicionais (Opcional)</Label>
+                             <Textarea id="additional-clauses" className="min-h-[100px]" placeholder="Adicione aqui outras cláusulas, se necessário." />
                         </div>
 
                         <Separator />
@@ -125,12 +173,15 @@ export default function ContractPage() {
                         {/* Signatures */}
                         <div className="pt-8 text-center space-y-8">
                              <div>_________________________<br/><strong>{client.name}</strong><br/>COMPRADOR(A)</div>
-                             <div>_________________________<br/><strong>[NOME DO PROPRIETÁRIO]</strong><br/>VENDEDOR(ES)</div>
+                             <div>_________________________<br/><strong className="uppercase">[NOME DO PROPRIETÁRIO]</strong><br/>VENDEDOR(ES)</div>
                              <div>_________________________<br/><strong>{realtor.name} (CRECI: {realtor.creci})</strong><br/>INTERVENIENTE ANUENTE</div>
                         </div>
 
                         <div className="text-center text-sm text-muted-foreground pt-8">
-                            <p>Local e Data: [CIDADE], {new Date().toLocaleDateString('pt-BR', { year: 'numeric', month: 'long', day: 'numeric' })}.</p>
+                             <div className="grid grid-cols-2 gap-4 mx-auto max-w-sm">
+                                <Input placeholder="Cidade" defaultValue="São Paulo" />
+                                <Input type="date" defaultValue={new Date().toISOString().split('T')[0]} />
+                            </div>
                         </div>
                     </div>
                 </CardContent>
@@ -138,4 +189,3 @@ export default function ContractPage() {
         </div>
     );
 }
-
