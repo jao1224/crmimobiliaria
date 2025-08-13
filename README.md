@@ -43,6 +43,9 @@ Este é o repositório do seu projeto LeadFlow, desenvolvido no Firebase Studio.
         -   Abertura de Conta
         -   Matrícula Atualizada
 
+-   **📍 Outros Serviços**
+    -   [✅] Módulo com abas para Avaliador, Jurídico, Leilão, Despachante e Locação.
+
 ### 🟡 Próximos Passos (A Fazer)
 
 -   **1. Persistência e Integração de Dados (Conectar ao Banco de Dados):**
