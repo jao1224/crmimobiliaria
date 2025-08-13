@@ -366,12 +366,16 @@ export default function NegotiationsPage() {
                         <TableBody>
                             {filteredNegotiations.length > 0 ? (
                                 filteredNegotiations.map((neg) => (
-                                <TableRow 
+                                <TableRow
                                     key={neg.id} 
-                                    className="cursor-pointer hover:bg-secondary"
-                                    onClick={() => router.push(`/dashboard/negotiations/${neg.id}/contract`)}
+                                    className="hover:bg-secondary"
                                 >
-                                    <TableCell className="font-medium">{neg.property}</TableCell>
+                                    <TableCell 
+                                        className="font-medium cursor-pointer"
+                                        onClick={() => router.push(`/dashboard/negotiations/${neg.id}/contract`)}
+                                    >
+                                        {neg.property}
+                                    </TableCell>
                                     <TableCell>{neg.client}</TableCell>
                                     <TableCell className="hidden md:table-cell">{neg.type}</TableCell>
                                     <TableCell>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(neg.value)}</TableCell>
@@ -383,7 +387,7 @@ export default function NegotiationsPage() {
                                     </TableCell>
                                     <TableCell className="hidden lg:table-cell">{neg.salesperson}</TableCell>
                                     <TableCell className="hidden lg:table-cell">{neg.realtor}</TableCell>
-                                    <TableCell onClick={(e) => e.stopPropagation()}>
+                                    <TableCell>
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
                                                 <Button aria-haspopup="true" size="icon" variant="ghost">
@@ -393,7 +397,7 @@ export default function NegotiationsPage() {
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                                                <DropdownMenuItem onClick={() => router.push(`/dashboard/negotiations/${neg.id}/contract`)}>Ver Detalhes</DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => router.push(`/dashboard/processes`)}>Ver Processo</DropdownMenuItem>
                                                 <DropdownMenuItem onClick={() => handleGenerateContract(neg.id)} disabled={neg.contractStatus !== 'Não Gerado'}>
                                                     Gerar Contrato
                                                 </DropdownMenuItem>
