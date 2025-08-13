@@ -6,6 +6,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, Clock, FileText, Landmark, Users, DollarSign, Building, User, Phone, Mail, FileSignature, Banknote, Group, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -209,4 +210,3 @@ export default function ProcessesPage() {
         </div>
     );
 }
-
