@@ -2,7 +2,7 @@
 "use client";
 
 import Image from "next/image";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, Upload } from "lucide-react";
 import { Badge, badgeVariants } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -69,6 +69,30 @@ export default function PropertiesPage() {
   const [isDetailModalOpen, setDetailModalOpen] = useState(false);
   const [isEditDialogOpen, setEditDialogOpen] = useState(false);
   const { toast } = useToast();
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) { // 2MB
+        toast({ variant: 'destructive', title: "Arquivo muito grande", description: "Por favor, selecione uma imagem com menos de 2MB." });
+        return;
+      }
+      const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!validTypes.includes(file.type)) {
+        toast({ variant: 'destructive', title: "Formato inválido", description: "Por favor, selecione uma imagem (JPG, PNG, GIF, WebP)." });
+        return;
+      }
+      setSelectedFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
 
   const handleAddProperty = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -81,7 +105,7 @@ export default function PropertiesPage() {
       status: "Disponível",
       price: Number(formData.get("price")),
       commission: Number(formData.get("commission")),
-      imageUrl: "https://placehold.co/80x80.png",
+      imageUrl: imagePreview || "https://placehold.co/80x80.png",
       imageHint: "novo imovel",
       description: formData.get("description") as string,
       ownerInfo: formData.get("owner") as string,
@@ -104,6 +128,7 @@ export default function PropertiesPage() {
       address: formData.get("address") as string,
       price: Number(formData.get("price")),
       commission: Number(formData.get("commission")),
+      imageUrl: imagePreview || editingProperty.imageUrl,
       description: formData.get("description") as string,
       ownerInfo: formData.get("owner") as string,
     };
@@ -121,8 +146,17 @@ export default function PropertiesPage() {
 
   const handleEditClick = (property: Property) => {
     setEditingProperty(property);
+    setImagePreview(property.imageUrl);
     setEditDialogOpen(true);
   };
+  
+  // Limpar o preview ao fechar o dialog
+  useEffect(() => {
+    if (!isPropertyDialogOpen && !isEditDialogOpen) {
+        setImagePreview(null);
+        setSelectedFile(null);
+    }
+  }, [isPropertyDialogOpen, isEditDialogOpen]);
 
   const getStatusVariant = (status: string): VariantProps<typeof badgeVariants>["variant"] => {
     switch (status) {
@@ -190,6 +224,19 @@ export default function PropertiesPage() {
                    <div className="md:col-span-2 space-y-2">
                      <Label htmlFor="owner">Informações do Proprietário</Label>
                      <Textarea id="owner" name="owner" placeholder="Nome, contato e outras informações do proprietário." />
+                  </div>
+                  <div className="md:col-span-2 space-y-2">
+                    <Label htmlFor="image">Imagem do Imóvel</Label>
+                    <div className="flex items-center gap-4">
+                        {imagePreview ? (
+                            <Image src={imagePreview} alt="Preview do imóvel" width={80} height={80} className="rounded-md object-cover aspect-square"/>
+                        ) : (
+                            <div className="w-20 h-20 bg-muted rounded-md flex items-center justify-center text-muted-foreground">
+                                <Upload className="h-6 w-6"/>
+                            </div>
+                        )}
+                        <Input id="image" name="image" type="file" onChange={handleFileChange} accept="image/png, image/jpeg, image/gif, image/webp" />
+                    </div>
                   </div>
                 </div>
                 <DialogFooter>
@@ -342,42 +389,55 @@ export default function PropertiesPage() {
             <DialogTitle>Editar Imóvel</DialogTitle>
             <DialogDescription>Atualize os detalhes do imóvel abaixo.</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleUpdateProperty}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-name">Nome do Imóvel</Label>
-                <Input id="edit-name" name="name" defaultValue={editingProperty?.name} required />
+          {editingProperty && (
+            <form onSubmit={handleUpdateProperty}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-name">Nome do Imóvel</Label>
+                  <Input id="edit-name" name="name" defaultValue={editingProperty.name} required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-address">Endereço</Label>
+                  <Input id="edit-address" name="address" defaultValue={editingProperty.address} required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-price">Preço (R$)</Label>
+                  <Input id="edit-price" name="price" type="number" defaultValue={editingProperty.price} required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-commission">Comissão (%)</Label>
+                  <Input id="edit-commission" name="commission" type="number" step="0.1" defaultValue={editingProperty.commission} required />
+                </div>
+                <div className="md:col-span-2 space-y-2">
+                  <Label htmlFor="edit-description">Descrição</Label>
+                  <Textarea id="edit-description" name="description" defaultValue={editingProperty.description} />
+                </div>
+                <div className="md:col-span-2 space-y-2">
+                  <Label htmlFor="edit-owner">Informações do Proprietário</Label>
+                  <Textarea id="edit-owner" name="owner" defaultValue={editingProperty.ownerInfo} />
+                </div>
+                <div className="md:col-span-2 space-y-2">
+                  <Label htmlFor="edit-image">Imagem do Imóvel</Label>
+                    <div className="flex items-center gap-4">
+                        {imagePreview ? (
+                            <Image src={imagePreview} alt="Preview do imóvel" width={80} height={80} className="rounded-md object-cover aspect-square"/>
+                        ) : (
+                             <div className="w-20 h-20 bg-muted rounded-md flex items-center justify-center text-muted-foreground">
+                                <Upload className="h-6 w-6"/>
+                            </div>
+                        )}
+                        <Input id="edit-image" name="image" type="file" onChange={handleFileChange} accept="image/png, image/jpeg, image/gif, image/webp" />
+                    </div>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-address">Endereço</Label>
-                <Input id="edit-address" name="address" defaultValue={editingProperty?.address} required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-price">Preço (R$)</Label>
-                <Input id="edit-price" name="price" type="number" defaultValue={editingProperty?.price} required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-commission">Comissão (%)</Label>
-                <Input id="edit-commission" name="commission" type="number" step="0.1" defaultValue={editingProperty?.commission} required />
-              </div>
-              <div className="md:col-span-2 space-y-2">
-                 <Label htmlFor="edit-description">Descrição</Label>
-                 <Textarea id="edit-description" name="description" defaultValue={editingProperty?.description} />
-              </div>
-               <div className="md:col-span-2 space-y-2">
-                 <Label htmlFor="edit-owner">Informações do Proprietário</Label>
-                 <Textarea id="edit-owner" name="owner" defaultValue={editingProperty?.ownerInfo} />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>Cancelar</Button>
-              <Button type="submit">Salvar Alterações</Button>
-            </DialogFooter>
-          </form>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>Cancelar</Button>
+                <Button type="submit">Salvar Alterações</Button>
+              </DialogFooter>
+            </form>
+          )}
         </DialogContent>
       </Dialog>
     </div>
   );
 }
-
-    
