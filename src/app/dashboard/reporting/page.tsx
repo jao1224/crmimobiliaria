@@ -46,15 +46,24 @@ export default function ReportingPage() {
     const handleFilterChange = (filterType: string, value: string) => {
         // Esta lógica é apenas para simulação visual.
         // Em um cenário real, você faria uma nova busca de dados.
-        if (filterType === 'realtor' && value === 'realtor-1') {
-            setChartData(realtor1Data);
-        } else if (filterType === 'realtor' && value === 'realtor-2') {
-            setChartData(realtor2Data);
-        } else if (filterType === 'team' && value === 'team-a') {
-            setChartData(teamAData);
-        } else {
-            // Se o filtro for 'geral' ou qualquer outro, volta para a soma
+        if (value === 'geral') {
             setChartData(generalData);
+            return;
+        }
+
+        switch (filterType) {
+            case 'realtor':
+                if (value === 'realtor-1') setChartData(realtor1Data);
+                else if (value === 'realtor-2') setChartData(realtor2Data);
+                else setChartData(generalData);
+                break;
+            case 'team':
+                 if (value === 'team-a') setChartData(teamAData);
+                 else setChartData(generalData);
+                break;
+            default:
+                 setChartData(generalData);
+                break;
         }
     };
 
