@@ -291,7 +291,7 @@ export default function NegotiationsPage() {
                                         <Badge variant={getStageVariant(neg.stage)} className="whitespace-nowrap">{neg.stage}</Badge>
                                     </TableCell>
                                      <TableCell>
-                                        <Badge variant={getContractStatusVariant(neg.contractStatus)}>{neg.contractStatus}</Badge>
+                                        <Badge variant={getContractStatusVariant(neg.contractStatus)} className="whitespace-nowrap">{neg.contractStatus}</Badge>
                                     </TableCell>
                                     <TableCell>{neg.salesperson}</TableCell>
                                     <TableCell>{neg.realtor}</TableCell>
@@ -331,5 +331,6 @@ export default function NegotiationsPage() {
     
 
     
+
 
 
