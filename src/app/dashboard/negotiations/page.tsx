@@ -144,7 +144,7 @@ export default function NegotiationsPage() {
             case 'Proposta Enviada':
                 return 'status-blue';
             case 'Em Negociação':
-                return 'warning';
+                return 'status-orange';
             case 'Contrato Gerado':
                 return 'success';
             default:
