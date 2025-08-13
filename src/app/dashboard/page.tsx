@@ -11,7 +11,7 @@ import { ProfileContext } from "@/contexts/ProfileContext";
 
 const welcomeMessages: Record<UserProfile, { title: string; subtitle: string }> = {
   'Admin': { title: "Admin!", subtitle: "Visão geral completa do sistema. Monitore o desempenho e gerencie todas as operações." },
-  'Imobiliária': { title: "à sua Imobiliária!", subtitle: "Gerencie suas equipes, imóveis e negociações com eficiência. Um ótimo dia de vendas!" },
+  'Imobiliária': { title: "à sua Imobiliária!", subtitle: "Aqui está uma visão geral completa do desempenho da imobiliária." },
   'Corretor Autônomo': { title: "Corretor(a)!", subtitle: "Visão geral do dia: seus resultados em destaque." },
   'Investidor': { title: "Investidor(a)!", subtitle: "Acompanhe seus imóveis e as melhores oportunidades de negociação do mercado." },
   'Construtora': { title: "Construtora!", subtitle: "Gerencie seus empreendimentos, vendas e parcerias de forma integrada." },
