@@ -27,7 +27,8 @@ export type Client = { id: string; name: string; doc: string; };
 
 export type Commission = {
     id: string;
-    deal: string;
+    dealId: string; // ID da negociação para referência
+    deal: string; // Descrição do negócio
     amount: number;
     status: 'Pago' | 'Pendente' | 'Vencido';
     paymentDate: string;
@@ -120,9 +121,9 @@ export const mockClients: Client[] = [
 
 
 export let initialCommissions: Commission[] = [
-    { id: 'comm1', deal: 'Venda Apartamento Central', amount: 15000, status: 'Pendente', paymentDate: '2024-08-15', involved: 'Carlos Pereira (50%), Sofia Lima (50%)', realtorId: 'Carlos Pereira' },
-    { id: 'comm2', deal: 'Venda Casa de Campo', amount: 22000, status: 'Pago', paymentDate: '2024-07-20', involved: 'Carlos Pereira (100%)', realtorId: 'Carlos Pereira' },
-    { id: 'comm3', deal: 'Aluguel Sala Comercial', amount: 1200, status: 'Vencido', paymentDate: '2024-06-10', involved: 'Imobiliária (100%)', realtorId: 'user2' },
+    { id: 'comm1', dealId: 'neg1', deal: 'Venda Apartamento Central', amount: 15000, status: 'Pendente', paymentDate: '2024-08-15', involved: 'Carlos Pereira (50%), Sofia Lima (50%)', realtorId: 'Carlos Pereira' },
+    { id: 'comm2', dealId: 'neg5', deal: 'Venda Casa de Campo', amount: 22000, status: 'Pago', paymentDate: '2024-07-20', involved: 'Carlos Pereira (100%)', realtorId: 'Carlos Pereira' },
+    { id: 'comm3', dealId: 'neg4', deal: 'Aluguel Sala Comercial', amount: 1200, status: 'Vencido', paymentDate: '2024-06-10', involved: 'Imobiliária (100%)', realtorId: 'user2' },
 ];
 
 // --- DADOS PARA CORRESPONDENTE ---
@@ -180,3 +181,5 @@ export function addServiceRequest(newRequest: ServiceRequest) {
         initialServiceRequests.unshift(newRequest);
     }
 }
+
+    

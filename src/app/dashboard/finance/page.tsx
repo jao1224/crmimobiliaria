@@ -101,7 +101,9 @@ export default function FinancePage() {
         event.preventDefault();
         const formData = new FormData(event.currentTarget);
         const newCommission: Commission = {
-            id: `comm${Date.now()}`, deal: formData.get('deal') as string, amount: parseFloat(formData.get('amount') as string),
+            id: `comm${Date.now()}`, 
+            dealId: formData.get('dealId') as string,
+            deal: formData.get('deal') as string, amount: parseFloat(formData.get('amount') as string),
             status: formData.get('status') as Commission['status'], paymentDate: formData.get('paymentDate') as string,
             involved: formData.get('involved') as string, advance: formData.has('advance') ? parseFloat(formData.get('advance') as string) : undefined,
             invoiceFile: formData.get('invoiceFile') as File || null, realtorId: 'user1' // Simulado
@@ -176,8 +178,12 @@ export default function FinancePage() {
                                             <div className="grid gap-4 py-4">
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                     <div className="space-y-2">
-                                                        <Label htmlFor="deal">Negócio (ID ou Descrição)</Label>
-                                                        <Input id="deal" name="deal" required />
+                                                        <Label htmlFor="dealId">Cód. do Processo</Label>
+                                                        <Input id="dealId" name="dealId" required placeholder="Ex: neg1"/>
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="deal">Descrição do Negócio</Label>
+                                                        <Input id="deal" name="deal" required placeholder="Ex: Venda Apto Vista Mar"/>
                                                     </div>
                                                     <div className="space-y-2">
                                                         <Label htmlFor="amount">Valor da Comissão (R$)</Label>
@@ -248,7 +254,8 @@ export default function FinancePage() {
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead>Negócio</TableHead>
+                                            <TableHead>Cód. Processo</TableHead>
+                                            <TableHead>Descrição</TableHead>
                                             {hasPermission && <TableHead>Envolvidos</TableHead>}
                                             <TableHead>Valor</TableHead><TableHead>Status</TableHead>
                                             <TableHead>Data de Pagamento</TableHead>
@@ -259,6 +266,7 @@ export default function FinancePage() {
                                         {visibleCommissions.length > 0 ? (
                                             visibleCommissions.map(commission => (
                                                 <TableRow key={commission.id} className="hover:bg-secondary">
+                                                    <TableCell className="font-mono text-xs text-muted-foreground">{commission.dealId.toUpperCase()}</TableCell>
                                                     <TableCell className="font-medium">{commission.deal}</TableCell>
                                                     {hasPermission && <TableCell className="text-muted-foreground text-xs">{commission.involved}</TableCell>}
                                                     <TableCell>{formatCurrency(commission.amount)}</TableCell>
@@ -279,7 +287,7 @@ export default function FinancePage() {
                                                     </TableCell>
                                                 </TableRow>
                                             ))
-                                        ) : <TableRow><TableCell colSpan={hasPermission ? 6 : 5} className="h-24 text-center">Nenhuma comissão encontrada.</TableCell></TableRow>}
+                                        ) : <TableRow><TableCell colSpan={hasPermission ? 7 : 6} className="h-24 text-center">Nenhuma comissão encontrada.</TableCell></TableRow>}
                                     </TableBody>
                                 </Table>
                             </CardContent>
@@ -456,3 +464,5 @@ export default function FinancePage() {
         </div>
     );
 }
+
+    

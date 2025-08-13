@@ -84,6 +84,7 @@ const processTeamPerformanceData = (negotiations: Negotiation[], teamsData: type
     }));
 };
 
+const propertyTypesForFilter = ['Casa', 'Apartamento', 'Terreno', 'Loja', 'Sítio'];
 
 export default function ReportingPage() {
     const [negotiations] = useState<Negotiation[]>(initialNegotiations);
@@ -99,6 +100,7 @@ export default function ReportingPage() {
     const [realtorFilter, setRealtorFilter] = useState('all');
     const [teamFilter, setTeamFilter] = useState('all');
     const [propertyTypeFilter, setPropertyTypeFilter] = useState('all');
+    const [operationTypeFilter, setOperationTypeFilter] = useState('all');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
 
@@ -106,16 +108,22 @@ export default function ReportingPage() {
         return negotiations.filter(neg => {
             const realtorMatch = realtorFilter === 'all' || neg.realtor === realtorFilter;
             const teamMatch = teamFilter === 'all' || teams.find(t => t.id === teamFilter)?.members.includes(neg.salesperson);
-            const propertyTypeMatch = propertyTypeFilter === 'all' || neg.propertyType === propertyTypeFilter;
             
+            // Simulação de tipo de imóvel (não existe no 'neg')
+            const propertyTypeMatch = propertyTypeFilter === 'all'; 
+
+            // Simulação de tipo de operação
+            const operationTypeMatch = operationTypeFilter === 'all' || (operationTypeFilter === 'venda' && neg.type === 'Venda');
+
+
             const dateMatch = !startDate || !endDate || !neg.completionDate || (
                 new Date(neg.completionDate) >= new Date(startDate) &&
                 new Date(neg.completionDate) <= new Date(endDate)
             );
 
-            return realtorMatch && teamMatch && propertyTypeMatch && dateMatch;
+            return realtorMatch && teamMatch && propertyTypeMatch && dateMatch && operationTypeMatch;
         });
-    }, [negotiations, realtorFilter, teamFilter, propertyTypeFilter, startDate, endDate]);
+    }, [negotiations, realtorFilter, teamFilter, propertyTypeFilter, startDate, endDate, operationTypeFilter]);
 
     const chartData = useMemo(() => processSalesData(filteredNegotiations), [filteredNegotiations]);
     const { realtorCaptures, propertyTypeCaptures } = useMemo(() => processCaptureData(properties), [properties]);
@@ -151,7 +159,7 @@ export default function ReportingPage() {
                                 </div>
                                 <div className="flex flex-wrap items-end gap-2">
                                      <Select value={realtorFilter} onValueChange={setRealtorFilter}>
-                                        <SelectTrigger className="w-full sm:w-[180px]">
+                                        <SelectTrigger className="w-full sm:w-auto min-w-[180px]">
                                             <SelectValue placeholder="Filtrar por Corretor" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -160,7 +168,7 @@ export default function ReportingPage() {
                                         </SelectContent>
                                     </Select>
                                      <Select value={teamFilter} onValueChange={setTeamFilter}>
-                                        <SelectTrigger className="w-full sm:w-[180px]">
+                                        <SelectTrigger className="w-full sm:w-auto min-w-[180px]">
                                             <SelectValue placeholder="Filtrar por Equipe" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -169,12 +177,22 @@ export default function ReportingPage() {
                                         </SelectContent>
                                     </Select>
                                     <Select value={propertyTypeFilter} onValueChange={setPropertyTypeFilter}>
-                                        <SelectTrigger className="w-full sm:w-[180px]">
+                                        <SelectTrigger className="w-full sm:w-auto min-w-[180px]">
                                             <SelectValue placeholder="Filtrar por Tipo de Imóvel" />
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="all">Todos os Tipos</SelectItem>
-                                            {allPropertyTypes.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                                            {propertyTypesForFilter.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                    <Select value={operationTypeFilter} onValueChange={setOperationTypeFilter}>
+                                        <SelectTrigger className="w-full sm:w-auto min-w-[180px]">
+                                            <SelectValue placeholder="Filtrar por Operação" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Todas as Operações</SelectItem>
+                                            <SelectItem value="captacao">Captação</SelectItem>
+                                            <SelectItem value="venda">Venda</SelectItem>
                                         </SelectContent>
                                     </Select>
                                     <div className="grid w-full sm:w-auto gap-1.5">
@@ -283,3 +301,5 @@ export default function ReportingPage() {
         </div>
     )
 }
+
+    
