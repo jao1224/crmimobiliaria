@@ -93,6 +93,19 @@ export default function PropertiesPage() {
     setDetailModalOpen(true);
   };
 
+  const getStatusVariant = (status: string) => {
+    switch (status) {
+      case "Disponível":
+        return "success";
+      case "Vendido":
+        return "destructive";
+      case "Alugado":
+        return "secondary";
+      default:
+        return "outline";
+    }
+  }
+
 
   return (
     <div className="flex flex-col gap-6">
@@ -190,7 +203,7 @@ export default function PropertiesPage() {
                     <div className="text-sm text-muted-foreground">{property.address}</div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={property.status === 'Disponível' ? 'secondary' : property.status === 'Vendido' ? 'destructive' : 'outline'}>
+                    <Badge variant={getStatusVariant(property.status) as any}>
                       {property.status}
                     </Badge>
                   </TableCell>
@@ -262,7 +275,7 @@ export default function PropertiesPage() {
                       <span>{selectedProperty.commission}%</span>
 
                       <span className="font-medium text-foreground">Status:</span>
-                      <span><Badge variant={selectedProperty.status === 'Disponível' ? 'secondary' : selectedProperty.status === 'Vendido' ? 'destructive' : 'outline'}>{selectedProperty.status}</Badge></span>
+                      <span><Badge variant={getStatusVariant(selectedProperty.status) as any}>{selectedProperty.status}</Badge></span>
                     </div>
                   </div>
                   <div>
@@ -285,5 +298,3 @@ export default function PropertiesPage() {
     </div>
   );
 }
-
-    
