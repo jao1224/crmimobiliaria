@@ -240,6 +240,7 @@ export default function PropertiesPage() {
                   </div>
                 </div>
                 <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setPropertyDialogOpen(false)}>Cancelar</Button>
                   <Button type="submit">Salvar Imóvel</Button>
                 </DialogFooter>
               </form>
