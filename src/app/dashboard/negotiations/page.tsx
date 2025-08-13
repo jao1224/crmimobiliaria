@@ -151,6 +151,17 @@ export default function NegotiationsPage() {
                 return 'secondary';
         }
     }
+    
+    const getContractStatusVariant = (status: string): VariantProps<typeof badgeVariants>['variant'] => {
+        switch (status) {
+            case 'Não Gerado':
+                return 'status-red-orange';
+            case 'Pendente':
+                return 'default';
+            default:
+                return 'secondary';
+        }
+    }
 
     return (
         <div className="flex flex-col gap-6">
@@ -280,7 +291,7 @@ export default function NegotiationsPage() {
                                         <Badge variant={getStageVariant(neg.stage)} className="whitespace-nowrap">{neg.stage}</Badge>
                                     </TableCell>
                                      <TableCell>
-                                        <Badge variant={neg.contractStatus === "Não Gerado" ? "secondary" : "default"}>{neg.contractStatus}</Badge>
+                                        <Badge variant={getContractStatusVariant(neg.contractStatus)}>{neg.contractStatus}</Badge>
                                     </TableCell>
                                     <TableCell>{neg.salesperson}</TableCell>
                                     <TableCell>{neg.realtor}</TableCell>
@@ -320,4 +331,5 @@ export default function NegotiationsPage() {
     
 
     
+
 

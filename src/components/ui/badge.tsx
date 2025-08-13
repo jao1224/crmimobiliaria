@@ -25,6 +25,8 @@ const badgeVariants = cva(
           "border-transparent bg-status-blue text-status-blue-foreground hover:bg-status-blue/80",
         "status-orange":
           "border-transparent bg-status-orange text-white hover:bg-status-orange/80",
+        "status-red-orange":
+          "border-transparent bg-status-red-orange text-white hover:bg-status-red-orange/80",
         outline: "text-foreground",
       },
     },
