@@ -35,6 +35,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { VariantProps } from "class-variance-authority";
 
 // Define o tipo para um imóvel
 type Property = {
@@ -100,7 +101,7 @@ export default function PropertiesPage() {
       case "Vendido":
         return "destructive";
       case "Alugado":
-        return "info";
+        return "outline-info";
       default:
         return "secondary";
     }
