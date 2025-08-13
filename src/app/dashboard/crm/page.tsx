@@ -14,45 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
-
-// Tipos para os dados simulados
-type Lead = {
-    id: string;
-    name: string;
-    source: string;
-    status: string;
-    assignedTo: string;
-};
-
-type Deal = {
-    id: string;
-    property: string;
-    client: string;
-    stage: string;
-    value: number;
-    closeDate: string;
-};
-
-type Client = {
-    id: string;
-    name: string;
-    source: string;
-    assignedTo: string;
-};
-
-const initialLeads: Lead[] = [
-    { id: "lead1", name: "Ana Silva", source: "Website", status: "Novo", assignedTo: "Carlos Pereira" },
-    { id: "lead2", name: "Bruno Costa", source: "Indicação", status: "Contatado", assignedTo: "Sofia Lima" },
-];
-
-const initialDeals: Deal[] = [
-    { id: "deal1", property: "Apartamento Central", client: "Empresa X", stage: "Proposta Enviada", value: 750000, closeDate: "2024-08-15" },
-];
-
-const initialClients: Client[] = [
-    { id: "client1", name: "Empresa X", source: "Website", assignedTo: "Carlos Pereira" },
-];
-
+import { initialLeads, initialDeals, initialClients, type Lead, type Deal, type Client } from "@/lib/crm-data";
 
 export default function CrmPage() {
     const [leads, setLeads] = useState<Lead[]>(initialLeads);

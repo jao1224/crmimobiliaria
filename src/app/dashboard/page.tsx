@@ -8,7 +8,8 @@ import { SalesReport } from "@/components/dashboard/sales-report";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { UserProfile } from "./layout";
 import { ProfileContext } from "@/contexts/ProfileContext";
-import { initialNegotiations, type Negotiation } from "@/lib/data"; // Importando dados
+import { initialNegotiations, type Negotiation } from "@/lib/data"; // Importando dados de negociação
+import { initialLeads } from "@/lib/crm-data"; // Importando dados de leads
 
 const welcomeMessages: Record<UserProfile, { title: string; subtitle: string }> = {
   'Admin': { title: "Admin!", subtitle: "Visão geral completa do sistema. Monitore o desempenho e gerencie todas as operações." },
@@ -57,12 +58,12 @@ export default function DashboardPage() {
       .reduce((sum, n) => sum + n.value, 0),
     activeDeals: negotiations.filter(n => n.stage !== 'Venda Concluída' && n.stage !== 'Aluguel Ativo').length,
     soldProperties: negotiations.filter(n => n.stage === 'Venda Concluída').length,
-    newLeads: 25, // Mantido como estático por enquanto
+    newLeads: initialLeads.length, // Sincronizado com os dados reais de leads
   };
 
   const overviewCards = [
     {
-      title: "Receita Total (Simulado)",
+      title: "Receita Total (Sincronizado)",
       value: new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.totalRevenue),
       change: "Todos os negócios fechados",
       icon: CircleDollarSign,
@@ -83,9 +84,9 @@ export default function DashboardPage() {
       loading: isLoading,
     },
     {
-      title: "Novos Leads (Últimos 30 dias)",
+      title: "Novos Leads (Total)",
       value: `+${stats.newLeads}`,
-      change: "+15% vs. mês anterior",
+      change: "Leads no funil de vendas",
       icon: BarChart3,
       loading: isLoading,
     },
