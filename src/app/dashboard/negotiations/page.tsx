@@ -43,6 +43,7 @@ const initialNegotiations: Negotiation[] = [
     { id: 'neg2', property: 'Casa com Piscina', propertyId: 'prop2', client: 'Maria Investidora', clientId: 'cli2', stage: 'Em Negociação', type: 'Venda', value: 1200000, salesperson: 'Joana Doe', realtor: 'Sofia Lima', contractStatus: 'Não Gerado' },
     { id: 'neg3', property: 'Terreno Comercial', propertyId: 'prop3', client: 'Construtora Build S.A.', clientId: 'cli3', stage: 'Contrato Gerado', type: 'Venda', value: 2500000, salesperson: 'Admin', realtor: 'Carlos Pereira', contractStatus: 'Pendente Assinaturas' },
     { id: 'neg4', property: 'Loft Moderno', propertyId: 'prop4', client: 'Paulo Inquilino', clientId: 'cli4', stage: 'Aluguel Ativo', type: 'Aluguel', value: 2500, salesperson: 'Sofia Lima', realtor: 'Carlos Pereira', contractStatus: 'Assinado' },
+    { id: 'neg5', property: 'Sítio Ecológico', propertyId: 'prop5', client: 'Família Verde', clientId: 'cli5', stage: 'Venda Concluída', type: 'Venda', value: 780000, salesperson: 'Joana Doe', realtor: 'Sofia Lima', contractStatus: 'Assinado' },
 ];
 
 const mockProperties: Property[] = [
@@ -61,6 +62,12 @@ export default function NegotiationsPage() {
     const [isNewNegotiationOpen, setNewNegotiationOpen] = useState(false);
     const { toast } = useToast();
     
+    // Estados dos filtros
+    const [typeFilter, setTypeFilter] = useState('all');
+    const [statusFilter, setStatusFilter] = useState('all');
+    const [realtorFilter, setRealtorFilter] = useState('all');
+
+
     const [propertyCode, setPropertyCode] = useState("");
     const [clientDoc, setClientDoc] = useState("");
     const [foundProperty, setFoundProperty] = useState<Property | null>(null);
@@ -147,6 +154,15 @@ export default function NegotiationsPage() {
         toast({ title: "Sucesso!", description: "Contrato gerado. Redirecionando..." });
         router.push(`/dashboard/negotiations/${negotiationId}/contract`);
     }
+
+    const filteredNegotiations = useMemo(() => {
+        return negotiations.filter(neg => {
+            const typeMatch = typeFilter === 'all' || neg.type.toLowerCase() === typeFilter;
+            const statusMatch = statusFilter === 'all' || neg.contractStatus.replace(/\s/g, '-').toLowerCase() === statusFilter;
+            const realtorMatch = realtorFilter === 'all' || neg.realtor === realtorFilter;
+            return typeMatch && statusMatch && realtorMatch;
+        });
+    }, [negotiations, typeFilter, statusFilter, realtorFilter]);
 
     const getStageVariant = (stage: Negotiation['stage']): VariantProps<typeof badgeVariants>['variant'] => {
         switch (stage) {
@@ -261,13 +277,13 @@ export default function NegotiationsPage() {
                     <div className="flex flex-wrap items-center justify-between gap-4">
                         <CardDescription>
                             {
-                                negotiations.length > 0 
-                                ? `Uma lista de ${negotiations.length} processo(s) de negociação.`
-                                : "Nenhum processo de negociação encontrado."
+                                filteredNegotiations.length > 0 
+                                ? `Exibindo ${filteredNegotiations.length} de ${negotiations.length} negociação(ões).`
+                                : "Nenhuma negociação encontrada com os filtros atuais."
                             }
                         </CardDescription>
                         <div className="flex flex-wrap items-center gap-2">
-                             <Select>
+                             <Select value={typeFilter} onValueChange={setTypeFilter}>
                                 <SelectTrigger className="w-full sm:w-[180px]">
                                     <SelectValue placeholder="Filtrar por Tipo" />
                                 </SelectTrigger>
@@ -278,18 +294,18 @@ export default function NegotiationsPage() {
                                     <SelectItem value="leilao">Leilão</SelectItem>
                                 </SelectContent>
                             </Select>
-                             <Select>
+                             <Select value={statusFilter} onValueChange={setStatusFilter}>
                                 <SelectTrigger className="w-full sm:w-[180px]">
                                     <SelectValue placeholder="Filtrar por Status" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">Todos os Status</SelectItem>
                                     <SelectItem value="nao-gerado">Não Gerado</SelectItem>
-                                    <SelectItem value="pendente">Pendente Assinaturas</SelectItem>
+                                    <SelectItem value="pendente-assinaturas">Pendente Assinaturas</SelectItem>
                                     <SelectItem value="assinado">Assinado</SelectItem>
                                 </SelectContent>
                             </Select>
-                            <Select>
+                            <Select value={realtorFilter} onValueChange={setRealtorFilter}>
                                 <SelectTrigger className="w-full sm:w-[180px]">
                                     <SelectValue placeholder="Filtrar por Responsável" />
                                 </SelectTrigger>
@@ -319,8 +335,8 @@ export default function NegotiationsPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {negotiations.length > 0 ? (
-                                negotiations.map((neg) => (
+                            {filteredNegotiations.length > 0 ? (
+                                filteredNegotiations.map((neg) => (
                                 <TableRow 
                                     key={neg.id} 
                                     className="cursor-pointer hover:bg-secondary"
@@ -361,7 +377,7 @@ export default function NegotiationsPage() {
                             ) : (
                                  <TableRow>
                                     <TableCell colSpan={9} className="h-24 text-center">Nenhum processo de negociação encontrado.</TableCell>
-                                </TableRow>
+                                 </TableRow>
                             )}
                         </TableBody>
                     </Table>
@@ -370,3 +386,4 @@ export default function NegotiationsPage() {
         </div>
     );
 }
+
