@@ -1,21 +1,14 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { SalesReport } from "@/components/dashboard/sales-report";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Download } from "lucide-react";
 
-
-const generalData = [
-  { month: "Jan", sales: 186000 }, { month: "Fev", sales: 305000 }, { month: "Mar", sales: 237000 },
-  { month: "Abr", sales: 73000 }, { month: "Mai", sales: 209000 }, { month: "Jun", sales: 214000 },
-  { month: "Jul", sales: 450000 }, { month: "Ago", sales: 320000 }, { month: "Set", sales: 0 },
-  { month: "Out", sales: 0 }, { month: "Nov", sales: 0 }, { month: "Dez", sales: 0 },
-];
-
+// Dados simulados para corretores individuais
 const realtor1Data = [
   { month: "Jan", sales: 95000 }, { month: "Fev", sales: 150000 }, { month: "Mar", sales: 80000 },
   { month: "Abr", sales: 40000 }, { month: "Mai", sales: 110000 }, { month: "Jun", sales: 100000 },
@@ -23,12 +16,28 @@ const realtor1Data = [
   { month: "Out", sales: 0 }, { month: "Nov", sales: 0 }, { month: "Dez", sales: 0 },
 ];
 
+const realtor2Data = [
+  { month: "Jan", sales: 91000 }, { month: "Fev", sales: 155000 }, { month: "Mar", sales: 157000 },
+  { month: "Abr", sales: 33000 }, { month: "Mai", sales: 99000 }, { month: "Jun", sales: 114000 },
+  { month: "Jul", sales: 230000 }, { month: "Ago", sales: 140000 }, { month: "Set", sales: 0 },
+  { month: "Out", sales: 0 }, { month: "Nov", sales: 0 }, { month: "Dez", sales: 0 },
+];
+
+// Dados simulados para equipes
 const teamAData = [
   { month: "Jan", sales: 120000 }, { month: "Fev", sales: 180000 }, { month: "Mar", sales: 150000 },
   { month: "Abr", sales: 50000 }, { month: "Mai", sales: 140000 }, { month: "Jun", sales: 160000 },
   { month: "Jul", sales: 300000 }, { month: "Ago", sales: 250000 }, { month: "Set", sales: 0 },
   { month: "Out", sales: 0 }, { month: "Nov", sales: 0 }, { month: "Dez", sales: 0 },
 ];
+
+// Calcula dinamicamente os dados gerais somando os dados dos corretores
+const generalData = realtor1Data.map((data, index) => {
+    return {
+        month: data.month,
+        sales: data.sales + (realtor2Data[index]?.sales || 0)
+    };
+});
 
 
 export default function ReportingPage() {
@@ -39,9 +48,12 @@ export default function ReportingPage() {
         // Em um cenário real, você faria uma nova busca de dados.
         if (filterType === 'realtor' && value === 'realtor-1') {
             setChartData(realtor1Data);
+        } else if (filterType === 'realtor' && value === 'realtor-2') {
+            setChartData(realtor2Data);
         } else if (filterType === 'team' && value === 'team-a') {
             setChartData(teamAData);
         } else {
+            // Se o filtro for 'geral' ou qualquer outro, volta para a soma
             setChartData(generalData);
         }
     };
