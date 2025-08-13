@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Badge } from "@/components/ui/badge";
+import { Badge, badgeVariants } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -14,6 +14,7 @@ import { MoreHorizontal, Search } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { VariantProps } from "class-variance-authority";
 
 // Tipos
 type Negotiation = {
@@ -22,7 +23,7 @@ type Negotiation = {
     propertyId: string;
     client: string;
     clientId: string;
-    stage: string;
+    stage: 'Proposta Enviada' | 'Em Negociação' | 'Contrato Gerado';
     value: number;
     salesperson: string;
     realtor: string;
@@ -136,6 +137,19 @@ export default function NegotiationsPage() {
         ));
         toast({ title: "Sucesso!", description: "Contrato gerado. Redirecionando..." });
         router.push(`/dashboard/negotiations/${negotiationId}/contract`);
+    }
+
+    const getStageVariant = (stage: Negotiation['stage']): VariantProps<typeof badgeVariants>['variant'] => {
+        switch (stage) {
+            case 'Proposta Enviada':
+                return 'status-blue';
+            case 'Em Negociação':
+                return 'warning';
+            case 'Contrato Gerado':
+                return 'success';
+            default:
+                return 'secondary';
+        }
     }
 
     return (
@@ -259,7 +273,7 @@ export default function NegotiationsPage() {
                                     <TableCell>{neg.client}</TableCell>
                                     <TableCell>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(neg.value)}</TableCell>
                                     <TableCell>
-                                        <Badge variant="outline">{neg.stage}</Badge>
+                                        <Badge variant={getStageVariant(neg.stage)}>{neg.stage}</Badge>
                                     </TableCell>
                                      <TableCell>
                                         <Badge variant={neg.contractStatus === "Não Gerado" ? "secondary" : "default"}>{neg.contractStatus}</Badge>
