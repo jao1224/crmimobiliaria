@@ -3,7 +3,7 @@
 
 import Image from "next/image";
 import { MoreHorizontal } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Badge, badgeVariants } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -93,7 +93,7 @@ export default function PropertiesPage() {
     setDetailModalOpen(true);
   };
 
-  const getStatusVariant = (status: string) => {
+  const getStatusVariant = (status: string): VariantProps<typeof badgeVariants>["variant"] => {
     switch (status) {
       case "Disponível":
         return "success";
@@ -102,7 +102,7 @@ export default function PropertiesPage() {
       case "Alugado":
         return "info";
       default:
-        return "outline";
+        return "secondary";
     }
   }
 
@@ -203,7 +203,7 @@ export default function PropertiesPage() {
                     <div className="text-sm text-muted-foreground">{property.address}</div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={getStatusVariant(property.status) as any}>
+                    <Badge variant={getStatusVariant(property.status)}>
                       {property.status}
                     </Badge>
                   </TableCell>
@@ -275,7 +275,7 @@ export default function PropertiesPage() {
                       <span>{selectedProperty.commission}%</span>
 
                       <span className="font-medium text-foreground">Status:</span>
-                      <span><Badge variant={getStatusVariant(selectedProperty.status) as any}>{selectedProperty.status}</Badge></span>
+                      <span><Badge variant={getStatusVariant(selectedProperty.status)}>{selectedProperty.status}</Badge></span>
                     </div>
                   </div>
                   <div>
@@ -298,3 +298,5 @@ export default function PropertiesPage() {
     </div>
   );
 }
+
+    
