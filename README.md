@@ -32,6 +32,9 @@ Este é o repositório do seu projeto LeadFlow, desenvolvido no Firebase Studio.
     -   **Gestão de Comissões (✅):**
         -   Interface para o Financeiro lançar comissões (múltiplos envolvidos, valor, status, adiantamentos, data, nota fiscal).
         -   Corretores podem visualizar suas próprias comissões.
+    -   **Desenvolver Formulários Financeiros (✅):**
+        -   Criar o formulário detalhado para "Lançar Pagamento".
+        -   Criar o formulário detalhado para "Lançar Despesa".
 
 ### 🟡 Em Progresso / A Fazer
 
@@ -41,9 +44,6 @@ Este é o repositório do seu projeto LeadFlow, desenvolvido no Firebase Studio.
     -   **Gestão de Despesas (❌):**
         -   Separar despesas fixas e variáveis.
         -   Sistema de lembretes para pagamentos e alertas de contas vencidas.
-    -   **Desenvolver Formulários Financeiros (❌):**
-        -   Criar o formulário detalhado para "Lançar Pagamento".
-        -   Criar o formulário detalhado para "Lançar Despesa".
     -   **Relatórios Financeiros Detalhados (❌):**
         -   Filtros para analisar comissões e despesas por corretor, equipe, período, tipo de imóvel, etc.
 
