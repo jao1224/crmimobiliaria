@@ -10,7 +10,7 @@ import type { UserProfile } from "./layout";
 import { ProfileContext } from "@/contexts/ProfileContext";
 
 const welcomeMessages: Record<UserProfile, { title: string; subtitle: string }> = {
-  'Admin': { title: "Bem-vindo(a) de volta, Admin!", subtitle: "Você tem controle total sobre o sistema. Vamos revisar os números e as operações." },
+  'Admin': { title: "Bem-vindo(a) de volta, Admin!", subtitle: "Visão geral completa do sistema. Monitore o desempenho e gerencie todas as operações." },
   'Imobiliária': { title: "Bem-vindo(a) à sua Imobiliária!", subtitle: "Gerencie suas equipes, imóveis e negociações com eficiência. Um ótimo dia de vendas!" },
   'Corretor Autônomo': { title: "Bem-vindo(a), Corretor(a)!", subtitle: "Visão geral do dia: seus resultados em destaque." },
   'Investidor': { title: "Olá, Investidor(a)!", subtitle: "Acompanhe seus imóveis e as melhores oportunidades de negociação do mercado." },
