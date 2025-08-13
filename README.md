@@ -35,15 +35,15 @@ Este é o repositório do seu projeto LeadFlow, desenvolvido no Firebase Studio.
     -   **Desenvolver Formulários Financeiros (✅):**
         -   Criar o formulário detalhado para "Lançar Pagamento".
         -   Criar o formulário detalhado para "Lançar Despesa".
+    -   **Gestão de Pagamentos (CLT) (✅):**
+        -   Interface para registrar salários, impostos, férias, 13º.
+    -   **Gestão de Despesas (✅):**
+        -   Separar despesas fixas e variáveis.
 
 ### 🟡 Em Progresso / A Fazer
 
 - **1. Módulo Financeiro (Continuação):**
-    -   **Gestão de Pagamentos (CLT) (❌):**
-        -   Interface para registrar salários, impostos, férias, 13º.
-    -   **Gestão de Despesas (❌):**
-        -   Separar despesas fixas e variáveis.
-        -   Sistema de lembretes para pagamentos e alertas de contas vencidas.
+    -   **Sistema de lembretes para pagamentos e alertas de contas vencidas (❌).**
     -   **Relatórios Financeiros Detalhados (❌):**
         -   Filtros para analisar comissões e despesas por corretor, equipe, período, tipo de imóvel, etc.
 
@@ -62,3 +62,5 @@ Este é o repositório do seu projeto LeadFlow, desenvolvido no Firebase Studio.
 
 - **5. Sistema de Notificações:**
     -   **Implementar Notificações (🟡):** Enviar alertas para ações importantes no sistema (e-mail, WhatsApp, etc.).
+
+    
