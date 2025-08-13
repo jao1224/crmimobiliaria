@@ -50,6 +50,7 @@ Este é o repositório do seu projeto LeadFlow, desenvolvido no Firebase Studio.
     -   **Implementar Autenticação Real (🟡):** Integrar o Firebase Authentication para que o login e o cadastro funcionem com usuários reais.
     -   **Implementar Mudança de Senha (🟡):** Conectar a funcionalidade na página de configurações.
     -   **Conectar Perfis de Usuário (🟡):** Salvar os dados do perfil do usuário no Firestore.
+    -   **Lógica de Permissões da Agenda (❌):** Ajustar a visibilidade das agendas para que cada perfil de usuário veja apenas as agendas relevantes para sua função (ex: Admin vê todas, Corretor vê a sua e a da equipe).
 
 - **4. Relatórios e Filtros Avançados:**
     -   **Filtros em Módulos (❌):** Adicionar filtros avançados nas páginas de Negociação, Contratos, Processos e Comissões.

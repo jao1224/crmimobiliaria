@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useContext } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,6 +13,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { PlusCircle } from "lucide-react";
 import { ptBR } from "date-fns/locale";
+import { ProfileContext } from "@/contexts/ProfileContext";
+import type { UserProfile } from "../layout";
+
 
 type EventType = 'personal' | 'company' | 'team_visit';
 
@@ -33,12 +36,40 @@ const initialEvents: Event[] = [
     { id: 'evt4', date: new Date(new Date().setDate(new Date().getDate() + 5)), title: 'Entrega das Chaves - Apto 701', type: 'team_visit', time: '09:00', description: 'Cliente Maria feliz.' },
 ];
 
+const agendaTabs: { id: EventType, label: string }[] = [
+    { id: 'personal', label: 'Minha Agenda' },
+    { id: 'company', label: 'Agenda da Imobiliária' },
+    { id: 'team_visit', label: 'Visitas da Equipe' }
+];
+
+const agendaPermissions: Record<EventType, UserProfile[]> = {
+    'personal': ['Admin', 'Imobiliária', 'Corretor Autônomo', 'Investidor', 'Construtora'],
+    'company': ['Admin', 'Imobiliária'],
+    'team_visit': ['Admin', 'Imobiliária', 'Corretor Autônomo', 'Construtora']
+};
+
+
 export default function AgendaPage() {
+    const { activeProfile } = useContext(ProfileContext);
+
+    const visibleTabs = useMemo(() => {
+        return agendaTabs.filter(tab => agendaPermissions[tab.id].includes(activeProfile));
+    }, [activeProfile]);
+
     const [events, setEvents] = useState<Event[]>(initialEvents);
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-    const [activeTab, setActiveTab] = useState<EventType>('personal');
+    const [activeTab, setActiveTab] = useState<EventType>(visibleTabs[0]?.id || 'personal');
     const [isEventDialogOpen, setEventDialogOpen] = useState(false);
     const { toast } = useToast();
+
+    // Sincroniza a aba ativa se o perfil mudar e a aba atual não for mais visível
+    useMemo(() => {
+        const currentTabIsVisible = visibleTabs.some(tab => tab.id === activeTab);
+        if (!currentTabIsVisible) {
+            setActiveTab(visibleTabs[0]?.id || 'personal');
+        }
+    }, [visibleTabs, activeTab]);
+
 
     const selectedDayEvents = useMemo(() => {
         if (!selectedDate) return [];
@@ -138,60 +169,34 @@ export default function AgendaPage() {
                 <CardContent className="p-0">
                     <div className="flex flex-col md:flex-row">
                         <div className="flex-1 p-4 md:p-6">
-                            <Tabs defaultValue="personal" onValueChange={(value) => setActiveTab(value as EventType)}>
+                            <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as EventType)}>
                                 <TabsList className="mb-4">
-                                    <TabsTrigger value="personal">Minha Agenda</TabsTrigger>
-                                    <TabsTrigger value="company">Agenda da Imobiliária</TabsTrigger>
-                                    <TabsTrigger value="team_visit">Visitas da Equipe</TabsTrigger>
+                                   {visibleTabs.map(tab => (
+                                        <TabsTrigger key={tab.id} value={tab.id}>{tab.label}</TabsTrigger>
+                                   ))}
                                 </TabsList>
-                                <TabsContent value="personal">
-                                     <Calendar
-                                        mode="single"
-                                        selected={selectedDate}
-                                        onSelect={setSelectedDate}
-                                        className="rounded-md"
-                                        locale={ptBR}
-                                        modifiers={{
-                                            events: events.filter(e => e.type === 'personal').map(e => e.date)
-                                        }}
-                                        modifiersStyles={{
-                                           events: {
-                                                color: 'white',
-                                                backgroundColor: getEventTypeLabel('personal').className
-                                            }
-                                        }}
-                                    />
-                                </TabsContent>
-                                <TabsContent value="company">
-                                     <Calendar
-                                        mode="single"
-                                        selected={selectedDate}
-                                        onSelect={setSelectedDate}
-                                        className="rounded-md"
-                                        locale={ptBR}
-                                        modifiers={{
-                                            events: events.filter(e => e.type === 'company').map(e => e.date)
-                                        }}
-                                        modifiersStyles={{
-                                            events: { color: 'white', backgroundColor: getEventTypeLabel('company').className }
-                                        }}
-                                    />
-                                </TabsContent>
-                                <TabsContent value="team_visit">
-                                      <Calendar
-                                        mode="single"
-                                        selected={selectedDate}
-                                        onSelect={setSelectedDate}
-                                        className="rounded-md"
-                                        locale={ptBR}
-                                        modifiers={{
-                                            events: events.filter(e => e.type === 'team_visit').map(e => e.date)
-                                        }}
-                                        modifiersStyles={{
-                                            events: { color: 'white', backgroundColor: getEventTypeLabel('team_visit').className }
-                                        }}
-                                    />
-                                </TabsContent>
+                                
+                                {visibleTabs.map(tab => (
+                                     <TabsContent key={tab.id} value={tab.id}>
+                                         <Calendar
+                                            mode="single"
+                                            selected={selectedDate}
+                                            onSelect={setSelectedDate}
+                                            className="rounded-md"
+                                            locale={ptBR}
+                                            modifiers={{
+                                                events: events.filter(e => e.type === tab.id).map(e => e.date)
+                                            }}
+                                            modifiersStyles={{
+                                               events: {
+                                                    color: 'white',
+                                                    backgroundColor: getEventTypeLabel(tab.id).className
+                                                }
+                                            }}
+                                        />
+                                    </TabsContent>
+                                ))}
+
                             </Tabs>
 
                         </div>
