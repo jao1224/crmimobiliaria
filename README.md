@@ -20,20 +20,18 @@ Este é o repositório do seu projeto LeadFlow, desenvolvido no Firebase Studio.
         -   Corretor: Vê apenas seus próprios dados.
         -   Gerente/Coordenador: Vê todos os dados de sua equipe.
         -   CEO/Administrativo/Financeiro: Vê todos os dados da imobiliária.
-    -   **Gerenciamento de Usuários (✅):** Criar interface na aba "Configurações" para o admin adicionar, remover, editar usuários e definir suas permissões.
+    -   **Gerenciamento de Usuários (✅):** Criar interface na aba "Configurações" para o admin adicionar, remover, editar usuários e definir suas permissções.
     -   **Gerenciamento de Tarefas (✅):** Permitir que o admin atribua tarefas para setores e usuários.
-
-
-### 🟡 Em Progresso / A Fazer
-
-- **1. Módulo de Agenda:**
-    -   **Criar a Página de Agenda (🟡):** Desenvolver uma nova seção principal no painel.
-    -   **Implementar as 3 Agendas (🟡):**
+- **Módulo de Agenda:**
+    -   **Criar a Página de Agenda (✅):** Desenvolver uma nova seção principal no painel.
+    -   **Implementar as 3 Agendas (✅):**
         -   **Agenda Pessoal:** Para todos os usuários.
         -   **Agenda da Imobiliária:** Calendário geral editável apenas pelo Admin.
         -   **Agenda de Visitas da Equipe:** Para Corretores e Gerentes marcarem visitas.
 
-- **2. Módulo Financeiro (Aba "Financeiro"):**
+### 🟡 Em Progresso / A Fazer
+
+- **1. Módulo Financeiro (Aba "Financeiro"):**
     -   **Gestão de Comissões (❌):**
         -   Interface para o Financeiro lançar comissões (múltiplos envolvidos, valor, status, adiantamentos, data, nota fiscal).
         -   Corretores podem visualizar suas próprias comissões.
@@ -45,18 +43,17 @@ Este é o repositório do seu projeto LeadFlow, desenvolvido no Firebase Studio.
     -   **Relatórios Financeiros Detalhados (❌):**
         -   Filtros para analisar comissões e despesas por corretor, equipe, período, tipo de imóvel, etc.
 
-- **3. Persistência de Dados (Conectar ao Banco de Dados):**
+- **2. Persistência de Dados (Conectar ao Banco de Dados):**
     -   **Conectar Módulos ao Firestore (🟡):** A tarefa principal. Conectar todas as funcionalidades (CRM, Imóveis, Finanças, Equipes, etc.) ao banco de dados para salvar e carregar as informações de forma persistente.
 
-- **4. Sistema de Autenticação e Perfis:**
+- **3. Sistema de Autenticação e Perfis:**
     -   **Implementar Autenticação Real (🟡):** Integrar o Firebase Authentication para que o login e o cadastro funcionem com usuários reais.
     -   **Implementar Mudança de Senha (🟡):** Conectar a funcionalidade na página de configurações.
     -   **Conectar Perfis de Usuário (🟡):** Salvar os dados do perfil do usuário no Firestore.
 
-- **5. Relatórios e Filtros Avançados:**
+- **4. Relatórios e Filtros Avançados:**
     -   **Filtros em Módulos (❌):** Adicionar filtros avançados nas páginas de Negociação, Contratos, Processos e Comissões.
     -   **Filtros de Relatórios (🟡):** Implementar os filtros na página de relatórios para que funcionem com os dados reais.
 
-- **6. Sistema de Notificações:**
+- **5. Sistema de Notificações:**
     -   **Implementar Notificações (🟡):** Enviar alertas para ações importantes no sistema (e-mail, WhatsApp, etc.).
-
