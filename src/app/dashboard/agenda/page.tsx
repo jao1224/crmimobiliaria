@@ -14,11 +14,13 @@ import { Badge } from "@/components/ui/badge";
 import { PlusCircle } from "lucide-react";
 import { ptBR } from "date-fns/locale";
 
+type EventType = 'personal' | 'company' | 'team_visit';
+
 type Event = {
     id: string;
     date: Date;
     title: string;
-    type: 'personal' | 'company' | 'team_visit';
+    type: EventType;
     time: string;
     description: string;
 };
@@ -28,11 +30,13 @@ const initialEvents: Event[] = [
     { id: 'evt1', date: new Date(), title: 'Reunião com João Comprador', type: 'personal', time: '10:00', description: 'Discutir proposta do Apto Vista Mar.' },
     { id: 'evt2', date: new Date(), title: 'Visita ao Terreno Comercial', type: 'team_visit', time: '14:30', description: 'Visita com a equipe de vendas e a Construtora Build S.A.' },
     { id: 'evt3', date: new Date(new Date().setDate(new Date().getDate() + 2)), title: 'Feriado Municipal', type: 'company', time: 'Dia todo', description: 'A imobiliária estará fechada.' },
+    { id: 'evt4', date: new Date(new Date().setDate(new Date().getDate() + 5)), title: 'Entrega das Chaves - Apto 701', type: 'team_visit', time: '09:00', description: 'Cliente Maria feliz.' },
 ];
 
 export default function AgendaPage() {
     const [events, setEvents] = useState<Event[]>(initialEvents);
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+    const [activeTab, setActiveTab] = useState<EventType>('personal');
     const [isEventDialogOpen, setEventDialogOpen] = useState(false);
     const { toast } = useToast();
 
@@ -41,9 +45,10 @@ export default function AgendaPage() {
         return events.filter(event => 
             event.date.getDate() === selectedDate.getDate() &&
             event.date.getMonth() === selectedDate.getMonth() &&
-            event.date.getFullYear() === selectedDate.getFullYear()
+            event.date.getFullYear() === selectedDate.getFullYear() &&
+            (event.type === activeTab || (activeTab === 'team' && event.type === 'team_visit'))
         );
-    }, [selectedDate, events]);
+    }, [selectedDate, events, activeTab]);
     
     const handleAddEvent = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -121,11 +126,11 @@ export default function AgendaPage() {
                 <CardContent className="p-0">
                     <div className="flex flex-col md:flex-row">
                         <div className="flex-1 p-4 md:p-6">
-                            <Tabs defaultValue="personal">
+                            <Tabs defaultValue="personal" onValueChange={(value) => setActiveTab(value as EventType)}>
                                 <TabsList className="mb-4">
                                     <TabsTrigger value="personal">Minha Agenda</TabsTrigger>
                                     <TabsTrigger value="company">Agenda da Imobiliária</TabsTrigger>
-                                    <TabsTrigger value="team">Visitas da Equipe</TabsTrigger>
+                                    <TabsTrigger value="team_visit">Visitas da Equipe</TabsTrigger>
                                 </TabsList>
                                 <TabsContent value="personal">
                                      <Calendar
@@ -160,7 +165,7 @@ export default function AgendaPage() {
                                         }}
                                     />
                                 </TabsContent>
-                                <TabsContent value="team">
+                                <TabsContent value="team_visit">
                                       <Calendar
                                         mode="single"
                                         selected={selectedDate}
@@ -195,7 +200,7 @@ export default function AgendaPage() {
                                         </div>
                                     ))
                                 ) : (
-                                    <p className="text-sm text-muted-foreground text-center py-8">Nenhum evento para esta data.</p>
+                                    <p className="text-sm text-muted-foreground text-center py-8">Nenhum evento para esta data nesta agenda.</p>
                                 )}
                             </div>
                         </aside>
@@ -205,4 +210,3 @@ export default function AgendaPage() {
         </div>
     );
 }
-
