@@ -9,65 +9,96 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Download, Building, Target, Users } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { initialNegotiations, realtors, teams, propertyTypes, type Negotiation } from "@/lib/data";
 import { Badge } from "@/components/ui/badge";
 
+// --- DADOS DINÂMICOS ---
 
-// --- DADOS SIMULADOS ---
+const processSalesData = (negotiations: Negotiation[]) => {
+    const monthlySales: { [key: string]: number } = {};
+    const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
-// VENDAS
-const realtor1Data = [ { month: "Jan", sales: 95000 }, { month: "Fev", sales: 150000 }, { month: "Mar", sales: 80000 }, { month: "Abr", sales: 40000 }, { month: "Mai", sales: 110000 }, { month: "Jun", sales: 100000 }, { month: "Jul", sales: 220000 }, { month: "Ago", sales: 180000 }, ];
-const realtor2Data = [ { month: "Jan", sales: 25000 }, { month: "Fev", sales: 30000 }, { month: "Mar", sales: 70000 }, { month: "Abr", sales: 10000 }, { month: "Mai", sales: 30000 }, { month: "Jun", sales: 60000 }, { month: "Jul", sales: 80000 }, { month: "Ago", sales: 70000 }, ];
-const realtor3Data = [ { month: "Jan", sales: 50000 }, { month: "Fev", sales: 60000 }, { month: "Mar", sales: 55000 }, { month: "Abr", sales: 75000 }, { month: "Mai", sales: 80000 }, { month: "Jun", sales: 90000 }, { month: "Jul", sales: 110000 }, { month: "Ago", sales: 100000 }, ];
-const sumSalesData = (dataSources: { month: string; sales: number }[][]) => {
-    if (dataSources.length === 0) return [];
-    const maxMonths = Math.max(...dataSources.map(d => d.length));
-    const summed = [];
-    for (let i = 0; i < maxMonths; i++) {
-        const monthData = dataSources[0][i];
-        if (monthData) {
-             const totalSales = dataSources.reduce((acc, currentSource) => acc + (currentSource[i]?.sales || 0), 0);
-             summed.push({ month: monthData.month, sales: totalSales });
+    negotiations.forEach(neg => {
+        if (neg.stage === 'Venda Concluída' && neg.completionDate) {
+            const date = new Date(neg.completionDate);
+            const monthIndex = date.getUTCMonth(); // Usar getUTCMonth para consistência
+            const month = months[monthIndex];
+            if (month) {
+                monthlySales[month] = (monthlySales[month] || 0) + neg.value;
+            }
         }
-    }
-    return summed;
+    });
+
+    return months.map(month => ({
+        month,
+        sales: monthlySales[month] || 0
+    }));
 };
-const teamAData = sumSalesData([realtor1Data, realtor2Data]); 
-const teamBData = sumSalesData([realtor3Data]);
-const generalSalesData = sumSalesData([teamAData, teamBData]);
 
-// CAPTAÇÕES
-const realtorCapturesData = [ { name: "Carlos Pereira", captures: 12 }, { name: "Sofia Lima", captures: 8 }, { name: "Novo Corretor", captures: 15 }, ];
-const propertyTypeCapturesData = [ { type: "Apartamento", captures: 20 }, { type: "Casa", captures: 10 }, { type: "Terreno", captures: 5 }, ];
+const processCaptureData = (negotiations: Negotiation[]) => {
+    const realtorCaptures: { [key: string]: number } = {};
+    const propertyTypeCaptures: { [key: string]: number } = {};
 
-// DESEMPENHO
-const teamPerformanceData = [ { name: "Equipe A", revenue: 1250000, deals: 25, conversionRate: "15%" }, { name: "Equipe B", revenue: 850000, deals: 18, conversionRate: "22%" }, ];
+    negotiations.forEach(neg => {
+        if (neg.realtor) {
+            realtorCaptures[neg.realtor] = (realtorCaptures[neg.realtor] || 0) + 1;
+        }
+        if (neg.propertyType) {
+            propertyTypeCaptures[neg.propertyType] = (propertyTypeCaptures[neg.propertyType] || 0) + 1;
+        }
+    });
+
+    return {
+        realtorCaptures: Object.entries(realtorCaptures).map(([name, captures]) => ({ name, captures })),
+        propertyTypeCaptures: Object.entries(propertyTypeCaptures).map(([type, captures]) => ({ type, captures })),
+    };
+};
+
+const processTeamPerformanceData = (negotiations: Negotiation[], teamsData: typeof teams) => {
+    const performanceData: { [key: string]: { revenue: number, deals: number } } = {};
+
+    teamsData.forEach(team => {
+        performanceData[team.name] = { revenue: 0, deals: 0 };
+    });
+
+    negotiations.forEach(neg => {
+        if (neg.stage === 'Venda Concluída') {
+            const team = teamsData.find(t => t.members.includes(neg.salesperson));
+            if (team) {
+                performanceData[team.name].revenue += neg.value;
+                performanceData[team.name].deals += 1;
+            }
+        }
+    });
+    
+    return Object.entries(performanceData).map(([name, data]) => ({
+        name,
+        ...data,
+        conversionRate: "15%" // Mantido como estático
+    }));
+};
 
 
 export default function ReportingPage() {
-    const [activeFilter, setActiveFilter] = useState('geral');
-    const [activeValue, setActiveValue] = useState('geral');
+    const [negotiations] = useState<Negotiation[]>(initialNegotiations);
     
-    const handleFilterChange = (filterType: string, value: string) => {
-        // Redefine outros filtros para "geral" para evitar confusão.
-        // Em uma implementação real, a lógica poderia ser mais complexa.
-        setActiveFilter(filterType);
-        setActiveValue(value);
-    };
+    // Estados dos filtros
+    const [realtorFilter, setRealtorFilter] = useState('all');
+    const [teamFilter, setTeamFilter] = useState('all');
+    const [propertyTypeFilter, setPropertyTypeFilter] = useState('all');
 
-    const chartData = useMemo(() => {
-        if (activeFilter === 'realtor') {
-            if (activeValue === 'realtor-1') return realtor1Data;
-            if (activeValue === 'realtor-2') return realtor2Data;
-            if (activeValue === 'realtor-3') return realtor3Data;
-        }
-        if (activeFilter === 'team') {
-            if (activeValue === 'team-a') return teamAData;
-            if (activeValue === 'team-b') return teamBData;
-        }
-        // Para 'geral' ou qualquer outra combinação, mostra os dados gerais.
-        return generalSalesData;
-    }, [activeFilter, activeValue]);
+    const filteredNegotiations = useMemo(() => {
+        return negotiations.filter(neg => {
+            const realtorMatch = realtorFilter === 'all' || neg.realtor === realtorFilter;
+            const teamMatch = teamFilter === 'all' || teams.find(t => t.id === teamFilter)?.members.includes(neg.salesperson);
+            const propertyTypeMatch = propertyTypeFilter === 'all' || neg.propertyType === propertyTypeFilter;
+            return realtorMatch && teamMatch && propertyTypeMatch;
+        });
+    }, [negotiations, realtorFilter, teamFilter, propertyTypeFilter]);
 
+    const chartData = useMemo(() => processSalesData(filteredNegotiations), [filteredNegotiations]);
+    const { realtorCaptures, propertyTypeCaptures } = useMemo(() => processCaptureData(filteredNegotiations), [filteredNegotiations]);
+    const teamPerformanceData = useMemo(() => processTeamPerformanceData(negotiations, teams), [negotiations]);
 
     return (
         <div className="flex flex-col gap-6">
@@ -98,46 +129,31 @@ export default function ReportingPage() {
                                     <CardDescription>Visualize dados de vendas com filtros personalizados.</CardDescription>
                                 </div>
                                 <div className="flex flex-wrap items-center gap-2">
-                                     <Select onValueChange={(value) => handleFilterChange('period', value)} defaultValue="geral">
-                                        <SelectTrigger className="w-[180px]">
-                                            <SelectValue placeholder="Filtrar por Período" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="geral">Ano Inteiro</SelectItem>
-                                            <SelectItem value="last-30">Últimos 30 dias</SelectItem>
-                                            <SelectItem value="this-month">Este Mês</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                     <Select onValueChange={(value) => handleFilterChange('realtor', value)} defaultValue="geral">
+                                     <Select value={realtorFilter} onValueChange={setRealtorFilter}>
                                         <SelectTrigger className="w-[180px]">
                                             <SelectValue placeholder="Filtrar por Corretor" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="geral">Todos os Corretores</SelectItem>
-                                            <SelectItem value="realtor-1">Carlos Pereira</SelectItem>
-                                            <SelectItem value="realtor-2">Sofia Lima</SelectItem>
-                                            <SelectItem value="realtor-3">Novo Corretor</SelectItem>
+                                            <SelectItem value="all">Todos os Corretores</SelectItem>
+                                            {realtors.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
-                                     <Select onValueChange={(value) => handleFilterChange('team', value)} defaultValue="geral">
+                                     <Select value={teamFilter} onValueChange={setTeamFilter}>
                                         <SelectTrigger className="w-[180px]">
                                             <SelectValue placeholder="Filtrar por Equipe" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="geral">Todas as Equipes</SelectItem>
-                                            <SelectItem value="team-a">Equipe A</SelectItem>
-                                            <SelectItem value="team-b">Equipe B</SelectItem>
+                                            <SelectItem value="all">Todas as Equipes</SelectItem>
+                                            {teams.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
-                                    <Select onValueChange={(value) => handleFilterChange('propertyType', value)} defaultValue="geral">
+                                    <Select value={propertyTypeFilter} onValueChange={setPropertyTypeFilter}>
                                         <SelectTrigger className="w-[180px]">
                                             <SelectValue placeholder="Filtrar por Tipo de Imóvel" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="geral">Todos os Tipos</SelectItem>
-                                            <SelectItem value="resale">Revenda</SelectItem>
-                                            <SelectItem value="new">Lançamento</SelectItem>
-                                            <SelectItem value="land">Terreno</SelectItem>
+                                            <SelectItem value="all">Todos os Tipos</SelectItem>
+                                            {propertyTypes.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -164,7 +180,7 @@ export default function ReportingPage() {
                                      <Table>
                                         <TableHeader><TableRow><TableHead>Corretor</TableHead><TableHead className="text-right">Imóveis Captados</TableHead></TableRow></TableHeader>
                                         <TableBody>
-                                            {realtorCapturesData.map(item => (
+                                            {realtorCaptures.map(item => (
                                                 <TableRow key={item.name}><TableCell>{item.name}</TableCell><TableCell className="text-right font-bold">{item.captures}</TableCell></TableRow>
                                             ))}
                                         </TableBody>
@@ -179,7 +195,7 @@ export default function ReportingPage() {
                                      <Table>
                                         <TableHeader><TableRow><TableHead>Tipo</TableHead><TableHead className="text-right">Imóveis Captados</TableHead></TableRow></TableHeader>
                                         <TableBody>
-                                            {propertyTypeCapturesData.map(item => (
+                                            {propertyTypeCaptures.map(item => (
                                                 <TableRow key={item.type}><TableCell>{item.type}</TableCell><TableCell className="text-right font-bold">{item.captures}</TableCell></TableRow>
                                             ))}
                                         </TableBody>
@@ -225,5 +241,3 @@ export default function ReportingPage() {
         </div>
     )
 }
-
-    

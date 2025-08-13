@@ -8,6 +8,7 @@ import { SalesReport } from "@/components/dashboard/sales-report";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { UserProfile } from "./layout";
 import { ProfileContext } from "@/contexts/ProfileContext";
+import { initialNegotiations, type Negotiation } from "@/lib/data"; // Importando dados
 
 const welcomeMessages: Record<UserProfile, { title: string; subtitle: string }> = {
   'Admin': { title: "Admin!", subtitle: "Visão geral completa do sistema. Monitore o desempenho e gerencie todas as operações." },
@@ -15,12 +16,28 @@ const welcomeMessages: Record<UserProfile, { title: string; subtitle: string }> 
   'Corretor Autônomo': { title: "Corretor(a)!", subtitle: "Visão geral do dia: seus resultados em destaque." },
   'Investidor': { title: "Investidor(a)!", subtitle: "Acompanhe seus imóveis e as melhores oportunidades de negociação do mercado." },
   'Construtora': { title: "Construtora!", subtitle: "Gerencie seus empreendimentos, vendas e parcerias de forma integrada." },
+  'Financeiro': { title: "Financeiro!", subtitle: "Acompanhe o fluxo de caixa e as métricas financeiras." },
 };
+
+// Dados simulados para vendas
+const salesData = [
+  { month: "Jan", sales: 95000 },
+  { month: "Fev", sales: 150000 },
+  { month: "Mar", sales: 80000 },
+  { month: "Abr", sales: 40000 },
+  { month: "Mai", sales: 110000 },
+  { month: "Jun", sales: 100000 },
+  { month: "Jul", sales: 220000 },
+  { month: "Ago", sales: 180000 },
+];
 
 export default function DashboardPage() {
   const { activeProfile } = useContext(ProfileContext);
   const [greeting, setGreeting] = useState("Bem-vindo(a) de volta,");
   const { title, subtitle } = welcomeMessages[activeProfile] || welcomeMessages['Admin'];
+  
+  const [negotiations, setNegotiations] = useState<Negotiation[]>(initialNegotiations);
+  const [isLoading, setIsLoading] = useState(false); // Não há carregamento real
 
   useEffect(() => {
     const currentHour = new Date().getHours();
@@ -33,15 +50,15 @@ export default function DashboardPage() {
     }
   }, []);
 
-
-  // Os dados agora são estáticos para simulação
+  // Calculando estatísticas dinamicamente
   const stats = {
-    totalRevenue: 1250000,
-    activeDeals: 12,
-    soldProperties: 5,
-    newLeads: 25,
+    totalRevenue: negotiations
+      .filter(n => n.stage === 'Venda Concluída')
+      .reduce((sum, n) => sum + n.value, 0),
+    activeDeals: negotiations.filter(n => n.stage !== 'Venda Concluída' && n.stage !== 'Aluguel Ativo').length,
+    soldProperties: negotiations.filter(n => n.stage === 'Venda Concluída').length,
+    newLeads: 25, // Mantido como estático por enquanto
   };
-  const [isLoading, setIsLoading] = useState(false); // Não há carregamento real
 
   const overviewCards = [
     {
@@ -110,7 +127,7 @@ export default function DashboardPage() {
             <CardDescription>Desempenho de vendas mensais com base nos contratos gerados.</CardDescription>
           </CardHeader>
           <CardContent className="pl-2">
-            <SalesReport />
+            <SalesReport data={salesData} />
           </CardContent>
         </Card>
       </div>

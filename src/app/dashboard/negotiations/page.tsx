@@ -16,45 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
-// Tipos
-type NegotiationStage = 'Proposta Enviada' | 'Em Negociação' | 'Contrato Gerado' | 'Venda Concluída' | 'Aluguel Ativo';
-type NegotiationType = 'Venda' | 'Aluguel' | 'Leilão';
-type ContractStatus = 'Não Gerado' | 'Pendente Assinaturas' | 'Assinado' | 'Cancelado';
-
-type Negotiation = {
-    id: string;
-    property: string;
-    propertyId: string;
-    client: string;
-    clientId: string;
-    stage: NegotiationStage;
-    type: NegotiationType;
-    value: number;
-    salesperson: string;
-    realtor: string;
-    contractStatus: ContractStatus;
-};
-type Property = { id: string; name: string; address: string; price: number; commission: number; };
-type Client = { id: string; name: string; doc: string; };
-
-const initialNegotiations: Negotiation[] = [
-    { id: 'neg1', property: 'Apartamento Vista Mar', propertyId: 'prop1', client: 'João Comprador', clientId: 'cli1', stage: 'Proposta Enviada', type: 'Venda', value: 850000, salesperson: 'Joana Doe', realtor: 'Carlos Pereira', contractStatus: 'Não Gerado' },
-    { id: 'neg2', property: 'Casa com Piscina', propertyId: 'prop2', client: 'Maria Investidora', clientId: 'cli2', stage: 'Em Negociação', type: 'Venda', value: 1200000, salesperson: 'Joana Doe', realtor: 'Sofia Lima', contractStatus: 'Não Gerado' },
-    { id: 'neg3', property: 'Terreno Comercial', propertyId: 'prop3', client: 'Construtora Build S.A.', clientId: 'cli3', stage: 'Contrato Gerado', type: 'Venda', value: 2500000, salesperson: 'Admin', realtor: 'Carlos Pereira', contractStatus: 'Pendente Assinaturas' },
-    { id: 'neg4', property: 'Loft Moderno', propertyId: 'prop4', client: 'Paulo Inquilino', clientId: 'cli4', stage: 'Aluguel Ativo', type: 'Aluguel', value: 2500, salesperson: 'Sofia Lima', realtor: 'Carlos Pereira', contractStatus: 'Assinado' },
-    { id: 'neg5', property: 'Sítio Ecológico', propertyId: 'prop5', client: 'Família Verde', clientId: 'cli5', stage: 'Venda Concluída', type: 'Venda', value: 780000, salesperson: 'Joana Doe', realtor: 'Sofia Lima', contractStatus: 'Assinado' },
-];
-
-const mockProperties: Property[] = [
-    { id: 'prop1', name: 'Apartamento Vista Mar', address: 'Av. Beira Mar, 123', price: 900000, commission: 2.5 },
-];
-
-const mockClients: Client[] = [
-     { id: 'cli1', name: 'João Comprador', doc: '111.222.333-44' },
-];
-
-const realtors = ['Carlos Pereira', 'Sofia Lima', 'Joana Doe', 'Admin'];
+import { initialNegotiations, mockProperties, mockClients, realtors, type Negotiation, type Property, type Client } from "@/lib/data";
 
 export default function NegotiationsPage() {
     const router = useRouter();
@@ -133,6 +95,7 @@ export default function NegotiationsPage() {
             id: `neg${Date.now()}`,
             property: foundProperty.name,
             propertyId: foundProperty.id,
+            propertyType: 'Revenda', // Simulado
             client: foundClient.name,
             clientId: foundClient.id,
             stage: "Proposta Enviada",
@@ -141,6 +104,7 @@ export default function NegotiationsPage() {
             value: Number(proposalValue),
             salesperson: "Joana Doe",
             realtor: "Carlos Pereira",
+            completionDate: new Date().toISOString(), // Simulado
         };
         setNegotiations(prev => [...prev, newNegotiation]);
         setNewNegotiationOpen(false);
@@ -175,7 +139,7 @@ export default function NegotiationsPage() {
         }
     }
     
-    const getContractStatusVariant = (status: ContractStatus): VariantProps<typeof badgeVariants>['variant'] => {
+    const getContractStatusVariant = (status: Negotiation['contractStatus']): VariantProps<typeof badgeVariants>['variant'] => {
         switch (status) {
             case 'Não Gerado': return 'secondary';
             case 'Pendente Assinaturas': return 'status-orange';
@@ -289,9 +253,9 @@ export default function NegotiationsPage() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">Todos os Tipos</SelectItem>
-                                    <SelectItem value="venda">Venda</SelectItem>
-                                    <SelectItem value="aluguel">Aluguel</SelectItem>
-                                    <SelectItem value="leilao">Leilão</SelectItem>
+                                    <SelectItem value="Venda">Venda</SelectItem>
+                                    <SelectItem value="Aluguel">Aluguel</SelectItem>
+                                    <SelectItem value="Leilão">Leilão</SelectItem>
                                 </SelectContent>
                             </Select>
                              <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -386,4 +350,3 @@ export default function NegotiationsPage() {
         </div>
     );
 }
-
