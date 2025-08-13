@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Download, Building, Target, Users, Calendar } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { initialNegotiations, realtors, teams, propertyTypes as allPropertyTypes, type Negotiation } from "@/lib/data";
+import { initialNegotiations, realtors, teams, propertyTypes, type Negotiation } from "@/lib/data";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -84,7 +84,6 @@ const processTeamPerformanceData = (negotiations: Negotiation[], teamsData: type
     }));
 };
 
-const propertyTypesForFilter = ['Casa', 'Apartamento', 'Terreno', 'Loja', 'Sítio'];
 
 export default function ReportingPage() {
     const [negotiations] = useState<Negotiation[]>(initialNegotiations);
@@ -106,15 +105,13 @@ export default function ReportingPage() {
 
     const filteredNegotiations = useMemo(() => {
         return negotiations.filter(neg => {
-            const realtorMatch = realtorFilter === 'all' || neg.realtor === realtorFilter;
+            const realtorMatch = realtorFilter === 'all' || neg.realtor === realtorFilter || neg.salesperson === realtorFilter;
             const teamMatch = teamFilter === 'all' || teams.find(t => t.id === teamFilter)?.members.includes(neg.salesperson);
-            
-            // Simulação de tipo de imóvel (não existe no 'neg')
-            const propertyTypeMatch = propertyTypeFilter === 'all'; 
+            const propertyTypeMatch = propertyTypeFilter === 'all' || neg.propertyType === propertyTypeFilter;
 
-            // Simulação de tipo de operação
+            // O filtro de operação é mais complexo, pois "Captação" vem dos imóveis, e "Venda" das negociações.
+            // Por simplicidade na simulação, vamos filtrar por tipo de negociação por enquanto.
             const operationTypeMatch = operationTypeFilter === 'all' || (operationTypeFilter === 'venda' && neg.type === 'Venda');
-
 
             const dateMatch = !startDate || !endDate || !neg.completionDate || (
                 new Date(neg.completionDate) >= new Date(startDate) &&
@@ -124,10 +121,24 @@ export default function ReportingPage() {
             return realtorMatch && teamMatch && propertyTypeMatch && dateMatch && operationTypeMatch;
         });
     }, [negotiations, realtorFilter, teamFilter, propertyTypeFilter, startDate, endDate, operationTypeFilter]);
+    
+    // Simulação de filtragem de captações
+    const filteredCaptures = useMemo(() => {
+        return properties.filter(prop => {
+            const realtorMatch = realtorFilter === 'all' || prop.capturedBy === realtorFilter;
+            const propertyTypeMatch = propertyTypeFilter === 'all' || prop.type === propertyTypeFilter;
+            // Para captações, não filtramos por data de conclusão de venda
+            return realtorMatch && propertyTypeMatch;
+        });
+    }, [properties, realtorFilter, propertyTypeFilter]);
 
     const chartData = useMemo(() => processSalesData(filteredNegotiations), [filteredNegotiations]);
-    const { realtorCaptures, propertyTypeCaptures } = useMemo(() => processCaptureData(properties), [properties]);
-    const teamPerformanceData = useMemo(() => processTeamPerformanceData(negotiations, teams), [negotiations]);
+    
+    // Dados para os relatórios de captação usam os imóveis filtrados
+    const { realtorCaptures, propertyTypeCaptures } = useMemo(() => processCaptureData(operationTypeFilter === 'venda' ? [] : filteredCaptures), [filteredCaptures, operationTypeFilter]);
+    
+    // Dados de desempenho de equipe usam as negociações filtradas
+    const teamPerformanceData = useMemo(() => processTeamPerformanceData(filteredNegotiations, teams), [filteredNegotiations]);
 
     return (
         <div className="flex flex-col gap-6">
@@ -176,16 +187,16 @@ export default function ReportingPage() {
                                             {teams.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
-                                    <Select value={propertyTypeFilter} onValueChange={setPropertyTypeFilter}>
+                                     <Select value={propertyTypeFilter} onValueChange={setPropertyTypeFilter}>
                                         <SelectTrigger className="w-full sm:w-auto min-w-[180px]">
                                             <SelectValue placeholder="Filtrar por Tipo de Imóvel" />
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="all">Todos os Tipos</SelectItem>
-                                            {propertyTypesForFilter.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                                            {propertyTypes.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
-                                    <Select value={operationTypeFilter} onValueChange={setOperationTypeFilter}>
+                                     <Select value={operationTypeFilter} onValueChange={setOperationTypeFilter}>
                                         <SelectTrigger className="w-full sm:w-auto min-w-[180px]">
                                             <SelectValue placeholder="Filtrar por Operação" />
                                         </SelectTrigger>
@@ -207,7 +218,11 @@ export default function ReportingPage() {
                             </div>
                         </CardHeader>
                         <CardContent className="pt-6">
-                            <SalesReport data={chartData} />
+                             {operationTypeFilter === 'captacao' ? (
+                                <div className="text-center py-10 text-muted-foreground">O gráfico de vendas não é exibido ao filtrar por "Captação".</div>
+                            ) : (
+                                <SalesReport data={chartData} />
+                            )}
                         </CardContent>
                     </Card>
                 </TabsContent>
@@ -227,9 +242,15 @@ export default function ReportingPage() {
                                      <Table>
                                         <TableHeader><TableRow><TableHead>Corretor</TableHead><TableHead className="text-right">Imóveis Captados</TableHead></TableRow></TableHeader>
                                         <TableBody>
-                                            {realtorCaptures.map(item => (
-                                                <TableRow key={item.name}><TableCell>{item.name}</TableCell><TableCell className="text-right font-bold">{item.captures}</TableCell></TableRow>
-                                            ))}
+                                            {realtorCaptures.length > 0 ? (
+                                                realtorCaptures.map(item => (
+                                                    <TableRow key={item.name}><TableCell>{item.name}</TableCell><TableCell className="text-right font-bold">{item.captures}</TableCell></TableRow>
+                                                ))
+                                            ) : (
+                                                 <TableRow>
+                                                    <TableCell colSpan={2} className="h-24 text-center">Nenhuma captação encontrada para os filtros selecionados.</TableCell>
+                                                </TableRow>
+                                            )}
                                         </TableBody>
                                     </Table>
                                 </CardContent>
@@ -247,14 +268,15 @@ export default function ReportingPage() {
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {propertyTypeCaptures.map(item => (
-                                                <TableRow key={item.type}>
-                                                    <TableCell>{item.type}</TableCell>
-                                                    <TableCell className="text-right font-bold">{item.captures}</TableCell>
-                                                </TableRow>
-                                            ))}
-                                            {propertyTypeCaptures.length === 0 && (
-                                                <TableRow>
+                                            {propertyTypeCaptures.length > 0 ? (
+                                                propertyTypeCaptures.map(item => (
+                                                    <TableRow key={item.type}>
+                                                        <TableCell>{item.type}</TableCell>
+                                                        <TableCell className="text-right font-bold">{item.captures}</TableCell>
+                                                    </TableRow>
+                                                ))
+                                            ) : (
+                                                 <TableRow>
                                                     <TableCell colSpan={2} className="h-24 text-center">Nenhuma captação encontrada.</TableCell>
                                                 </TableRow>
                                             )}
@@ -291,6 +313,11 @@ export default function ReportingPage() {
                                             <TableCell><Badge variant="success">{team.conversionRate}</Badge></TableCell>
                                         </TableRow>
                                     ))}
+                                    {teamPerformanceData.length === 0 && (
+                                        <TableRow>
+                                            <TableCell colSpan={4} className="h-24 text-center">Nenhum dado de performance encontrado para os filtros.</TableCell>
+                                        </TableRow>
+                                    )}
                                 </TableBody>
                             </Table>
                         </CardContent>
@@ -301,5 +328,3 @@ export default function ReportingPage() {
         </div>
     )
 }
-
-    
