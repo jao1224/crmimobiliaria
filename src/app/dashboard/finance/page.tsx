@@ -39,7 +39,7 @@ const initialCommissions: Commission[] = [
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount);
 
-const commissionLaunchPermissions: UserProfile[] = ['Admin', 'Imobiliária'];
+const commissionLaunchPermissions: UserProfile[] = ['Admin', 'Imobiliária', 'Financeiro'];
 
 
 export default function FinancePage() {
