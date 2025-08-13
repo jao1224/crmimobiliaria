@@ -277,7 +277,7 @@ export default function NegotiationsPage() {
                                     <TableCell>{neg.client}</TableCell>
                                     <TableCell>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(neg.value)}</TableCell>
                                     <TableCell>
-                                        <Badge variant={getStageVariant(neg.stage)}>{neg.stage}</Badge>
+                                        <Badge variant={getStageVariant(neg.stage)} className="whitespace-nowrap">{neg.stage}</Badge>
                                     </TableCell>
                                      <TableCell>
                                         <Badge variant={neg.contractStatus === "Não Gerado" ? "secondary" : "default"}>{neg.contractStatus}</Badge>
@@ -320,3 +320,4 @@ export default function NegotiationsPage() {
     
 
     
+
