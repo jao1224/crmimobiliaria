@@ -60,9 +60,15 @@ Este é o repositório do seu projeto LeadFlow, desenvolvido no Firebase Studio.
 
 ### 🟡 Em Progresso / A Fazer
 
-- **1. Persistência de Dados (Conectar ao Banco de Dados):**
+- **1. Persistência e Integração de Dados (Conectar ao Banco de Dados):**
     -   **Conectar Módulos ao Firestore (🟡):** A tarefa principal. Conectar todas as funcionalidades (CRM, Imóveis, Finanças, Equipes, etc.) ao banco de dados para salvar e carregar as informações de forma persistente.
-        -   **Integração de Dados (❌):** Garantir que o código de um imóvel ou o CPF de um cliente preencha automaticamente os campos em outras seções (ex: negociações).
+    -   **Integração de Dados entre Módulos (❌):**
+        -   Garantir que o código de um imóvel ou o CPF de um cliente preencha automaticamente os campos em outras seções (ex: negociações).
+        -   Quando uma venda for concluída em "Negociações", a comissão deve ser gerada automaticamente no módulo "Financeiro" (❌).
+    -   **Detalhamento Financeiro nas Comissões (❌):**
+        -   Incluir detalhes do negócio na tela de comissão: valor do imóvel, captador, vendedor, gerente, sinal do cliente, parcelamento com a construtora, etc.
+    -   **Detalhamento do Processo de Negociação (❌):**
+        -   Criar uma visão detalhada para cada processo, onde seja possível abrir e ver todas as informações financeiras e de comissão relacionadas.
 
 - **2. Sistema de Autenticação e Perfis:**
     -   **Implementar Autenticação Real (🟡):** Integrar o Firebase Authentication para que o login e o cadastro funcionem com usuários reais.
