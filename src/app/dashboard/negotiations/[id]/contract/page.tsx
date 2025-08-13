@@ -65,11 +65,10 @@ const mockRealtors = {
 }
 
 
-export default function ContractPage() {
+export default function ContractPage({ params }: { params: { id: string } }) {
     const router = useRouter();
-    const params = useParams();
     const { toast } = useToast();
-    const negotiationId = params.id as string;
+    const negotiationId = params.id;
 
     const [negotiation, setNegotiation] = useState<Negotiation | null>(mockNegotiation);
     const [property, setProperty] = useState<Property | null>(mockProperty);
@@ -201,15 +200,15 @@ export default function ContractPage() {
     return (
         <div className="flex flex-col gap-6">
             <div className="flex items-center justify-between print:hidden">
-                <div>
-                    <Button variant="outline" size="icon" className="mr-4" onClick={() => router.back()}>
+                 <div className="flex items-center gap-4">
+                    <Button variant="outline" size="icon" onClick={() => router.back()}>
                         <ArrowLeft className="h-4 w-4" />
                         <span className="sr-only">Voltar</span>
                     </Button>
-                </div>
-                <div className="flex-1">
-                    <h1 className="text-2xl font-bold">Gestão de Contratos</h1>
-                    <p className="text-muted-foreground">Negociação ID: {negotiationId}</p>
+                    <div>
+                        <h1 className="text-2xl font-bold">Gestão de Contratos</h1>
+                        <p className="text-muted-foreground">Negociação ID: {negotiationId}</p>
+                    </div>
                 </div>
                 <div className="flex gap-2">
                     <Button onClick={handleSave} variant="default" disabled={isSaving}>
@@ -245,10 +244,10 @@ export default function ContractPage() {
                         <div className="mt-4 flex items-center gap-2 text-sm text-emerald-600 border border-emerald-200 bg-emerald-50 rounded-md p-3">
                             <FileText className="h-5 w-5" />
                             <span className="font-medium">Contrato Anexado:</span>
-                            <Link href={negotiation.contractUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 underline hover:text-emerald-800">
+                             <a href={negotiation.contractUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 underline hover:text-emerald-800">
                                 Visualizar Contrato
                                 <LinkIcon className="h-4 w-4" />
-                            </Link>
+                            </a>
                         </div>
                     )}
                  </CardContent>
@@ -379,5 +378,3 @@ export default function ContractPage() {
         </div>
     );
 }
-
-    
