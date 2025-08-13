@@ -44,6 +44,12 @@ Este é o repositório do seu projeto LeadFlow, desenvolvido no Firebase Studio.
         -   Filtros para analisar comissões e despesas por corretor, equipe, período, tipo de imóvel, etc.
 - **Sistema de Autenticação e Perfis:**
     -   **Gestão de Plano (Minha Conta) (✅):** Interface para o usuário ver seu plano (mensal, anual, etc.).
+- **Relatórios e Filtros Avançados:**
+    -   **Relatório de Captações (✅):** Criar relatório para imóveis captados, com filtros por corretor e período.
+    -   **Relatório de Desempenho (✅):** Criar relatórios para equipes e corretores.
+    -   **Filtros Avançados em Módulos (✅):** Adicionar filtros avançados na página de Processos/Negociações para filtrar por tipo (venda, aluguel, leilão, etc.), status e responsável.
+    -   **Filtros de Relatórios (✅):** Implementar a lógica dos filtros na página de relatórios para que funcionem com os dados reais.
+    -   **Módulo de Processos Administrativos (✅):** Criar uma seção para gerenciar processos internos.
 
 
 ### 🟡 Em Progresso / A Fazer
@@ -57,19 +63,12 @@ Este é o repositório do seu projeto LeadFlow, desenvolvido no Firebase Studio.
     -   **Implementar Mudança de Senha (🟡):** Conectar a funcionalidade na página de configurações ("Minha Conta").
     -   **Conectar Perfis de Usuário (🟡):** Salvar os dados do perfil do usuário no Firestore.
 
-- **3. Relatórios e Filtros Avançados:**
-    -   **Relatório de Captações (❌):** Criar relatório para imóveis captados, com filtros por corretor e período.
-    -   **Relatório de Desempenho (❌):** Criar relatórios para equipes e corretores.
-    -   **Filtros Avançados em Módulos (❌):** Adicionar filtros avançados na página de Processos/Negociações para filtrar por tipo (venda, aluguel, leilão, etc.), status e responsável.
-    -   **Filtros de Relatórios (🟡):** Implementar a lógica dos filtros na página de relatórios para que funcionem com os dados reais.
-    -   **Módulo de Processos Administrativos (❌):** Criar uma seção para gerenciar processos internos.
-
-- **4. Novos Módulos e Funcionalidades:**
+- **3. Novos Módulos e Funcionalidades:**
     -   **Módulo de Correspondente Bancário (❌):** Criar uma nova seção principal no painel.
     -   **Módulo "Outros Serviços" (❌):**
         -   Criar uma seção principal "Outros Serviços" no menu.
         -   Dentro dela, criar as abas/submódulos: `Avaliador`, `Jurídico`, `Leilão`, `Despachante`, `Locação`.
     -   **Lógica de Permissões da Agenda (❌):** Ajustar a visibilidade das agendas para que cada perfil de usuário veja apenas as agendas relevantes para sua função (ex: Admin vê todas, Corretor vê a sua e a da equipe).
 
-- **5. Sistema de Notificações:**
+- **4. Sistema de Notificações:**
     -   **Implementar Notificações (🟡):** Enviar alertas para ações importantes no sistema (e-mail, WhatsApp, etc.).
