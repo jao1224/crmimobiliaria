@@ -54,7 +54,7 @@ export default function ReportingPage() {
                         </div>
                     </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-6">
                     <SalesReport />
                 </CardContent>
             </Card>

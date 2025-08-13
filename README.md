@@ -27,8 +27,8 @@ Este é o repositório do seu projeto LeadFlow, desenvolvido no Firebase Studio.
 ### 🟡 Em Progresso / A Fazer
 
 - **1. Módulo de Agenda:**
-    -   **Criar a Página de Agenda (❌):** Desenvolver uma nova seção principal no painel.
-    -   **Implementar as 3 Agendas (❌):**
+    -   **Criar a Página de Agenda (🟡):** Desenvolver uma nova seção principal no painel.
+    -   **Implementar as 3 Agendas (🟡):**
         -   **Agenda Pessoal:** Para todos os usuários.
         -   **Agenda da Imobiliária:** Calendário geral editável apenas pelo Admin.
         -   **Agenda de Visitas da Equipe:** Para Corretores e Gerentes marcarem visitas.
