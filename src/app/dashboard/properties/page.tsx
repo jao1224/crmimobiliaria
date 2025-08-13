@@ -64,8 +64,10 @@ const initialProperties: Property[] = [
 export default function PropertiesPage() {
   const [properties, setProperties] = useState<Property[]>(initialProperties);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [isPropertyDialogOpen, setPropertyDialogOpen] = useState(false);
   const [isDetailModalOpen, setDetailModalOpen] = useState(false);
+  const [isEditDialogOpen, setEditDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const handleAddProperty = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -90,9 +92,36 @@ export default function PropertiesPage() {
     setPropertyDialogOpen(false);
   };
   
+  const handleUpdateProperty = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!editingProperty) return;
+
+    const formData = new FormData(event.currentTarget);
+    
+    const updatedProperty = {
+      ...editingProperty,
+      name: formData.get("name") as string,
+      address: formData.get("address") as string,
+      price: Number(formData.get("price")),
+      commission: Number(formData.get("commission")),
+      description: formData.get("description") as string,
+      ownerInfo: formData.get("owner") as string,
+    };
+
+    setProperties(prev => prev.map(p => p.id === updatedProperty.id ? updatedProperty : p));
+    toast({ title: "Sucesso!", description: "Imóvel atualizado com sucesso (simulado)." });
+    setEditDialogOpen(false);
+    setEditingProperty(null);
+  };
+
   const handleRowClick = (property: Property) => {
     setSelectedProperty(property);
     setDetailModalOpen(true);
+  };
+
+  const handleEditClick = (property: Property) => {
+    setEditingProperty(property);
+    setEditDialogOpen(true);
   };
 
   const getStatusVariant = (status: string): VariantProps<typeof badgeVariants>["variant"] => {
@@ -234,7 +263,7 @@ export default function PropertiesPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                        <DropdownMenuItem>Editar</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleEditClick(property)}>Editar</DropdownMenuItem>
                         <DropdownMenuItem>Ver Detalhes</DropdownMenuItem>
                         <DropdownMenuItem className="text-destructive">
                           Excluir
@@ -306,6 +335,49 @@ export default function PropertiesPage() {
           )}
         </DialogContent>
       </Dialog>
+      
+      <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Editar Imóvel</DialogTitle>
+            <DialogDescription>Atualize os detalhes do imóvel abaixo.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleUpdateProperty}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">Nome do Imóvel</Label>
+                <Input id="edit-name" name="name" defaultValue={editingProperty?.name} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-address">Endereço</Label>
+                <Input id="edit-address" name="address" defaultValue={editingProperty?.address} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-price">Preço (R$)</Label>
+                <Input id="edit-price" name="price" type="number" defaultValue={editingProperty?.price} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-commission">Comissão (%)</Label>
+                <Input id="edit-commission" name="commission" type="number" step="0.1" defaultValue={editingProperty?.commission} required />
+              </div>
+              <div className="md:col-span-2 space-y-2">
+                 <Label htmlFor="edit-description">Descrição</Label>
+                 <Textarea id="edit-description" name="description" defaultValue={editingProperty?.description} />
+              </div>
+               <div className="md:col-span-2 space-y-2">
+                 <Label htmlFor="edit-owner">Informações do Proprietário</Label>
+                 <Textarea id="edit-owner" name="owner" defaultValue={editingProperty?.ownerInfo} />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>Cancelar</Button>
+              <Button type="submit">Salvar Alterações</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
+    
