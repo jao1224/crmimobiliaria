@@ -263,9 +263,9 @@ export default function PropertiesPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => handleEditClick(property)}>Editar</DropdownMenuItem>
-                        <DropdownMenuItem>Ver Detalhes</DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditClick(property); }}>Editar</DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleRowClick(property); }}>Ver Detalhes</DropdownMenuItem>
+                        <DropdownMenuItem className="text-destructive" onClick={(e) => e.stopPropagation()}>
                           Excluir
                         </DropdownMenuItem>
                       </DropdownMenuContent>
