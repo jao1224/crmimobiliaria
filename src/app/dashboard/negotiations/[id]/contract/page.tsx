@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { notFound, useParams, useRouter } from "next/navigation";
+import { notFound, useRouter } from "next/navigation";
 import { Printer, Save, Upload, FileText, Link as LinkIcon, ArrowLeft } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -65,11 +65,10 @@ const mockRealtors = {
 }
 
 
-export default function ContractPage() {
-    const params = useParams();
+export default function ContractPage({ params }: { params: { id: string } }) {
     const router = useRouter();
     const { toast } = useToast();
-    const negotiationId = params.id as string;
+    const negotiationId = params.id;
 
     const [negotiation, setNegotiation] = useState<Negotiation | null>(mockNegotiation);
     const [property, setProperty] = useState<Property | null>(mockProperty);
@@ -365,5 +364,3 @@ export default function ContractPage() {
         </div>
     );
 }
-
-    
