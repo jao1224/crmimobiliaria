@@ -65,10 +65,11 @@ const mockRealtors = {
 }
 
 
-export default function ContractPage({ params }: { params: { id: string } }) {
+export default function ContractPage() {
     const router = useRouter();
+    const params = useParams();
     const { toast } = useToast();
-    const negotiationId = params.id;
+    const negotiationId = params.id as string;
 
     const [negotiation, setNegotiation] = useState<Negotiation | null>(mockNegotiation);
     const [property, setProperty] = useState<Property | null>(mockProperty);
@@ -183,6 +184,7 @@ export default function ContractPage({ params }: { params: { id: string } }) {
                 setNegotiation(prev => prev ? {...prev, contractUrl: base64String} : null);
                 toast({ title: "Sucesso!", description: "Arquivo do contrato enviado." });
                 setIsUploading(false);
+                setSelectedFile(null); // Limpa o arquivo selecionado após o upload
             };
             reader.onerror = (error) => {
                 console.error("File reading error:", error);
