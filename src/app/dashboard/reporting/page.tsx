@@ -11,6 +11,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { initialNegotiations, realtors, teams, propertyTypes, type Negotiation } from "@/lib/data";
 import { Badge } from "@/components/ui/badge";
+// Importar os dados e o tipo de Imóvel
+import PropertiesPage, { type Property } from "../properties/page";
 
 // --- DADOS DINÂMICOS ---
 
@@ -35,22 +37,21 @@ const processSalesData = (negotiations: Negotiation[]) => {
     }));
 };
 
-const processCaptureData = (negotiations: Negotiation[]) => {
+// ** Lógica de Captações Corrigida **
+// Agora usa a lista de imóveis como fonte
+const processCaptureData = (properties: Property[]) => {
     const realtorCaptures: { [key: string]: number } = {};
-    const propertyTypeCaptures: { [key: string]: number } = {};
+    const propertyTypeCaptures: { [key: string]: number } = {}; // Esta lógica precisaria de um campo 'type' no imóvel
 
-    negotiations.forEach(neg => {
-        if (neg.realtor) {
-            realtorCaptures[neg.realtor] = (realtorCaptures[neg.realtor] || 0) + 1;
-        }
-        if (neg.propertyType) {
-            propertyTypeCaptures[neg.propertyType] = (propertyTypeCaptures[neg.propertyType] || 0) + 1;
+    properties.forEach(prop => {
+        if (prop.capturedBy) {
+            realtorCaptures[prop.capturedBy] = (realtorCaptures[prop.capturedBy] || 0) + 1;
         }
     });
 
     return {
         realtorCaptures: Object.entries(realtorCaptures).map(([name, captures]) => ({ name, captures })),
-        propertyTypeCaptures: Object.entries(propertyTypeCaptures).map(([type, captures]) => ({ type, captures })),
+        propertyTypeCaptures: [], // Deixado vazio por enquanto, pois o tipo não existe no imóvel
     };
 };
 
@@ -82,6 +83,15 @@ const processTeamPerformanceData = (negotiations: Negotiation[], teamsData: type
 export default function ReportingPage() {
     const [negotiations] = useState<Negotiation[]>(initialNegotiations);
     
+    // ** Lógica de Captações Corrigida **
+    // Usa um estado simulado para os imóveis, mas em um app real viria do mesmo local que a página de imóveis.
+    const [properties, setProperties] = useState<Property[]>([
+        { id: "prop1", name: "Apartamento Vista Mar", address: "Av. Beira Mar, 123", status: "Disponível", price: 950000, commission: 2.5, imageUrl: "https://placehold.co/600x400.png", imageHint: "apartamento luxo", capturedBy: "Carlos Pereira" },
+        { id: "prop2", name: "Casa com Piscina", address: "Rua das Flores, 456", status: "Vendido", price: 1200000, commission: 3.0, imageUrl: "https://placehold.co/600x400.png", imageHint: "casa piscina", capturedBy: "Sofia Lima" },
+        { id: "prop3", name: "Terreno Comercial", address: "Av. das Américas, 789", status: "Disponível", price: 2500000, commission: 4.0, imageUrl: "https://placehold.co/600x400.png", imageHint: "terreno comercial", capturedBy: "Carlos Pereira" },
+        { id: "prop4", name: "Loft Moderno", address: "Centro, Rua Principal", status: "Alugado", price: 450000, commission: 1.5, imageUrl: "https://placehold.co/600x400.png", imageHint: "loft moderno", capturedBy: "Joana Doe" },
+    ]);
+
     // Estados dos filtros
     const [realtorFilter, setRealtorFilter] = useState('all');
     const [teamFilter, setTeamFilter] = useState('all');
@@ -97,7 +107,7 @@ export default function ReportingPage() {
     }, [negotiations, realtorFilter, teamFilter, propertyTypeFilter]);
 
     const chartData = useMemo(() => processSalesData(filteredNegotiations), [filteredNegotiations]);
-    const { realtorCaptures, propertyTypeCaptures } = useMemo(() => processCaptureData(filteredNegotiations), [filteredNegotiations]);
+    const { realtorCaptures } = useMemo(() => processCaptureData(properties), [properties]);
     const teamPerformanceData = useMemo(() => processTeamPerformanceData(negotiations, teams), [negotiations]);
 
     return (
@@ -169,7 +179,7 @@ export default function ReportingPage() {
                      <Card className="mt-4">
                         <CardHeader>
                             <CardTitle>Relatório de Captações</CardTitle>
-                            <CardDescription>Analise os imóveis captados por corretor e tipo.</CardDescription>
+                            <CardDescription>Analise os imóveis captados por corretor.</CardDescription>
                         </CardHeader>
                         <CardContent className="grid gap-6 md:grid-cols-2">
                              <Card>
@@ -189,17 +199,12 @@ export default function ReportingPage() {
                             </Card>
                              <Card>
                                 <CardHeader>
-                                    <CardTitle className="flex items-center gap-2"><Building className="h-5 w-5" /> Captações por Tipo de Imóvel</CardTitle>
+                                    <CardTitle className="flex items-center gap-2"><Building className="h-5 w-5" /> Em breve</CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                     <Table>
-                                        <TableHeader><TableRow><TableHead>Tipo</TableHead><TableHead className="text-right">Imóveis Captados</TableHead></TableRow></TableHeader>
-                                        <TableBody>
-                                            {propertyTypeCaptures.map(item => (
-                                                <TableRow key={item.type}><TableCell>{item.type}</TableCell><TableCell className="text-right font-bold">{item.captures}</TableCell></TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
+                                     <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
+                                        <p>Relatório de captações por tipo de imóvel estará disponível em breve.</p>
+                                     </div>
                                 </CardContent>
                             </Card>
                         </CardContent>
