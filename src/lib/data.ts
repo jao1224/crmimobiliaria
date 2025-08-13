@@ -3,7 +3,7 @@
 export type NegotiationStage = 'Proposta Enviada' | 'Em Negociação' | 'Contrato Gerado' | 'Venda Concluída' | 'Aluguel Ativo';
 export type NegotiationType = 'Venda' | 'Aluguel' | 'Leilão';
 export type ContractStatus = 'Não Gerado' | 'Pendente Assinaturas' | 'Assinado' | 'Cancelado';
-export type PropertyType = 'Lançamento' | 'Revenda' | 'Terreno';
+export type PropertyType = 'Lançamento' | 'Revenda' | 'Terreno' | 'Casa' | 'Apartamento';
 
 export type Negotiation = {
     id: string;
@@ -120,19 +120,19 @@ export type ServiceRequest = {
 
 
 export const realtors = ['Carlos Pereira', 'Sofia Lima', 'Joana Doe', 'Admin'];
-export const propertyTypes: PropertyType[] = ['Lançamento', 'Revenda', 'Terreno'];
+export const propertyTypes: PropertyType[] = ['Lançamento', 'Revenda', 'Terreno', 'Casa', 'Apartamento'];
 export const teams = [
     { id: 'team-a', name: 'Equipe A', members: ['Carlos Pereira', 'Sofia Lima'] },
     { id: 'team-b', name: 'Equipe B', members: ['Joana Doe', 'Admin'] },
 ];
 
 export let initialNegotiations: Negotiation[] = [
-    { id: 'neg1', property: 'Apartamento Vista Mar', propertyId: 'prop1', propertyType: 'Revenda', client: 'João Comprador', clientId: 'cli1', stage: 'Venda Concluída', type: 'Venda', value: 850000, salesperson: 'Carlos Pereira', realtor: 'Carlos Pereira', contractStatus: 'Assinado', completionDate: '2024-07-15T10:00:00Z', isFinanced: true, status: 'Finalizado', processStage: 'Finalizado', negotiationType: 'Repasse', category: 'Usado', team: 'Equipe A' },
-    { id: 'neg2', property: 'Casa com Piscina', propertyId: 'prop2', propertyType: 'Revenda', client: 'Maria Investidora', clientId: 'cli2', stage: 'Em Negociação', type: 'Venda', value: 1200000, salesperson: 'Sofia Lima', realtor: 'Sofia Lima', contractStatus: 'Não Gerado', completionDate: null, isFinanced: false, status: 'Ativo', processStage: 'Em andamento', negotiationType: 'Novo', category: 'Usado', team: 'Equipe A', observations: 'Aguardando contra-proposta do cliente.' },
+    { id: 'neg1', property: 'Apartamento Vista Mar', propertyId: 'prop1', propertyType: 'Apartamento', client: 'João Comprador', clientId: 'cli1', stage: 'Venda Concluída', type: 'Venda', value: 850000, salesperson: 'Carlos Pereira', realtor: 'Carlos Pereira', contractStatus: 'Assinado', completionDate: '2024-07-15T10:00:00Z', isFinanced: true, status: 'Finalizado', processStage: 'Finalizado', negotiationType: 'Repasse', category: 'Usado', team: 'Equipe A' },
+    { id: 'neg2', property: 'Casa com Piscina', propertyId: 'prop2', propertyType: 'Casa', client: 'Maria Investidora', clientId: 'cli2', stage: 'Em Negociação', type: 'Venda', value: 1200000, salesperson: 'Sofia Lima', realtor: 'Sofia Lima', contractStatus: 'Não Gerado', completionDate: null, isFinanced: false, status: 'Ativo', processStage: 'Em andamento', negotiationType: 'Novo', category: 'Usado', team: 'Equipe A', observations: 'Aguardando contra-proposta do cliente.' },
     { id: 'neg3', property: 'Terreno Comercial', propertyId: 'prop3', propertyType: 'Terreno', client: 'Construtora Build S.A.', clientId: 'cli3', stage: 'Contrato Gerado', type: 'Venda', value: 2500000, salesperson: 'Admin', realtor: 'Carlos Pereira', contractStatus: 'Pendente Assinaturas', completionDate: null, isFinanced: true, status: 'Ativo', processStage: 'Pendência', negotiationType: 'Lote', category: 'Novo', team: 'Equipe A', observations: 'Pendente assinatura do contrato pelo vendedor.' },
-    { id: 'neg4', property: 'Loft Moderno', propertyId: 'prop4', propertyType: 'Lançamento', client: 'Paulo Inquilino', clientId: 'cli4', stage: 'Aluguel Ativo', type: 'Aluguel', value: 2500, salesperson: 'Sofia Lima', realtor: 'Sofia Lima', contractStatus: 'Assinado', completionDate: '2024-08-01T10:00:00Z', status: 'Finalizado', processStage: 'Finalizado', negotiationType: 'Novo', category: 'Novo', team: 'Equipe A' },
-    { id: 'neg5', property: 'Sítio Ecológico', propertyId: 'prop5', propertyType: 'Revenda', client: 'Família Verde', clientId: 'cli5', stage: 'Venda Concluída', type: 'Venda', value: 780000, salesperson: 'Joana Doe', realtor: 'Sofia Lima', contractStatus: 'Assinado', completionDate: '2024-08-05T10:00:00Z', isFinanced: false, status: 'Finalizado', processStage: 'Finalizado', negotiationType: 'Novo', category: 'Usado', team: 'Equipe B' },
-    { id: 'neg6', property: 'Apartamento Centro', propertyId: 'prop6', propertyType: 'Lançamento', client: 'Investidor Anônimo', clientId: 'cli6', stage: 'Venda Concluída', type: 'Venda', value: 450000, salesperson: 'Joana Doe', realtor: 'Joana Doe', contractStatus: 'Assinado', completionDate: '2024-06-20T10:00:00Z', isFinanced: true, status: 'Cancelado', processStage: 'Finalizado', negotiationType: 'Crédito Associativo', category: 'Novo', team: 'Equipe B', observations: 'Venda cancelada por desistência do comprador.' },
+    { id: 'neg4', property: 'Loft Moderno', propertyId: 'prop4', propertyType: 'Apartamento', client: 'Paulo Inquilino', clientId: 'cli4', stage: 'Aluguel Ativo', type: 'Aluguel', value: 2500, salesperson: 'Sofia Lima', realtor: 'Sofia Lima', contractStatus: 'Assinado', completionDate: '2024-08-01T10:00:00Z', status: 'Finalizado', processStage: 'Finalizado', negotiationType: 'Novo', category: 'Novo', team: 'Equipe A' },
+    { id: 'neg5', property: 'Sítio Ecológico', propertyId: 'prop5', propertyType: 'Casa', client: 'Família Verde', clientId: 'cli5', stage: 'Venda Concluída', type: 'Venda', value: 780000, salesperson: 'Joana Doe', realtor: 'Sofia Lima', contractStatus: 'Assinado', completionDate: '2024-08-05T10:00:00Z', isFinanced: false, status: 'Finalizado', processStage: 'Finalizado', negotiationType: 'Novo', category: 'Usado', team: 'Equipe B' },
+    { id: 'neg6', property: 'Apartamento Centro', propertyId: 'prop6', propertyType: 'Apartamento', client: 'Investidor Anônimo', clientId: 'cli6', stage: 'Venda Concluída', type: 'Venda', value: 450000, salesperson: 'Joana Doe', realtor: 'Joana Doe', contractStatus: 'Assinado', completionDate: '2024-06-20T10:00:00Z', isFinanced: true, status: 'Cancelado', processStage: 'Finalizado', negotiationType: 'Crédito Associativo', category: 'Novo', team: 'Equipe B', observations: 'Venda cancelada por desistência do comprador.' },
 ];
 
 export const mockProperties: Property[] = [
@@ -199,6 +199,8 @@ export let initialServiceRequests: ServiceRequest[] = [
     { id: 'req2', type: 'engineering_report', realtorName: 'Joana Doe', clientInfo: '', propertyInfo: 'Loft Moderno - Rua Principal, Centro', status: 'Pendente', date: '2024-08-10' },
 ];
 
+// --- FUNÇÕES DE MANIPULAÇÃO DE DADOS ---
+
 // Função para adicionar uma nova comissão (simulando a atualização do "banco de dados")
 export function addCommission(newCommission: Commission) {
     if (!initialCommissions.some(c => c.id === newCommission.id)) {
@@ -218,4 +220,64 @@ export function addServiceRequest(newRequest: ServiceRequest) {
     if (!initialServiceRequests.some(r => r.id === newRequest.id)) {
         initialServiceRequests.unshift(newRequest);
     }
+}
+
+/**
+ * Centralized function to complete a sale, update negotiation status, and generate commission.
+ * @param negotiationId The ID of the negotiation to complete.
+ * @param finalizationNote Optional note from the finalization process.
+ * @returns An object with success status and a message.
+ */
+export function completeSaleAndGenerateCommission(negotiationId: string, finalizationNote?: string) {
+    const negIndex = initialNegotiations.findIndex(n => n.id === negotiationId);
+
+    if (negIndex === -1) {
+        return { success: false, message: "Negociação não encontrada." };
+    }
+
+    const neg = initialNegotiations[negIndex];
+
+    if (neg.stage === 'Venda Concluída' || neg.stage === 'Aluguel Ativo') {
+        return { success: false, message: "Esta negociação já foi concluída." };
+    }
+
+    // Atualiza a negociação
+    initialNegotiations[negIndex] = {
+        ...neg,
+        stage: "Venda Concluída",
+        contractStatus: "Assinado",
+        completionDate: new Date().toISOString(),
+        status: 'Finalizado',
+        processStage: 'Finalizado',
+        observations: finalizationNote || neg.observations,
+    };
+
+    // Simula a geração automática de comissão (se for uma venda)
+    if(neg.type === 'Venda') {
+        const commissionAmount = neg.value * 0.05; // Simulação de 5%
+        const newCommission: Commission = {
+            id: `comm-from-${neg.id}`,
+            dealId: neg.id,
+            deal: `Venda ${neg.property}`,
+            amount: commissionAmount,
+            status: 'Pendente',
+            paymentDate: new Date(new Date().setDate(new Date().getDate() + 30)).toISOString().split('T')[0], // Pagar em 30 dias
+            involved: `${neg.salesperson} (Vendedor), ${neg.realtor} (Captador)`,
+            realtorId: neg.salesperson, // Simulação para permissão de visualização
+        };
+        addCommission(newCommission);
+    }
+
+    // Atualiza o processo administrativo correspondente
+    const processIndex = initialAdminProcesses.findIndex(p => p.id === negotiationId);
+    if(processIndex !== -1) {
+        initialAdminProcesses[processIndex] = {
+            ...initialAdminProcesses[processIndex],
+            status: 'Finalizado',
+            stage: 'Finalizado',
+            observations: finalizationNote || neg.observations,
+        }
+    }
+    
+    return { success: true, message: `A comissão para a venda de "${neg.property}" foi gerada no módulo Financeiro.` };
 }

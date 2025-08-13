@@ -17,7 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { initialNegotiations, mockProperties, mockClients, realtors, type Negotiation, type Property, type Client, addCommission, addFinancingProcess } from "@/lib/data";
+import { initialNegotiations, mockProperties, mockClients, realtors, type Negotiation, type Property, type Client, addFinancingProcess, completeSaleAndGenerateCommission } from "@/lib/data";
 
 export default function NegotiationsPage() {
     const router = useRouter();
@@ -109,6 +109,11 @@ export default function NegotiationsPage() {
             realtor: "Carlos Pereira",
             completionDate: null,
             isFinanced: isFinanced,
+            status: 'Ativo',
+            processStage: 'Em andamento',
+            negotiationType: 'Novo',
+            category: 'Novo',
+            team: 'Equipe A',
         };
         setNegotiations(prev => [...prev, newNegotiation]);
         
@@ -156,28 +161,22 @@ export default function NegotiationsPage() {
     }
 
     const handleCompleteSale = (neg: Negotiation) => {
-        // Atualiza a negociação para "Venda Concluída"
-        setNegotiations(prev => prev.map(n => 
-            n.id === neg.id ? { ...n, stage: "Venda Concluída", contractStatus: "Assinado", completionDate: new Date().toISOString() } : n
-        ));
-
-        // Simula a geração automática de comissão
-        const commissionAmount = neg.value * 0.05; // Simulação de 5%
-        const newCommission = {
-            id: `comm-from-${neg.id}`,
-            deal: `Venda ${neg.property} (ID: ${neg.id})`,
-            amount: commissionAmount,
-            status: 'Pendente' as 'Pendente' | 'Pago' | 'Vencido',
-            paymentDate: new Date(new Date().setDate(new Date().getDate() + 30)).toISOString().split('T')[0], // Pagar em 30 dias
-            involved: `${neg.salesperson} (Vendedor), ${neg.realtor} (Captador)`,
-            realtorId: neg.salesperson // Apenas para simulação de permissão de visualização
-        };
-        addCommission(newCommission); // Adiciona a comissão à lista de dados globais
-        
-        toast({
-            title: "Venda Concluída!",
-            description: `A comissão para a venda de "${neg.property}" foi gerada no módulo Financeiro.`
-        });
+        const { success, message } = completeSaleAndGenerateCommission(neg.id);
+        if (success) {
+            setNegotiations(prev => prev.map(n => 
+                n.id === neg.id ? { ...n, stage: "Venda Concluída", contractStatus: "Assinado", completionDate: new Date().toISOString() } : n
+            ));
+            toast({
+                title: "Venda Concluída!",
+                description: message
+            });
+        } else {
+             toast({
+                variant: "destructive",
+                title: "Erro ao Concluir Venda",
+                description: message
+            });
+        }
     };
 
     const filteredNegotiations = useMemo(() => {

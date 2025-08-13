@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, AlertCircle, CheckCircle, Hourglass, PlusCircle } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { initialAdminProcesses, type AdminProcess, type ProcessStatus, type ProcessStage } from "@/lib/data";
+import { initialAdminProcesses, type AdminProcess, type ProcessStatus, type ProcessStage, completeSaleAndGenerateCommission } from "@/lib/data";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,6 +19,7 @@ const getStatusVariant = (status: ProcessStatus) => {
         case 'Ativo': return 'success';
         case 'Suspenso': return 'warning';
         case 'Cancelado': return 'destructive';
+        case 'Finalizado': return 'default';
         default: return 'secondary';
     }
 };
@@ -66,12 +67,21 @@ export default function ProcessesPage() {
 
     const handleFinalizeProcess = () => {
         if (!selectedProcess) return;
-         setProcesses(prev => prev.map(p => 
-            p.id === selectedProcess.id 
-            ? { ...p, status: 'Finalizado', stage: 'Finalizado', observations: `Processo finalizado. Detalhes: ${finalizationNote}` } 
-            : p
-        ));
-        toast({ title: "Processo Finalizado!", description: `O processo ${selectedProcess.id.toUpperCase()} foi concluído.` });
+
+        const { success, message } = completeSaleAndGenerateCommission(selectedProcess.id, finalizationNote);
+
+        if (success) {
+            // Atualiza a visualização local dos processos
+            setProcesses(prev => prev.map(p => 
+                p.id === selectedProcess.id 
+                ? { ...p, status: 'Finalizado', stage: 'Finalizado', observations: `Processo finalizado. Detalhes: ${finalizationNote}` } 
+                : p
+            ));
+            toast({ title: "Processo Finalizado!", description: message });
+        } else {
+            toast({ variant: "destructive", title: "Erro ao Finalizar", description: message });
+        }
+        
         setFinalizeModalOpen(false);
     };
 
@@ -139,7 +149,7 @@ export default function ProcessesPage() {
                                                 <DropdownMenuItem 
                                                     onClick={() => handleOpenFinalizeModal(process)}
                                                     className="text-green-600 focus:text-green-600 focus:bg-green-50"
-                                                    disabled={process.status === 'Finalizado'}
+                                                    disabled={process.status === 'Finalizado' || process.status === 'Cancelado'}
                                                 >
                                                     Finalizar Processo
                                                 </DropdownMenuItem>
