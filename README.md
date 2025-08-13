@@ -24,7 +24,7 @@ Este é o repositório do seu projeto LeadFlow, desenvolvido no Firebase Studio.
         -   Corretor: Vê apenas seus próprios dados.
         -   Gerente/Coordenador: Vê todos os dados de sua equipe.
         -   CEO/Administrativo/Financeiro: Vê todos os dados da imobiliária.
-    -   **Gerenciamento de Usuários (❌):** Criar interface na aba "Configurações" para o admin adicionar, remover, editar usuários e definir suas permissões.
+    -   **Gerenciamento de Usuários (🟡):** Criar interface na aba "Configurações" para o admin adicionar, remover, editar usuários e definir suas permissões.
     -   **Gerenciamento de Tarefas (❌):** Permitir que o admin atribua tarefas para setores e usuários.
 
 - **2. Módulo de Agenda:**
