@@ -36,6 +36,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
+import { cn } from "@/lib/utils";
 
 // Define o tipo para um imóvel
 type Property = {
@@ -106,6 +107,15 @@ export default function PropertiesPage() {
         return "secondary";
     }
   }
+
+  const getStatusClass = (status: string): string => {
+    switch (status) {
+        case "Alugado":
+            return "border-transparent bg-blue-100 text-blue-800 hover:bg-blue-100/80";
+        default:
+            return "";
+    }
+  };
 
 
   return (
@@ -204,7 +214,7 @@ export default function PropertiesPage() {
                     <div className="text-sm text-muted-foreground">{property.address}</div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={getStatusVariant(property.status)}>
+                    <Badge variant={getStatusVariant(property.status)} className={getStatusClass(property.status)}>
                       {property.status}
                     </Badge>
                   </TableCell>
@@ -276,7 +286,7 @@ export default function PropertiesPage() {
                       <span>{selectedProperty.commission}%</span>
 
                       <span className="font-medium text-foreground">Status:</span>
-                      <span><Badge variant={getStatusVariant(selectedProperty.status)}>{selectedProperty.status}</Badge></span>
+                      <span><Badge variant={getStatusVariant(selectedProperty.status)} className={getStatusClass(selectedProperty.status)}>{selectedProperty.status}</Badge></span>
                     </div>
                   </div>
                    <div>
