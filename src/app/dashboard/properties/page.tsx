@@ -280,12 +280,12 @@ export default function PropertiesPage() {
                     </div>
                   </div>
                   <div>
-                    <h3 className="font-semibold text-lg">Descrição</h3>
-                    <p className="text-sm text-muted-foreground mt-2">{selectedProperty.description || "Nenhuma descrição disponível."}</p>
-                  </div>
-                   <div>
                     <h3 className="font-semibold text-lg">Proprietário</h3>
                     <p className="text-sm text-muted-foreground mt-2">{selectedProperty.ownerInfo || "Nenhuma informação disponível."}</p>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-lg">Descrição</h3>
+                    <p className="text-sm text-muted-foreground mt-2">{selectedProperty.description || "Nenhuma descrição disponível."}</p>
                   </div>
                 </div>
               </div>
