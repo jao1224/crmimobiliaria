@@ -37,6 +37,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
+import type { PropertyType } from "@/lib/data";
 
 // Define o tipo para um imóvel
 export type Property = {
@@ -45,6 +46,7 @@ export type Property = {
   address: string;
   status: string;
   price: number;
+  type: PropertyType;
   commission: number; // Armazenado como taxa percentual, ex: 2.5
   imageUrl: string;
   imageHint: string;
@@ -55,10 +57,10 @@ export type Property = {
 
 // Dados simulados para os imóveis
 const initialProperties: Property[] = [
-    { id: "prop1", name: "Apartamento Vista Mar", address: "Av. Beira Mar, 123", status: "Disponível", price: 950000, commission: 2.5, imageUrl: "https://placehold.co/600x400.png", imageHint: "apartamento luxo", capturedBy: "Carlos Pereira", description: "Lindo apartamento com 3 quartos, 2 suítes, varanda gourmet com vista para o mar, cozinha moderna e 2 vagas de garagem. Condomínio com lazer completo.", ownerInfo: "Ana Vendedora - (85) 98877-6655" },
-    { id: "prop2", name: "Casa com Piscina", address: "Rua das Flores, 456", status: "Vendido", price: 1200000, commission: 3.0, imageUrl: "https://placehold.co/600x400.png", imageHint: "casa piscina", capturedBy: "Sofia Lima", description: "Espaçosa casa com 4 suítes, piscina, área gourmet com churrasqueira e um grande quintal gramado. Ideal para famílias que buscam conforto e lazer.", ownerInfo: "Bruno Costa - (85) 99988-7766" },
-    { id: "prop3", name: "Terreno Comercial", address: "Av. das Américas, 789", status: "Disponível", price: 2500000, commission: 4.0, imageUrl: "https://placehold.co/600x400.png", imageHint: "terreno comercial", capturedBy: "Carlos Pereira", description: "Terreno plano de esquina em avenida movimentada, perfeito para construção de lojas, galpões ou centros comerciais. Excelente visibilidade e acesso.", ownerInfo: "Construtora Invest S.A. - (85) 3222-1100" },
-    { id: "prop4", name: "Loft Moderno", address: "Centro, Rua Principal", status: "Alugado", price: 450000, commission: 1.5, imageUrl: "https://placehold.co/600x400.png", imageHint: "loft moderno", capturedBy: "Joana Doe", description: "Loft no coração da cidade, com design industrial, pé-direito duplo, 1 quarto, cozinha integrada e totalmente mobiliado. Perfeito para solteiros ou casais.", ownerInfo: "Maria Investidora - (85) 98765-4321" },
+    { id: "prop1", name: "Apartamento Vista Mar", address: "Av. Beira Mar, 123", status: "Disponível", price: 950000, commission: 2.5, imageUrl: "https://placehold.co/600x400.png", imageHint: "apartamento luxo", capturedBy: "Carlos Pereira", description: "Lindo apartamento com 3 quartos, 2 suítes, varanda gourmet com vista para o mar, cozinha moderna e 2 vagas de garagem. Condomínio com lazer completo.", ownerInfo: "Ana Vendedora - (85) 98877-6655", type: 'Revenda' },
+    { id: "prop2", name: "Casa com Piscina", address: "Rua das Flores, 456", status: "Vendido", price: 1200000, commission: 3.0, imageUrl: "https://placehold.co/600x400.png", imageHint: "casa piscina", capturedBy: "Sofia Lima", description: "Espaçosa casa com 4 suítes, piscina, área gourmet com churrasqueira e um grande quintal gramado. Ideal para famílias que buscam conforto e lazer.", ownerInfo: "Bruno Costa - (85) 99988-7766", type: 'Revenda' },
+    { id: "prop3", name: "Terreno Comercial", address: "Av. das Américas, 789", status: "Disponível", price: 2500000, commission: 4.0, imageUrl: "https://placehold.co/600x400.png", imageHint: "terreno comercial", capturedBy: "Carlos Pereira", description: "Terreno plano de esquina em avenida movimentada, perfeito para construção de lojas, galpões ou centros comerciais. Excelente visibilidade e acesso.", ownerInfo: "Construtora Invest S.A. - (85) 3222-1100", type: 'Terreno' },
+    { id: "prop4", name: "Loft Moderno", address: "Centro, Rua Principal", status: "Alugado", price: 450000, commission: 1.5, imageUrl: "https://placehold.co/600x400.png", imageHint: "loft moderno", capturedBy: "Joana Doe", description: "Loft no coração da cidade, com design industrial, pé-direito duplo, 1 quarto, cozinha integrada e totalmente mobiliado. Perfeito para solteiros ou casais.", ownerInfo: "Maria Investidora - (85) 98765-4321", type: 'Lançamento' },
 ];
 
 
@@ -111,6 +113,7 @@ export default function PropertiesPage() {
       capturedBy: "Admin", // Simulado, poderia ser o usuário logado
       description: formData.get("description") as string,
       ownerInfo: formData.get("owner") as string,
+      type: "Revenda", // Simulado
     };
 
     setProperties(prev => [...prev, newProperty]);
@@ -134,6 +137,7 @@ export default function PropertiesPage() {
       capturedBy: formData.get("capturedBy") as string,
       description: formData.get("description") as string,
       ownerInfo: formData.get("owner") as string,
+      type: editingProperty.type, // Mantém o tipo existente
     };
 
     setProperties(prev => prev.map(p => p.id === updatedProperty.id ? updatedProperty : p));
@@ -375,6 +379,9 @@ export default function PropertiesPage() {
 
                       <span className="font-medium text-foreground">Status:</span>
                       <span><Badge variant={getStatusVariant(selectedProperty.status)} className={getStatusClass(selectedProperty.status)}>{selectedProperty.status}</Badge></span>
+                      
+                      <span className="font-medium text-foreground">Tipo:</span>
+                      <span><Badge variant="secondary">{selectedProperty.type}</Badge></span>
                     </div>
                   </div>
                    <div>
