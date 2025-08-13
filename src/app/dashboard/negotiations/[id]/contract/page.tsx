@@ -228,8 +228,8 @@ export default function ContractPage() {
 
 
     return (
-        <div className="flex flex-col gap-6 printable-container">
-            <div className="flex items-center justify-between no-print">
+        <div className="flex flex-col gap-6">
+            <div className="no-print flex items-center justify-between">
                  <div className="flex items-center gap-4">
                     <Button variant="outline" size="icon" onClick={() => router.back()}>
                         <ArrowLeft className="h-4 w-4" />
