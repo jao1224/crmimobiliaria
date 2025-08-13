@@ -101,7 +101,7 @@ export default function PropertiesPage() {
       case "Vendido":
         return "destructive";
       case "Alugado":
-        return "info-soft";
+        return "info";
       default:
         return "secondary";
     }
@@ -279,7 +279,7 @@ export default function PropertiesPage() {
                       <span><Badge variant={getStatusVariant(selectedProperty.status)}>{selectedProperty.status}</Badge></span>
                     </div>
                   </div>
-                  <div>
+                   <div>
                     <h3 className="font-semibold text-lg">Proprietário</h3>
                     <p className="text-sm text-muted-foreground mt-2">{selectedProperty.ownerInfo || "Nenhuma informação disponível."}</p>
                   </div>
