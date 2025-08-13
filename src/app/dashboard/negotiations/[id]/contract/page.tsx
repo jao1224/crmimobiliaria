@@ -15,7 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 
 // Tipos para os dados simulados
-type Negotiation = { id: string; property: string; propertyId: string; client: string; clientId: string; value: number; realtor: string; commissionRate: number; contractDetails?: ContractDetails; contractUrl?: string; };
+type Negotiation = { id: string; property: string; propertyId: string; client: string; clientId: string; value: number; realtor: string; commissionRate: number; contractDetails?: ContractDetails; contractFile?: File | null; };
 type Property = { id: string; name: string; address: string; price: number; };
 type Client = { id: string; name: string; doc: string; address: string; };
 type ContractDetails = {
@@ -78,6 +78,7 @@ export default function ContractPage() {
     const [isSaving, setIsSaving] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [contractUrl, setContractUrl] = useState<string | null>(null);
 
     const [contractData, setContractData] = useState<ContractDetails>({
         sellerName: "Ana Vendedora",
@@ -103,6 +104,16 @@ export default function ContractPage() {
         }
     }, [negotiation]);
 
+    useEffect(() => {
+        if (negotiation?.contractFile) {
+            const url = URL.createObjectURL(negotiation.contractFile);
+            setContractUrl(url);
+
+            return () => {
+                URL.revokeObjectURL(url);
+            };
+        }
+    }, [negotiation?.contractFile]);
     
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { id, value } = e.target;
@@ -176,26 +187,14 @@ export default function ContractPage() {
             return;
         }
         setIsUploading(true);
-        try {
-            const reader = new FileReader();
-            reader.readAsDataURL(selectedFile);
-            reader.onloadend = () => {
-                const base64String = reader.result as string;
-                setNegotiation(prev => prev ? {...prev, contractUrl: base64String} : null);
-                toast({ title: "Sucesso!", description: "Arquivo do contrato enviado." });
-                setIsUploading(false);
-                setSelectedFile(null); // Limpa o arquivo selecionado após o upload
-            };
-            reader.onerror = (error) => {
-                console.error("File reading error:", error);
-                toast({ variant: "destructive", title: "Erro de Leitura", description: "Não foi possível ler o arquivo selecionado."});
-                setIsUploading(false);
-            };
-        } catch (error) {
-            console.error("Upload error:", error);
-            toast({ variant: "destructive", title: "Erro", description: "Ocorreu um erro durante o envio."});
+        
+        // Simulação de delay de upload
+        setTimeout(() => {
+            setNegotiation(prev => prev ? { ...prev, contractFile: selectedFile } : null);
+            toast({ title: "Sucesso!", description: "Arquivo do contrato enviado." });
             setIsUploading(false);
-        }
+            setSelectedFile(null);
+        }, 1000);
     };
 
 
@@ -242,11 +241,11 @@ export default function ContractPage() {
                             {isUploading ? "Enviando..." : "Enviar"}
                         </Button>
                     </div>
-                     {negotiation.contractUrl && (
+                     {contractUrl && (
                         <div className="mt-4 flex items-center gap-2 text-sm text-emerald-600 border border-emerald-200 bg-emerald-50 rounded-md p-3">
                             <FileText className="h-5 w-5" />
                             <span className="font-medium">Contrato Anexado:</span>
-                             <a href={negotiation.contractUrl} target="_blank" rel="noopener noreferrer" className="underline hover:text-emerald-800">
+                             <a href={contractUrl} target="_blank" rel="noopener noreferrer" className="underline hover:text-emerald-800">
                                 Visualizar Contrato <LinkIcon className="h-4 w-4 inline-block ml-1" />
                             </a>
                         </div>
