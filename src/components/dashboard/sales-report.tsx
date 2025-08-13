@@ -1,31 +1,15 @@
 
 "use client"
 
-import { useState, useEffect } from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import {
   ChartContainer,
-  ChartTooltipContent,
 } from "@/components/ui/chart";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-// Dados simulados para o gráfico
-const chartData = [
-  { month: "Jan", sales: 186000 },
-  { month: "Fev", sales: 305000 },
-  { month: "Mar", sales: 237000 },
-  { month: "Abr", sales: 73000 },
-  { month: "Mai", sales: 209000 },
-  { month: "Jun", sales: 214000 },
-  { month: "Jul", sales: 450000 },
-  { month: "Ago", sales: 320000 },
-  { month: "Set", sales: 0 },
-  { month: "Out", sales: 0 },
-  { month: "Nov", sales: 0 },
-  { month: "Dez", sales: 0 },
-];
-
+type SalesData = {
+  month: string;
+  sales: number;
+};
 
 const chartConfig = {
   sales: {
@@ -41,11 +25,11 @@ const formatCurrency = (value: number) => {
 }
 
 
-export function SalesReport() {
+export function SalesReport({ data }: { data: SalesData[] }) {
     return (
         <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
             <ResponsiveContainer width="100%" height={350}>
-                <BarChart data={chartData} margin={{ top: 20, right: 20, left: 20, bottom: 5 }}>
+                <BarChart data={data} margin={{ top: 20, right: 20, left: 20, bottom: 5 }}>
                     <CartesianGrid vertical={false} />
                     <XAxis
                         dataKey="month"
