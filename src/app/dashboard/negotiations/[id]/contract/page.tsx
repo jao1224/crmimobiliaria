@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { notFound, useRouter, useParams } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { Printer, Save, Upload, FileText, Link as LinkIcon, ArrowLeft } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -140,13 +140,15 @@ export default function ContractPage() {
     }
     
     if (!negotiation || !property || !client) {
-        return notFound();
+        // next/navigation notFound() is recommended for pages, but this is a component
+        // Return a message or a skeleton loader
+        return <div>Negociação não encontrada.</div>;
     }
     
     const realtor = (mockRealtors as any)[negotiation.realtor];
 
     if (!realtor) {
-        return notFound();
+        return <div>Corretor não encontrado.</div>;
     }
     
     const handlePrint = () => {
@@ -174,13 +176,25 @@ export default function ContractPage() {
             return;
         }
         setIsUploading(true);
-        // Simula upload
-        setTimeout(() => {
-            const fakeUrl = URL.createObjectURL(selectedFile);
-            setNegotiation(prev => prev ? {...prev, contractUrl: fakeUrl} : null);
-            toast({ title: "Sucesso!", description: "Arquivo do contrato enviado (simulado)." });
+        try {
+            const reader = new FileReader();
+            reader.readAsDataURL(selectedFile);
+            reader.onloadend = () => {
+                const base64String = reader.result as string;
+                setNegotiation(prev => prev ? {...prev, contractUrl: base64String} : null);
+                toast({ title: "Sucesso!", description: "Arquivo do contrato enviado." });
+                setIsUploading(false);
+            };
+            reader.onerror = (error) => {
+                console.error("File reading error:", error);
+                toast({ variant: "destructive", title: "Erro de Leitura", description: "Não foi possível ler o arquivo selecionado."});
+                setIsUploading(false);
+            };
+        } catch (error) {
+            console.error("Upload error:", error);
+            toast({ variant: "destructive", title: "Erro", description: "Ocorreu um erro durante o envio."});
             setIsUploading(false);
-        }, 1500);
+        }
     };
 
 
@@ -365,3 +379,5 @@ export default function ContractPage() {
         </div>
     );
 }
+
+    
