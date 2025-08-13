@@ -246,9 +246,8 @@ export default function ContractPage() {
                         <div className="mt-4 flex items-center gap-2 text-sm text-emerald-600 border border-emerald-200 bg-emerald-50 rounded-md p-3">
                             <FileText className="h-5 w-5" />
                             <span className="font-medium">Contrato Anexado:</span>
-                             <a href={negotiation.contractUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 underline hover:text-emerald-800">
-                                Visualizar Contrato
-                                <LinkIcon className="h-4 w-4" />
+                             <a href={negotiation.contractUrl} target="_blank" rel="noopener noreferrer" className="underline hover:text-emerald-800">
+                                Visualizar Contrato <LinkIcon className="h-4 w-4 inline-block ml-1" />
                             </a>
                         </div>
                     )}
@@ -380,5 +379,7 @@ export default function ContractPage() {
         </div>
     );
 }
+
+    
 
     
