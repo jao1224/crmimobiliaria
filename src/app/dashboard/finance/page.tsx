@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useContext } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -84,8 +84,8 @@ export default function FinancePage() {
     // Lógica de Comissões
     const visibleCommissions = commissions.filter(c => {
         if (hasPermission) return true;
-        // Simulado: 'user1' é o ID do Carlos Pereira, que pode ser o vendedor ou captador
-        if (activeProfile === 'Corretor Autônomo') return c.realtorId === 'Carlos Pereira'; 
+        // Simulado: 'Carlos Pereira' é o Corretor Autônomo padrão para o exemplo
+        if (activeProfile === 'Corretor Autônomo' && c.involved.includes('Carlos Pereira')) return true; 
         return false;
     });
     const totalCommission = visibleCommissions.reduce((sum, item) => sum + item.amount, 0);
@@ -288,7 +288,7 @@ export default function FinancePage() {
                 </TabsContent>
 
                 {/* Aba de Pagamentos (CLT) */}
-                <TabsContent value="payments">
+                 {hasPermission && (<TabsContent value="payments">
                      <Card className="mt-4">
                         <CardHeader className="flex flex-row items-center justify-between">
                             <div>
@@ -369,10 +369,10 @@ export default function FinancePage() {
                             </Table>
                         </CardContent>
                     </Card>
-                </TabsContent>
+                </TabsContent>)}
 
                 {/* Aba de Despesas */}
-                <TabsContent value="expenses">
+                {hasPermission && (<TabsContent value="expenses">
                     <Card className="mt-4">
                         <CardHeader className="flex flex-row items-center justify-between">
                              <div>
@@ -451,10 +451,8 @@ export default function FinancePage() {
                             </Table>
                         </CardContent>
                     </Card>
-                </TabsContent>
+                </TabsContent>)}
             </Tabs>
         </div>
     );
 }
-
-    

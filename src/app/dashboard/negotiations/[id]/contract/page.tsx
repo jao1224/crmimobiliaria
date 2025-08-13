@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -13,6 +13,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
+import { ProfileContext } from "@/contexts/ProfileContext";
+import type { UserProfile } from "@/app/dashboard/layout";
+
 
 // Tipos para os dados simulados
 type ContractFile = { content: ArrayBuffer; type: string; name: string; };
@@ -65,12 +68,17 @@ const mockRealtors = {
     "Sofia Lima": { name: "Sofia Lima", creci: "67890-J" },
 }
 
+const contractEditPermissions: UserProfile[] = ['Admin', 'Imobiliária'];
+
 
 export default function ContractPage() {
     const router = useRouter();
     const params = useParams();
     const { toast } = useToast();
     const negotiationId = params.id as string;
+    
+    const { activeProfile } = useContext(ProfileContext);
+    const canEdit = contractEditPermissions.includes(activeProfile);
 
     const [negotiation, setNegotiation] = useState<Negotiation | null>(mockNegotiation);
     const [property, setProperty] = useState<Property | null>(mockProperty);
@@ -241,7 +249,7 @@ export default function ContractPage() {
                     </div>
                 </div>
                 <div className="flex gap-2">
-                    <Button onClick={handleSave} variant="default" disabled={isSaving}>
+                    <Button onClick={handleSave} variant="default" disabled={isSaving || !canEdit}>
                         <Save className="mr-2 h-4 w-4" />
                         {isSaving ? "Salvando..." : "Salvar Editor"}
                     </Button>
@@ -306,15 +314,15 @@ export default function ContractPage() {
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border p-4 rounded-md">
                                         <div className="space-y-1">
                                             <Label htmlFor="sellerName">Nome</Label>
-                                            <Input id="sellerName" placeholder="Nome do Proprietário" value={contractData.sellerName} onChange={handleInputChange} />
+                                            <Input id="sellerName" placeholder="Nome do Proprietário" value={contractData.sellerName} onChange={handleInputChange} disabled={!canEdit} />
                                         </div>
                                         <div className="space-y-1">
                                             <Label htmlFor="sellerDoc">CPF/CNPJ</Label>
-                                            <Input id="sellerDoc" placeholder="Documento do Proprietário" value={contractData.sellerDoc} onChange={handleInputChange} />
+                                            <Input id="sellerDoc" placeholder="Documento do Proprietário" value={contractData.sellerDoc} onChange={handleInputChange} disabled={!canEdit} />
                                         </div>
                                         <div className="col-span-1 md:col-span-2 space-y-1">
                                             <Label htmlFor="sellerAddress">Endereço</Label>
-                                            <Input id="sellerAddress" placeholder="Endereço Completo do Proprietário" value={contractData.sellerAddress} onChange={handleInputChange} />
+                                            <Input id="sellerAddress" placeholder="Endereço Completo do Proprietário" value={contractData.sellerAddress} onChange={handleInputChange} disabled={!canEdit} />
                                         </div>
                                     </div>
                                 </div>
@@ -344,15 +352,15 @@ export default function ContractPage() {
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div className="space-y-1">
                                         <Label htmlFor="propertyArea">Área (m²)</Label>
-                                        <Input id="propertyArea" placeholder="Ex: 120" value={contractData.propertyArea} onChange={handleInputChange} />
+                                        <Input id="propertyArea" placeholder="Ex: 120" value={contractData.propertyArea} onChange={handleInputChange} disabled={!canEdit} />
                                     </div>
                                     <div className="space-y-1">
                                         <Label htmlFor="propertyRegistration">Matrícula do Imóvel</Label>
-                                        <Input id="propertyRegistration" placeholder="Nº da Matrícula" value={contractData.propertyRegistration} onChange={handleInputChange} />
+                                        <Input id="propertyRegistration" placeholder="Nº da Matrícula" value={contractData.propertyRegistration} onChange={handleInputChange} disabled={!canEdit} />
                                     </div>
                                     <div className="space-y-1">
                                         <Label htmlFor="propertyRegistryOffice">Cartório de Registro</Label>
-                                        <Input id="propertyRegistryOffice" placeholder="Ex: 1º Cartório de Registro de Imóveis de São Paulo" value={contractData.propertyRegistryOffice} onChange={handleInputChange} />
+                                        <Input id="propertyRegistryOffice" placeholder="Ex: 1º Cartório de Registro de Imóveis de São Paulo" value={contractData.propertyRegistryOffice} onChange={handleInputChange} disabled={!canEdit} />
                                     </div>
                                 </div>
                             </div>
@@ -364,27 +372,27 @@ export default function ContractPage() {
                                     O valor total da presente transação é de <strong>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(negotiation.value)}</strong>, a ser pago pelo COMPRADOR(A) ao VENDEDOR(ES).
                                 </p>
                                 <Label htmlFor="paymentTerms">Forma de Pagamento Detalhada</Label>
-                                <Textarea id="paymentTerms" placeholder="Descreva os termos de pagamento. Ex: a) Sinal de R$ 50.000,00... b) O restante de R$ 700.000,00 será pago via financiamento bancário..." className="min-h-[100px]" value={contractData.paymentTerms} onChange={handleInputChange} />
+                                <Textarea id="paymentTerms" placeholder="Descreva os termos de pagamento. Ex: a) Sinal de R$ 50.000,00... b) O restante de R$ 700.000,00 será pago via financiamento bancário..." className="min-h-[100px]" value={contractData.paymentTerms} onChange={handleInputChange} disabled={!canEdit} />
                             </div>
 
                             {/* Commission */}
                             <div className="space-y-2">
                                 <h3 className="font-semibold">CLÁUSULA TERCEIRA - DA COMISSÃO DE CORRETAGEM</h3>
                                 <Label htmlFor="commissionClause">Texto da Cláusula de Comissão</Label>
-                                <Textarea id="commissionClause" className="min-h-[120px]" value={contractData.commissionClause} onChange={handleInputChange} />
+                                <Textarea id="commissionClause" className="min-h-[120px]" value={contractData.commissionClause} onChange={handleInputChange} disabled={!canEdit} />
                             </div>
 
                             {/* General Clauses */}
                             <div className="space-y-2">
                                 <h3 className="font-semibold">CLÁUSULA QUARTA - DAS DISPOSIÇÕES GERAIS</h3>
                                 <Label htmlFor="generalClauses">Texto das Disposições Gerais</Label>
-                                <Textarea id="generalClauses" className="min-h-[100px]" value={contractData.generalClauses} onChange={handleInputChange} />
+                                <Textarea id="generalClauses" className="min-h-[100px]" value={contractData.generalClauses} onChange={handleInputChange} disabled={!canEdit} />
                             </div>
                             
                             <div className="space-y-2">
                                 <h3 className="font-semibold">CLÁUSULAS ADICIONAIS</h3>
                                 <Label htmlFor="additionalClauses">Cláusulas Adicionais (Opcional)</Label>
-                                <Textarea id="additionalClauses" className="min-h-[100px]" placeholder="Adicione aqui outras cláusulas, se necessário." value={contractData.additionalClauses} onChange={handleInputChange} />
+                                <Textarea id="additionalClauses" className="min-h-[100px]" placeholder="Adicione aqui outras cláusulas, se necessário." value={contractData.additionalClauses} onChange={handleInputChange} disabled={!canEdit} />
                             </div>
 
                             <Separator />
@@ -398,8 +406,8 @@ export default function ContractPage() {
 
                             <div className="text-center text-sm text-muted-foreground pt-8">
                                 <div className="grid grid-cols-2 gap-4 mx-auto max-w-sm">
-                                    <Input id="city" placeholder="Cidade" value={contractData.city} onChange={handleInputChange} />
-                                    <Input id="date" type="date" value={contractData.date} onChange={handleInputChange} />
+                                    <Input id="city" placeholder="Cidade" value={contractData.city} onChange={handleInputChange} disabled={!canEdit} />
+                                    <Input id="date" type="date" value={contractData.date} onChange={handleInputChange} disabled={!canEdit} />
                                 </div>
                             </div>
                         </div>

@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { MoreHorizontal, UserPlus, Trash2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import type { UserProfile } from "../layout";
+import type { UserProfile } from "@/app/dashboard/layout";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ProfileContext } from "@/contexts/ProfileContext";
 

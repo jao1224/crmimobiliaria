@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useContext } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -16,8 +16,13 @@ import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, PlusCircle, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { initialFinancingProcesses, initialServiceRequests, realtors, addServiceRequest, type FinancingProcess, type ServiceRequest, type ServiceRequestType, type FinancingStatus, type EngineeringStatus, type GeneralProcessStatus } from "@/lib/data";
+import { ProfileContext } from "@/contexts/ProfileContext";
+import type { UserProfile } from "../layout";
+
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount);
+
+const correspondentPermissions: UserProfile[] = ['Admin', 'Imobiliária'];
 
 export default function CorrespondentPage() {
     const [processes, setProcesses] = useState<FinancingProcess[]>(initialFinancingProcesses);
@@ -221,6 +226,9 @@ export default function CorrespondentPage() {
 
 // Componente do formulário de detalhes do processo para evitar re-renderização massiva
 function ProcessDetailForm({ process, onSave, onCancel }: { process: FinancingProcess, onSave: (p: FinancingProcess) => void, onCancel: () => void }) {
+    const { activeProfile } = useContext(ProfileContext);
+    const canEdit = correspondentPermissions.includes(activeProfile);
+
     const [formData, setFormData] = useState<FinancingProcess>(process);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -264,7 +272,7 @@ function ProcessDetailForm({ process, onSave, onCancel }: { process: FinancingPr
                         <CardContent className="space-y-4">
                             <div className="space-y-2">
                                 <Label>Status</Label>
-                                <Select value={formData.clientStatus} onValueChange={v => handleSelectChange('clientStatus', v)}>
+                                <Select value={formData.clientStatus} onValueChange={v => handleSelectChange('clientStatus', v)} disabled={!canEdit}>
                                     <SelectTrigger><SelectValue/></SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="Pendente">Pendente</SelectItem>
@@ -277,18 +285,18 @@ function ProcessDetailForm({ process, onSave, onCancel }: { process: FinancingPr
                             </div>
                              <div className="space-y-2">
                                 <Label htmlFor="approvedValue">Valor Aprovado (R$)</Label>
-                                <Input id="approvedValue" type="number" value={formData.approvedValue} onChange={handleNumberInputChange} />
+                                <Input id="approvedValue" type="number" value={formData.approvedValue} onChange={handleNumberInputChange} disabled={!canEdit} />
                             </div>
                              <div className="space-y-2">
                                 <Label htmlFor="clientStatusReason">Motivo/Observação</Label>
-                                <Textarea id="clientStatusReason" value={formData.clientStatusReason} onChange={handleInputChange} />
+                                <Textarea id="clientStatusReason" value={formData.clientStatusReason} onChange={handleInputChange} disabled={!canEdit} />
                             </div>
                         </CardContent>
                     </Card>
                      <Card>
                         <CardHeader><CardTitle className="text-base">Consulta Bacen</CardTitle></CardHeader>
                         <CardContent>
-                             <Textarea id="bacenInfo" value={formData.bacenInfo} onChange={handleInputChange} placeholder="Informações do Bacen..."/>
+                             <Textarea id="bacenInfo" value={formData.bacenInfo} onChange={handleInputChange} placeholder="Informações do Bacen..." disabled={!canEdit}/>
                         </CardContent>
                     </Card>
                 </div>
@@ -299,7 +307,7 @@ function ProcessDetailForm({ process, onSave, onCancel }: { process: FinancingPr
                         <CardContent className="space-y-4">
                             <div className="space-y-2">
                                 <Label>Status</Label>
-                                <Select value={formData.engineeringStatus} onValueChange={v => handleSelectChange('engineeringStatus', v)}>
+                                <Select value={formData.engineeringStatus} onValueChange={v => handleSelectChange('engineeringStatus', v)} disabled={!canEdit}>
                                     <SelectTrigger><SelectValue/></SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="Não solicitado">Não solicitado</SelectItem>
@@ -311,16 +319,16 @@ function ProcessDetailForm({ process, onSave, onCancel }: { process: FinancingPr
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="engineeringReason">Motivo da Pendência</Label>
-                                <Input id="engineeringReason" value={formData.engineeringReason} onChange={handleInputChange} />
+                                <Input id="engineeringReason" value={formData.engineeringReason} onChange={handleInputChange} disabled={!canEdit} />
                             </div>
                             <div className="flex gap-4">
                                 <div className="space-y-2 w-1/2">
                                     <Label htmlFor="appraisalDate">Data Laudo</Label>
-                                    <Input id="appraisalDate" type="date" value={formData.appraisalDate} onChange={handleInputChange} />
+                                    <Input id="appraisalDate" type="date" value={formData.appraisalDate} onChange={handleInputChange} disabled={!canEdit} />
                                 </div>
                                 <div className="space-y-2 w-1/2">
                                     <Label htmlFor="appraisalValue">Valor Laudo</Label>
-                                    <Input id="appraisalValue" type="number" value={formData.appraisalValue} onChange={handleNumberInputChange} />
+                                    <Input id="appraisalValue" type="number" value={formData.appraisalValue} onChange={handleNumberInputChange} disabled={!canEdit} />
                                 </div>
                             </div>
                         </CardContent>
@@ -328,12 +336,12 @@ function ProcessDetailForm({ process, onSave, onCancel }: { process: FinancingPr
                      <Card>
                         <CardHeader><CardTitle className="text-base">Etapas do Processo</CardTitle></CardHeader>
                         <CardContent className="space-y-2">
-                           <div className="flex items-center space-x-2"><Checkbox checked={formData.stages.formSignature} onCheckedChange={(c) => handleNestedInputChange('stages', 'formSignature', c as boolean)} id="formSignature"/><Label htmlFor="formSignature">Assinatura de Formulários</Label></div>
-                           <div className="flex items-center space-x-2"><Checkbox checked={formData.stages.compliance} onCheckedChange={(c) => handleNestedInputChange('stages', 'compliance', c as boolean)} id="compliance"/><Label htmlFor="compliance">Conformidade</Label></div>
-                           <div className="flex items-center space-x-2"><Checkbox checked={formData.stages.financingResources} onCheckedChange={(c) => handleNestedInputChange('stages', 'financingResources', c as boolean)} id="financingResources"/><Label htmlFor="financingResources">Recursos p/ Financiar</Label></div>
-                           <div className="space-y-1"><Label htmlFor="bankSignature">Assinatura no Banco</Label><Input id="bankSignature" type="date" value={formData.stages.bankSignature} onChange={e => handleNestedInputChange('stages', 'bankSignature', e.target.value)} /></div>
-                           <div className="space-y-1"><Label htmlFor="registryEntry">Entrada no Cartório</Label><Input id="registryEntry" type="date" value={formData.stages.registryEntry} onChange={e => handleNestedInputChange('stages', 'registryEntry', e.target.value)} /></div>
-                           <div className="space-y-1"><Label htmlFor="warranty">Garantia</Label><Input id="warranty" type="date" value={formData.stages.warranty} onChange={e => handleNestedInputChange('stages', 'warranty', e.target.value)} /></div>
+                           <div className="flex items-center space-x-2"><Checkbox checked={formData.stages.formSignature} onCheckedChange={(c) => handleNestedInputChange('stages', 'formSignature', c as boolean)} id="formSignature" disabled={!canEdit}/><Label htmlFor="formSignature">Assinatura de Formulários</Label></div>
+                           <div className="flex items-center space-x-2"><Checkbox checked={formData.stages.compliance} onCheckedChange={(c) => handleNestedInputChange('stages', 'compliance', c as boolean)} id="compliance" disabled={!canEdit}/><Label htmlFor="compliance">Conformidade</Label></div>
+                           <div className="flex items-center space-x-2"><Checkbox checked={formData.stages.financingResources} onCheckedChange={(c) => handleNestedInputChange('stages', 'financingResources', c as boolean)} id="financingResources" disabled={!canEdit}/><Label htmlFor="financingResources">Recursos p/ Financiar</Label></div>
+                           <div className="space-y-1"><Label htmlFor="bankSignature">Assinatura no Banco</Label><Input id="bankSignature" type="date" value={formData.stages.bankSignature} onChange={e => handleNestedInputChange('stages', 'bankSignature', e.target.value)} disabled={!canEdit} /></div>
+                           <div className="space-y-1"><Label htmlFor="registryEntry">Entrada no Cartório</Label><Input id="registryEntry" type="date" value={formData.stages.registryEntry} onChange={e => handleNestedInputChange('stages', 'registryEntry', e.target.value)} disabled={!canEdit} /></div>
+                           <div className="space-y-1"><Label htmlFor="warranty">Garantia</Label><Input id="warranty" type="date" value={formData.stages.warranty} onChange={e => handleNestedInputChange('stages', 'warranty', e.target.value)} disabled={!canEdit} /></div>
                         </CardContent>
                     </Card>
                 </div>
@@ -342,17 +350,17 @@ function ProcessDetailForm({ process, onSave, onCancel }: { process: FinancingPr
                     <Card>
                         <CardHeader><CardTitle className="text-base">Documentação</CardTitle></CardHeader>
                         <CardContent className="space-y-2">
-                             <div className="flex items-center space-x-2"><Checkbox id="doc-mat" checked={formData.docs.propertyRegistration.updated} onCheckedChange={c => handleCheckboxChange('docs', 'propertyRegistration', c as boolean)}/><Label htmlFor="doc-mat">Matrícula Atualizada</Label></div>
-                             <div className="flex items-center space-x-2"><Checkbox id="doc-cc" checked={formData.docs.paycheck.updated} onCheckedChange={c => handleCheckboxChange('docs', 'paycheck', c as boolean)}/><Label htmlFor="doc-cc">Contracheque</Label></div>
-                             <div className="flex items-center space-x-2"><Checkbox id="doc-end" checked={formData.docs.addressProof.updated} onCheckedChange={c => handleCheckboxChange('docs', 'addressProof', c as boolean)}/><Label htmlFor="doc-end">Endereço</Label></div>
-                             <div className="flex items-center space-x-2"><Checkbox id="doc-aprov" checked={formData.docs.clientApproval.updated} onCheckedChange={c => handleCheckboxChange('docs', 'clientApproval', c as boolean)}/><Label htmlFor="doc-aprov">Aprovação do Cliente</Label></div>
-                             <div className="flex items-center space-x-2"><Checkbox id="doc-laudo" checked={formData.docs.engineeringReport.updated} onCheckedChange={c => handleCheckboxChange('docs', 'engineeringReport', c as boolean)}/><Label htmlFor="doc-laudo">Laudo de Engenharia</Label></div>
+                             <div className="flex items-center space-x-2"><Checkbox id="doc-mat" checked={formData.docs.propertyRegistration.updated} onCheckedChange={c => handleCheckboxChange('docs', 'propertyRegistration', c as boolean)} disabled={!canEdit}/><Label htmlFor="doc-mat">Matrícula Atualizada</Label></div>
+                             <div className="flex items-center space-x-2"><Checkbox id="doc-cc" checked={formData.docs.paycheck.updated} onCheckedChange={c => handleCheckboxChange('docs', 'paycheck', c as boolean)} disabled={!canEdit}/><Label htmlFor="doc-cc">Contracheque</Label></div>
+                             <div className="flex items-center space-x-2"><Checkbox id="doc-end" checked={formData.docs.addressProof.updated} onCheckedChange={c => handleCheckboxChange('docs', 'addressProof', c as boolean)} disabled={!canEdit}/><Label htmlFor="doc-end">Endereço</Label></div>
+                             <div className="flex items-center space-x-2"><Checkbox id="doc-aprov" checked={formData.docs.clientApproval.updated} onCheckedChange={c => handleCheckboxChange('docs', 'clientApproval', c as boolean)} disabled={!canEdit}/><Label htmlFor="doc-aprov">Aprovação do Cliente</Label></div>
+                             <div className="flex items-center space-x-2"><Checkbox id="doc-laudo" checked={formData.docs.engineeringReport.updated} onCheckedChange={c => handleCheckboxChange('docs', 'engineeringReport', c as boolean)} disabled={!canEdit}/><Label htmlFor="doc-laudo">Laudo de Engenharia</Label></div>
                         </CardContent>
                     </Card>
                     <Card>
                         <CardHeader><CardTitle className="text-base">Status Geral do Processo</CardTitle></CardHeader>
                         <CardContent>
-                            <Select value={formData.generalStatus} onValueChange={v => handleSelectChange('generalStatus', v)}>
+                            <Select value={formData.generalStatus} onValueChange={v => handleSelectChange('generalStatus', v)} disabled={!canEdit}>
                                 <SelectTrigger><SelectValue/></SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="Ativo">Ativo</SelectItem>
@@ -367,9 +375,8 @@ function ProcessDetailForm({ process, onSave, onCancel }: { process: FinancingPr
             </div>
             <DialogFooter>
                 <Button type="button" variant="ghost" onClick={onCancel}>Cancelar</Button>
-                <Button type="submit">Salvar Alterações</Button>
+                <Button type="submit" disabled={!canEdit}>Salvar Alterações</Button>
             </DialogFooter>
         </form>
     );
 }
-
