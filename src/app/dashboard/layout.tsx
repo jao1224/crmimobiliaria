@@ -16,6 +16,7 @@ import {
   UserCircle,
   Handshake,
   Calendar,
+  FileText,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -50,9 +51,9 @@ import { ProfileProvider } from "@/contexts/ProfileContext";
 export type UserProfile = 'Admin' | 'Imobiliária' | 'Corretor Autônomo' | 'Investidor' | 'Construtora' | 'Financeiro';
 
 const menuConfig: Record<UserProfile, string[]> = {
-    'Admin': ['/dashboard', '/dashboard/properties', '/dashboard/crm', '/dashboard/negotiations', '/dashboard/finance', '/dashboard/agenda', '/dashboard/reporting', '/dashboard/settings'],
-    'Imobiliária': ['/dashboard', '/dashboard/properties', '/dashboard/crm', '/dashboard/negotiations', '/dashboard/finance', '/dashboard/agenda', '/dashboard/reporting', '/dashboard/settings'],
-    'Corretor Autônomo': ['/dashboard', '/dashboard/properties', '/dashboard/crm', '/dashboard/negotiations', '/dashboard/agenda', '/dashboard/reporting', '/dashboard/finance'],
+    'Admin': ['/dashboard', '/dashboard/properties', '/dashboard/crm', '/dashboard/negotiations', '/dashboard/processes', '/dashboard/finance', '/dashboard/agenda', '/dashboard/reporting', '/dashboard/settings'],
+    'Imobiliária': ['/dashboard', '/dashboard/properties', '/dashboard/crm', '/dashboard/negotiations', '/dashboard/processes', '/dashboard/finance', '/dashboard/agenda', '/dashboard/reporting', '/dashboard/settings'],
+    'Corretor Autônomo': ['/dashboard', '/dashboard/properties', '/dashboard/crm', '/dashboard/negotiations', '/dashboard/processes', '/dashboard/agenda', '/dashboard/reporting', '/dashboard/finance'],
     'Investidor': ['/dashboard', '/dashboard/properties', '/dashboard/finance', '/dashboard/negotiations', '/dashboard/agenda'],
     'Construtora': ['/dashboard', '/dashboard/properties', '/dashboard/negotiations', '/dashboard/finance', '/dashboard/agenda'],
     'Financeiro': ['/dashboard', '/dashboard/finance', '/dashboard/reporting', '/dashboard/settings'],
@@ -80,6 +81,7 @@ export default function DashboardLayout({
       { href: "/dashboard/properties", icon: Building2, label: "Imóveis", tooltip: "Imóveis" },
       { href: "/dashboard/crm", icon: Users, label: "CRM", tooltip: "CRM" },
       { href: "/dashboard/negotiations", icon: Handshake, label: "Negociações", tooltip: "Negociações" },
+      { href: "/dashboard/processes", icon: FileText, label: "Processos Admin", tooltip: "Processos Administrativos" },
       { href: "/dashboard/finance", icon: CircleDollarSign, label: "Financeiro", tooltip: "Financeiro" },
       { href: "/dashboard/agenda", icon: Calendar, label: "Agenda", tooltip: "Agenda" },
       { href: "/dashboard/reporting", icon: BarChart3, label: "Relatórios", tooltip: "Relatórios" },
@@ -198,5 +200,3 @@ export default function DashboardLayout({
     </ProfileProvider>
   );
 }
-
-    

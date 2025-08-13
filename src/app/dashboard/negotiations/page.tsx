@@ -15,27 +15,34 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // Tipos
+type NegotiationStage = 'Proposta Enviada' | 'Em Negociação' | 'Contrato Gerado' | 'Venda Concluída' | 'Aluguel Ativo';
+type NegotiationType = 'Venda' | 'Aluguel' | 'Leilão';
+type ContractStatus = 'Não Gerado' | 'Pendente Assinaturas' | 'Assinado' | 'Cancelado';
+
 type Negotiation = {
     id: string;
     property: string;
     propertyId: string;
     client: string;
     clientId: string;
-    stage: 'Proposta Enviada' | 'Em Negociação' | 'Contrato Gerado';
+    stage: NegotiationStage;
+    type: NegotiationType;
     value: number;
     salesperson: string;
     realtor: string;
-    contractStatus: string;
+    contractStatus: ContractStatus;
 };
 type Property = { id: string; name: string; address: string; price: number; commission: number; };
 type Client = { id: string; name: string; doc: string; };
 
 const initialNegotiations: Negotiation[] = [
-    { id: 'neg1', property: 'Apartamento Vista Mar', propertyId: 'prop1', client: 'João Comprador', clientId: 'cli1', stage: 'Proposta Enviada', value: 850000, salesperson: 'Joana Doe', realtor: 'Carlos Pereira', contractStatus: 'Não Gerado' },
-    { id: 'neg2', property: 'Casa com Piscina', propertyId: 'prop2', client: 'Maria Investidora', clientId: 'cli2', stage: 'Em Negociação', value: 1200000, salesperson: 'Joana Doe', realtor: 'Sofia Lima', contractStatus: 'Não Gerado' },
-    { id: 'neg3', property: 'Terreno Comercial', propertyId: 'prop3', client: 'Construtora Build S.A.', clientId: 'cli3', stage: 'Contrato Gerado', value: 2500000, salesperson: 'Admin', realtor: 'Carlos Pereira', contractStatus: 'Pendente' },
+    { id: 'neg1', property: 'Apartamento Vista Mar', propertyId: 'prop1', client: 'João Comprador', clientId: 'cli1', stage: 'Proposta Enviada', type: 'Venda', value: 850000, salesperson: 'Joana Doe', realtor: 'Carlos Pereira', contractStatus: 'Não Gerado' },
+    { id: 'neg2', property: 'Casa com Piscina', propertyId: 'prop2', client: 'Maria Investidora', clientId: 'cli2', stage: 'Em Negociação', type: 'Venda', value: 1200000, salesperson: 'Joana Doe', realtor: 'Sofia Lima', contractStatus: 'Não Gerado' },
+    { id: 'neg3', property: 'Terreno Comercial', propertyId: 'prop3', client: 'Construtora Build S.A.', clientId: 'cli3', stage: 'Contrato Gerado', type: 'Venda', value: 2500000, salesperson: 'Admin', realtor: 'Carlos Pereira', contractStatus: 'Pendente Assinaturas' },
+    { id: 'neg4', property: 'Loft Moderno', propertyId: 'prop4', client: 'Paulo Inquilino', clientId: 'cli4', stage: 'Aluguel Ativo', type: 'Aluguel', value: 2500, salesperson: 'Sofia Lima', realtor: 'Carlos Pereira', contractStatus: 'Assinado' },
 ];
 
 const mockProperties: Property[] = [
@@ -46,6 +53,7 @@ const mockClients: Client[] = [
      { id: 'cli1', name: 'João Comprador', doc: '111.222.333-44' },
 ];
 
+const realtors = ['Carlos Pereira', 'Sofia Lima', 'Joana Doe', 'Admin'];
 
 export default function NegotiationsPage() {
     const router = useRouter();
@@ -121,6 +129,7 @@ export default function NegotiationsPage() {
             client: foundClient.name,
             clientId: foundClient.id,
             stage: "Proposta Enviada",
+            type: 'Venda', // Default
             contractStatus: "Não Gerado",
             value: Number(proposalValue),
             salesperson: "Joana Doe",
@@ -133,7 +142,7 @@ export default function NegotiationsPage() {
     
     const handleGenerateContract = (negotiationId: string) => {
         setNegotiations(prev => prev.map(neg => 
-            neg.id === negotiationId ? { ...neg, stage: "Contrato Gerado", contractStatus: "Pendente" } : neg
+            neg.id === negotiationId ? { ...neg, stage: "Contrato Gerado", contractStatus: "Pendente Assinaturas" } : neg
         ));
         toast({ title: "Sucesso!", description: "Contrato gerado. Redirecionando..." });
         router.push(`/dashboard/negotiations/${negotiationId}/contract`);
@@ -141,25 +150,22 @@ export default function NegotiationsPage() {
 
     const getStageVariant = (stage: Negotiation['stage']): VariantProps<typeof badgeVariants>['variant'] => {
         switch (stage) {
-            case 'Proposta Enviada':
-                return 'status-blue';
-            case 'Em Negociação':
-                return 'status-orange';
-            case 'Contrato Gerado':
-                return 'success';
-            default:
-                return 'secondary';
+            case 'Proposta Enviada': return 'status-blue';
+            case 'Em Negociação': return 'status-orange';
+            case 'Contrato Gerado': return 'info';
+            case 'Venda Concluída': return 'success';
+            case 'Aluguel Ativo': return 'success';
+            default: return 'secondary';
         }
     }
     
-    const getContractStatusVariant = (status: string): VariantProps<typeof badgeVariants>['variant'] => {
+    const getContractStatusVariant = (status: ContractStatus): VariantProps<typeof badgeVariants>['variant'] => {
         switch (status) {
-            case 'Não Gerado':
-                return 'status-red-orange';
-            case 'Pendente':
-                return 'default';
-            default:
-                return 'secondary';
+            case 'Não Gerado': return 'secondary';
+            case 'Pendente Assinaturas': return 'status-orange';
+            case 'Assinado': return 'success';
+            case 'Cancelado': return 'destructive';
+            default: return 'secondary';
         }
     }
 
@@ -252,13 +258,48 @@ export default function NegotiationsPage() {
             <Card>
                 <CardHeader>
                     <CardTitle>Negociações em Andamento</CardTitle>
-                    <CardDescription>
-                        {
-                            negotiations.length > 0 
-                            ? `Uma lista de ${negotiations.length} processo(s) de negociação.`
-                            : "Nenhum processo de negociação encontrado."
-                        }
-                    </CardDescription>
+                    <div className="flex flex-wrap items-center justify-between gap-4">
+                        <CardDescription>
+                            {
+                                negotiations.length > 0 
+                                ? `Uma lista de ${negotiations.length} processo(s) de negociação.`
+                                : "Nenhum processo de negociação encontrado."
+                            }
+                        </CardDescription>
+                        <div className="flex flex-wrap items-center gap-2">
+                             <Select>
+                                <SelectTrigger className="w-full sm:w-[180px]">
+                                    <SelectValue placeholder="Filtrar por Tipo" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todos os Tipos</SelectItem>
+                                    <SelectItem value="venda">Venda</SelectItem>
+                                    <SelectItem value="aluguel">Aluguel</SelectItem>
+                                    <SelectItem value="leilao">Leilão</SelectItem>
+                                </SelectContent>
+                            </Select>
+                             <Select>
+                                <SelectTrigger className="w-full sm:w-[180px]">
+                                    <SelectValue placeholder="Filtrar por Status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todos os Status</SelectItem>
+                                    <SelectItem value="nao-gerado">Não Gerado</SelectItem>
+                                    <SelectItem value="pendente">Pendente Assinaturas</SelectItem>
+                                    <SelectItem value="assinado">Assinado</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <Select>
+                                <SelectTrigger className="w-full sm:w-[180px]">
+                                    <SelectValue placeholder="Filtrar por Responsável" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todos os Responsáveis</SelectItem>
+                                    {realtors.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
                 </CardHeader>
                 <CardContent>
                     <Table>
@@ -266,11 +307,12 @@ export default function NegotiationsPage() {
                             <TableRow>
                                 <TableHead>Imóvel</TableHead>
                                 <TableHead>Cliente</TableHead>
+                                <TableHead className="hidden md:table-cell">Tipo</TableHead>
                                 <TableHead>Valor</TableHead>
                                 <TableHead>Fase</TableHead>
                                 <TableHead>Contrato</TableHead>
-                                <TableHead>Vendedor</TableHead>
-                                <TableHead>Captador</TableHead>
+                                <TableHead className="hidden lg:table-cell">Vendedor</TableHead>
+                                <TableHead className="hidden lg:table-cell">Captador</TableHead>
                                 <TableHead>
                                   <span className="sr-only">Ações</span>
                                 </TableHead>
@@ -286,6 +328,7 @@ export default function NegotiationsPage() {
                                 >
                                     <TableCell className="font-medium">{neg.property}</TableCell>
                                     <TableCell>{neg.client}</TableCell>
+                                    <TableCell className="hidden md:table-cell">{neg.type}</TableCell>
                                     <TableCell>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(neg.value)}</TableCell>
                                     <TableCell>
                                         <Badge variant={getStageVariant(neg.stage)} className="whitespace-nowrap">{neg.stage}</Badge>
@@ -293,8 +336,8 @@ export default function NegotiationsPage() {
                                      <TableCell>
                                         <Badge variant={getContractStatusVariant(neg.contractStatus)} className="whitespace-nowrap">{neg.contractStatus}</Badge>
                                     </TableCell>
-                                    <TableCell>{neg.salesperson}</TableCell>
-                                    <TableCell>{neg.realtor}</TableCell>
+                                    <TableCell className="hidden lg:table-cell">{neg.salesperson}</TableCell>
+                                    <TableCell className="hidden lg:table-cell">{neg.realtor}</TableCell>
                                     <TableCell onClick={(e) => e.stopPropagation()}>
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
@@ -317,7 +360,7 @@ export default function NegotiationsPage() {
                             ))
                             ) : (
                                  <TableRow>
-                                    <TableCell colSpan={8} className="h-24 text-center">Nenhum processo de negociação encontrado.</TableCell>
+                                    <TableCell colSpan={9} className="h-24 text-center">Nenhum processo de negociação encontrado.</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>
@@ -327,10 +370,3 @@ export default function NegotiationsPage() {
         </div>
     );
 }
-
-    
-
-    
-
-
-

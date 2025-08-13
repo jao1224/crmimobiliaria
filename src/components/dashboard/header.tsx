@@ -1,3 +1,4 @@
+
 "use client"
 
 import React from "react"
@@ -14,6 +15,7 @@ const pathTranslations: { [key: string]: string } = {
     finance: 'Financeiro',
     reporting: 'Relatórios',
     settings: 'Configurações',
+    processes: 'Processos Admin',
 };
 
 function translatePath(path: string) {
