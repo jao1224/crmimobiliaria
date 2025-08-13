@@ -350,6 +350,7 @@ export default function NegotiationsPage() {
                     <Table>
                         <TableHeader>
                             <TableRow>
+                                <TableHead>Cód.</TableHead>
                                 <TableHead>Imóvel</TableHead>
                                 <TableHead>Cliente</TableHead>
                                 <TableHead className="hidden md:table-cell">Tipo</TableHead>
@@ -370,6 +371,7 @@ export default function NegotiationsPage() {
                                     key={neg.id} 
                                     className="hover:bg-secondary"
                                 >
+                                    <TableCell className="font-mono text-xs text-muted-foreground">{neg.id.toUpperCase()}</TableCell>
                                     <TableCell 
                                         className="font-medium cursor-pointer"
                                         onClick={() => router.push(`/dashboard/negotiations/${neg.id}/contract`)}
@@ -416,7 +418,7 @@ export default function NegotiationsPage() {
                             ))
                             ) : (
                                  <TableRow>
-                                    <TableCell colSpan={9} className="h-24 text-center">Nenhum processo de negociação encontrado.</TableCell>
+                                    <TableCell colSpan={10} className="h-24 text-center">Nenhum processo de negociação encontrado.</TableCell>
                                  </TableRow>
                             )}
                         </TableBody>

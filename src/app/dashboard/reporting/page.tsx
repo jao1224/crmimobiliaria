@@ -6,11 +6,13 @@ import { SalesReport } from "@/components/dashboard/sales-report";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Download, Building, Target, Users } from "lucide-react";
+import { Download, Building, Target, Users, Calendar } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { initialNegotiations, realtors, teams, propertyTypes as allPropertyTypes, type Negotiation } from "@/lib/data";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 // Importar os dados e o tipo de Imóvel
 import { type Property } from "../properties/page";
 
@@ -97,15 +99,23 @@ export default function ReportingPage() {
     const [realtorFilter, setRealtorFilter] = useState('all');
     const [teamFilter, setTeamFilter] = useState('all');
     const [propertyTypeFilter, setPropertyTypeFilter] = useState('all');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
 
     const filteredNegotiations = useMemo(() => {
         return negotiations.filter(neg => {
             const realtorMatch = realtorFilter === 'all' || neg.realtor === realtorFilter;
             const teamMatch = teamFilter === 'all' || teams.find(t => t.id === teamFilter)?.members.includes(neg.salesperson);
             const propertyTypeMatch = propertyTypeFilter === 'all' || neg.propertyType === propertyTypeFilter;
-            return realtorMatch && teamMatch && propertyTypeMatch;
+            
+            const dateMatch = !startDate || !endDate || !neg.completionDate || (
+                new Date(neg.completionDate) >= new Date(startDate) &&
+                new Date(neg.completionDate) <= new Date(endDate)
+            );
+
+            return realtorMatch && teamMatch && propertyTypeMatch && dateMatch;
         });
-    }, [negotiations, realtorFilter, teamFilter, propertyTypeFilter]);
+    }, [negotiations, realtorFilter, teamFilter, propertyTypeFilter, startDate, endDate]);
 
     const chartData = useMemo(() => processSalesData(filteredNegotiations), [filteredNegotiations]);
     const { realtorCaptures, propertyTypeCaptures } = useMemo(() => processCaptureData(properties), [properties]);
@@ -134,14 +144,14 @@ export default function ReportingPage() {
                 <TabsContent value="sales">
                     <Card className="mt-4">
                         <CardHeader>
-                            <div className="flex flex-wrap items-center justify-between gap-4">
+                            <div className="flex flex-col gap-4">
                                 <div>
                                     <CardTitle>Desempenho de Vendas</CardTitle>
                                     <CardDescription>Visualize dados de vendas com filtros personalizados.</CardDescription>
                                 </div>
-                                <div className="flex flex-wrap items-center gap-2">
+                                <div className="flex flex-wrap items-end gap-2">
                                      <Select value={realtorFilter} onValueChange={setRealtorFilter}>
-                                        <SelectTrigger className="w-[180px]">
+                                        <SelectTrigger className="w-full sm:w-[180px]">
                                             <SelectValue placeholder="Filtrar por Corretor" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -150,7 +160,7 @@ export default function ReportingPage() {
                                         </SelectContent>
                                     </Select>
                                      <Select value={teamFilter} onValueChange={setTeamFilter}>
-                                        <SelectTrigger className="w-[180px]">
+                                        <SelectTrigger className="w-full sm:w-[180px]">
                                             <SelectValue placeholder="Filtrar por Equipe" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -159,7 +169,7 @@ export default function ReportingPage() {
                                         </SelectContent>
                                     </Select>
                                     <Select value={propertyTypeFilter} onValueChange={setPropertyTypeFilter}>
-                                        <SelectTrigger className="w-[180px]">
+                                        <SelectTrigger className="w-full sm:w-[180px]">
                                             <SelectValue placeholder="Filtrar por Tipo de Imóvel" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -167,6 +177,14 @@ export default function ReportingPage() {
                                             {allPropertyTypes.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
+                                    <div className="grid w-full sm:w-auto gap-1.5">
+                                        <Label htmlFor="start-date">Data de Início</Label>
+                                        <Input type="date" id="start-date" value={startDate} onChange={e => setStartDate(e.target.value)} />
+                                    </div>
+                                     <div className="grid w-full sm:w-auto gap-1.5">
+                                        <Label htmlFor="end-date">Data de Fim</Label>
+                                        <Input type="date" id="end-date" value={endDate} onChange={e => setEndDate(e.target.value)} />
+                                    </div>
                                 </div>
                             </div>
                         </CardHeader>
