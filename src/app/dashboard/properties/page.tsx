@@ -151,9 +151,6 @@ export default function PropertiesPage() {
   };
 
   const handleRemoveImage = () => {
-    if (editingProperty) {
-      setEditingProperty(prev => prev ? { ...prev, imageUrl: "https://placehold.co/600x400.png" } : null);
-    }
     setImagePreview("https://placehold.co/600x400.png");
     setSelectedFile(null);
     toast({ title: "Imagem Removida", description: "A imagem do imóvel foi redefinida para a padrão. Salve para confirmar." });
@@ -351,7 +348,7 @@ export default function PropertiesPage() {
                 <DialogDescription>{selectedProperty.address}</DialogDescription>
               </DialogHeader>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
-                <div>
+                <div className="space-y-4">
                   <Image
                     alt="Imagem do imóvel"
                     className="aspect-video w-full rounded-md object-cover"
@@ -360,6 +357,10 @@ export default function PropertiesPage() {
                     width="600"
                     data-ai-hint={selectedProperty.imageHint}
                   />
+                  <div>
+                    <h3 className="font-semibold text-lg">Descrição</h3>
+                    <p className="text-sm text-muted-foreground mt-2">{selectedProperty.description || "Nenhuma descrição disponível."}</p>
+                  </div>
                 </div>
                 <div className="space-y-4">
                   <div>
@@ -378,10 +379,6 @@ export default function PropertiesPage() {
                    <div>
                     <h3 className="font-semibold text-lg">Proprietário</h3>
                     <p className="text-sm text-muted-foreground mt-2">{selectedProperty.ownerInfo || "Nenhuma informação disponível."}</p>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-lg">Descrição</h3>
-                    <p className="text-sm text-muted-foreground mt-2">{selectedProperty.description || "Nenhuma descrição disponível."}</p>
                   </div>
                 </div>
               </div>
