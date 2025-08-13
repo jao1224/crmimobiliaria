@@ -1,212 +1,211 @@
 
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, Clock, FileText, Landmark, Users, DollarSign, Building, User, Phone, Mail, FileSignature, Banknote, Group, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { MoreHorizontal, AlertCircle, CheckCircle, Hourglass, PlusCircle } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { initialAdminProcesses, type AdminProcess, type ProcessStatus, type ProcessStage } from "@/lib/data";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
 
-
-// Dados simulados para o processo
-const processData = {
-    negotiation: {
-        type: "Repasse com Financiamento",
-        property: {
-            name: "Apartamento Vista Mar",
-            address: "Av. Beira Mar, 123, Apto 101 - Meireles, Fortaleza-CE",
-            registration: "Matrícula 12345 do 2º CRI",
-        },
-        seller: {
-            name: "Ana Vendedora Silva",
-            doc: "111.222.333-44",
-            phone: "(85) 98888-7777",
-            email: "ana.vendedora@email.com",
-        },
-        buyer: {
-            name: "João Comprador de Souza",
-            doc: "555.666.777-88",
-        }
-    },
-    team: {
-        captador: "Carlos Pereira",
-        captadorTeam: "Equipe de Revenda",
-        vendedor: "Sofia Lima",
-        vendedorGerente: "Gerente Admin"
-    },
-    values: {
-        saleValue: 850000,
-        negotiatedValue: 840000,
-        downPayment: 150000,
-    },
-    responsibles: {
-        sector: "Repasse",
-        correspondent: "Banco Parceiro S.A."
-    },
-    finance: {
-        status: "Comissões Pendentes",
-        notes: "Aguardando pagamento do sinal para liberar comissão do captador.",
-    },
-    correspondent: {
-        status: "Análise de Crédito",
-        notes: "Cliente enviou a documentação inicial. Aguardando análise do banco.",
+const getStatusVariant = (status: ProcessStatus) => {
+    switch (status) {
+        case 'Ativo': return 'success';
+        case 'Suspenso': return 'warning';
+        case 'Cancelado': return 'destructive';
+        default: return 'secondary';
     }
-}
+};
 
-const formatCurrency = (amount: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount);
-
+const getStageVariant = (stage: ProcessStage) => {
+    switch (stage) {
+        case 'Em andamento': return 'status-blue';
+        case 'Pendência': return 'status-orange';
+        case 'Finalizado': return 'default';
+        default: return 'secondary';
+    }
+};
 
 export default function ProcessesPage() {
+    const [processes, setProcesses] = useState<AdminProcess[]>(initialAdminProcesses);
+    const [selectedProcess, setSelectedProcess] = useState<AdminProcess | null>(null);
+    const [isPendencyModalOpen, setPendencyModalOpen] = useState(false);
+    const [isFinalizeModalOpen, setFinalizeModalOpen] = useState(false);
+    const [pendencyNote, setPendencyNote] = useState("");
+    const [finalizationNote, setFinalizationNote] = useState("");
+    const { toast } = useToast();
+
+    const handleOpenPendencyModal = (process: AdminProcess) => {
+        setSelectedProcess(process);
+        setPendencyNote(process.observations || "");
+        setPendencyModalOpen(true);
+    };
+
+    const handleOpenFinalizeModal = (process: AdminProcess) => {
+        setSelectedProcess(process);
+        setFinalizationNote("");
+        setFinalizeModalOpen(true);
+    };
+
+    const handleSavePendency = () => {
+        if (!selectedProcess) return;
+        setProcesses(prev => prev.map(p => 
+            p.id === selectedProcess.id 
+            ? { ...p, stage: 'Pendência', observations: pendencyNote } 
+            : p
+        ));
+        toast({ title: "Pendência Registrada!", description: `Uma nova observação foi adicionada ao processo ${selectedProcess.id.toUpperCase()}.` });
+        setPendencyModalOpen(false);
+    };
+
+    const handleFinalizeProcess = () => {
+        if (!selectedProcess) return;
+         setProcesses(prev => prev.map(p => 
+            p.id === selectedProcess.id 
+            ? { ...p, status: 'Finalizado', stage: 'Finalizado', observations: `Processo finalizado. Detalhes: ${finalizationNote}` } 
+            : p
+        ));
+        toast({ title: "Processo Finalizado!", description: `O processo ${selectedProcess.id.toUpperCase()} foi concluído.` });
+        setFinalizeModalOpen(false);
+    };
+
+
     return (
         <div className="flex flex-col gap-6">
             <div>
-                <h1 className="text-2xl font-bold">Processo Administrativo da Negociação</h1>
-                <p className="text-muted-foreground">Visão consolidada de todas as etapas e informações da negociação: <span className="font-semibold">{processData.negotiation.property.name}</span></p>
+                <h1 className="text-2xl font-bold">Gestão de Processos</h1>
+                <p className="text-muted-foreground">Acompanhe todos os processos em que você está envolvido.</p>
             </div>
 
-            {/* Cabeçalho "PDF" não-editável */}
-            <Card className="border-2 border-primary/20">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-primary">
-                        <FileSignature className="h-6 w-6"/>
-                        Resumo da Negociação
-                    </CardTitle>
-                    <CardDescription>
-                        Esta é uma visão geral consolidada do processo. A edição é feita nos módulos específicos.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                    {/* Dados da Negociação */}
-                    <div className="space-y-4">
-                         <h3 className="font-semibold flex items-center gap-2"><FileText className="h-5 w-5 text-muted-foreground"/>Dados da Negociação</h3>
-                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-4 border rounded-lg">
-                            <div><Label>Tipo de Negócio</Label><p className="text-sm font-medium">{processData.negotiation.type}</p></div>
-                            <div><Label>Imóvel</Label><p className="text-sm font-medium">{processData.negotiation.property.name}</p></div>
-                            <div><Label>Endereço</Label><p className="text-sm font-medium">{processData.negotiation.property.address}</p></div>
-                            <div><Label>Matrícula</Label><p className="text-sm font-medium">{processData.negotiation.property.registration}</p></div>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="p-4 border rounded-lg space-y-2">
-                                <h4 className="font-semibold flex items-center gap-2 text-sm"><User className="h-4 w-4"/>Vendedor</h4>
-                                <p className="text-sm"><span className="font-medium">Nome:</span> {processData.negotiation.seller.name}</p>
-                                <p className="text-sm"><span className="font-medium">CPF:</span> {processData.negotiation.seller.doc}</p>
-                                <p className="text-sm"><span className="font-medium">Contato:</span> {processData.negotiation.seller.phone} / {processData.negotiation.seller.email}</p>
-                            </div>
-                            <div className="p-4 border rounded-lg space-y-2">
-                                <h4 className="font-semibold flex items-center gap-2 text-sm"><User className="h-4 w-4"/>Comprador</h4>
-                                <p className="text-sm"><span className="font-medium">Nome:</span> {processData.negotiation.buyer.name}</p>
-                                <p className="text-sm"><span className="font-medium">CPF:</span> {processData.negotiation.buyer.doc}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <Separator />
-                    
-                     {/* Equipe Envolvida */}
-                    <div className="space-y-4">
-                         <h3 className="font-semibold flex items-center gap-2"><Users className="h-5 w-5 text-muted-foreground"/>Equipe Envolvida</h3>
-                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-4 border rounded-lg">
-                            <div><Label>Captador</Label><p className="text-sm font-medium">{processData.team.captador}</p></div>
-                            <div><Label>Equipe do Captador</Label><p className="text-sm font-medium">{processData.team.captadorTeam}</p></div>
-                            <div><Label>Corretor da Venda</Label><p className="text-sm font-medium">{processData.team.vendedor}</p></div>
-                            <div><Label>Gerente da Venda</Label><p className="text-sm font-medium">{processData.team.vendedorGerente}</p></div>
-                        </div>
-                    </div>
-
-                    <Separator/>
-
-                    {/* Valores e Responsáveis */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-4">
-                             <h3 className="font-semibold flex items-center gap-2"><DollarSign className="h-5 w-5 text-muted-foreground"/>Valores</h3>
-                             <div className="p-4 border rounded-lg space-y-3">
-                                <div className="flex justify-between items-center"><span className="text-sm">Valor de Venda:</span> <span className="font-semibold">{formatCurrency(processData.values.saleValue)}</span></div>
-                                <div className="flex justify-between items-center"><span className="text-sm">Valor Negociado:</span> <span className="font-semibold text-primary">{formatCurrency(processData.values.negotiatedValue)}</span></div>
-                                <div className="flex justify-between items-center"><span className="text-sm">Valor de Entrada (Sinal):</span> <span className="font-semibold">{formatCurrency(processData.values.downPayment)}</span></div>
-                             </div>
-                        </div>
-                         <div className="space-y-4">
-                             <h3 className="font-semibold flex items-center gap-2"><Target className="h-5 w-5 text-muted-foreground"/>Responsáveis</h3>
-                             <div className="p-4 border rounded-lg space-y-3">
-                                 <div className="flex justify-between items-center"><span className="text-sm">Setor Responsável:</span> <Badge variant="secondary">{processData.responsibles.sector}</Badge></div>
-                                 <div className="flex justify-between items-center"><span className="text-sm">Correspondente:</span> <span className="font-medium">{processData.responsibles.correspondent}</span></div>
-                             </div>
-                        </div>
-                    </div>
-
-                </CardContent>
-            </Card>
-
-            {/* Área de Ações e Acompanhamento */}
             <Card>
                 <CardHeader>
-                    <CardTitle>Acompanhamento do Processo</CardTitle>
-                    <CardDescription>Área para os setores responsáveis atualizarem o andamento de suas tarefas.</CardDescription>
+                    <CardTitle>Meus Processos</CardTitle>
+                    <CardDescription>Lista de todos os processos ativos, com pendências ou finalizados.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Tabs defaultValue="finance">
-                        <TabsList>
-                            <TabsTrigger value="finance">Financeiro</TabsTrigger>
-                            <TabsTrigger value="correspondent">Correspondente</TabsTrigger>
-                            <TabsTrigger value="administrative">Administrativo</TabsTrigger>
-                        </TabsList>
-                        <TabsContent value="finance" className="mt-4">
-                            <Card className="bg-muted/30">
-                                <CardHeader>
-                                    <CardTitle className="flex items-center justify-between text-base">
-                                        <span>Status Financeiro</span>
-                                        <Badge variant="warning">{processData.finance.status}</Badge>
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <Label>Última Atualização / Observações</Label>
-                                    <p className="text-sm border p-3 rounded-md bg-background min-h-24">{processData.finance.notes}</p>
-                                    <Label htmlFor="finance-update">Adicionar nova atualização:</Label>
-                                    <Textarea id="finance-update" placeholder="Ex: Pagamento de sinal confirmado. Liberando comissão..."/>
-                                    <Button size="sm">Salvar Atualização Financeira</Button>
-                                </CardContent>
-                            </Card>
-                        </TabsContent>
-                        <TabsContent value="correspondent" className="mt-4">
-                             <Card className="bg-muted/30">
-                                <CardHeader>
-                                    <CardTitle className="flex items-center justify-between text-base">
-                                        <span>Status do Financiamento</span>
-                                        <Badge variant="status-blue">{processData.correspondent.status}</Badge>
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                     <Label>Última Atualização / Observações</Label>
-                                    <p className="text-sm border p-3 rounded-md bg-background min-h-24">{processData.correspondent.notes}</p>
-                                    <Label htmlFor="correspondent-update">Adicionar nova atualização:</Label>
-                                    <Textarea id="correspondent-update" placeholder="Ex: Crédito aprovado com ressalvas. Aguardando laudo da engenharia..."/>
-                                    <Button size="sm">Salvar Atualização do Correspondente</Button>
-                                </CardContent>
-                            </Card>
-                        </TabsContent>
-                         <TabsContent value="administrative" className="mt-4">
-                             <Card className="bg-muted/30">
-                                <CardHeader>
-                                    <CardTitle className="flex items-center justify-between text-base">
-                                        <span>Status Administrativo / Contrato</span>
-                                        <Badge>Contrato Gerado</Badge>
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                     <Label>Última Atualização / Observações</Label>
-                                    <p className="text-sm border p-3 rounded-md bg-background min-h-24">Contrato de compra e venda gerado no sistema. Aguardando assinaturas.</p>
-                                    <Label htmlFor="admin-update">Adicionar nova atualização:</Label>
-                                    <Textarea id="admin-update" placeholder="Ex: Coleta de assinatura do vendedor concluída."/>
-                                    <Button size="sm">Salvar Atualização Administrativa</Button>
-                                </CardContent>
-                            </Card>
-                        </TabsContent>
-                    </Tabs>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Status</TableHead>
+                                <TableHead>Código</TableHead>
+                                <TableHead>Andamento</TableHead>
+                                <TableHead>Tipo Negociação</TableHead>
+                                <TableHead>Categoria</TableHead>
+                                <TableHead>Imóvel</TableHead>
+                                <TableHead>Vendedor</TableHead>
+                                <TableHead>Captador</TableHead>
+                                <TableHead>Equipe</TableHead>
+                                <TableHead>Observações</TableHead>
+                                <TableHead><span className="sr-only">Ações</span></TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {processes.map(process => (
+                                <TableRow key={process.id} className="hover:bg-secondary">
+                                    <TableCell><Badge variant={getStatusVariant(process.status)}>{process.status}</Badge></TableCell>
+                                    <TableCell className="font-mono text-xs">{process.id.toUpperCase()}</TableCell>
+                                    <TableCell>
+                                        <div className="flex items-center gap-2">
+                                            {process.stage === 'Pendência' && <AlertCircle className="h-4 w-4 text-status-orange" />}
+                                            {process.stage === 'Em andamento' && <Hourglass className="h-4 w-4 text-status-blue" />}
+                                            {process.stage === 'Finalizado' && <CheckCircle className="h-4 w-4 text-primary" />}
+                                            <Badge variant={getStageVariant(process.stage)}>{process.stage}</Badge>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>{process.negotiationType}</TableCell>
+                                    <TableCell>{process.category}</TableCell>
+                                    <TableCell className="font-medium">{process.property}</TableCell>
+                                    <TableCell>{process.salesperson}</TableCell>
+                                    <TableCell>{process.realtor}</TableCell>
+                                    <TableCell>{process.team}</TableCell>
+                                    <TableCell className="text-muted-foreground text-xs max-w-xs truncate">{process.observations}</TableCell>
+                                    <TableCell>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button aria-haspopup="true" size="icon" variant="ghost">
+                                                    <MoreHorizontal className="h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuLabel>Ações do Processo</DropdownMenuLabel>
+                                                <DropdownMenuItem onClick={() => handleOpenPendencyModal(process)}>Marcar Pendência</DropdownMenuItem>
+                                                <DropdownMenuSeparator/>
+                                                <DropdownMenuItem 
+                                                    onClick={() => handleOpenFinalizeModal(process)}
+                                                    className="text-green-600 focus:text-green-600 focus:bg-green-50"
+                                                    disabled={process.status === 'Finalizado'}
+                                                >
+                                                    Finalizar Processo
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
                 </CardContent>
             </Card>
+
+            {/* Modal de Pendência */}
+            <Dialog open={isPendencyModalOpen} onOpenChange={setPendencyModalOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Marcar Pendência no Processo</DialogTitle>
+                        <DialogDescription>
+                            Adicione uma observação sobre a pendência. Todos os envolvidos no processo 
+                            serão notificados (simulado). Processo: <span className="font-bold">{selectedProcess?.id.toUpperCase()}</span>
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4 space-y-2">
+                        <Label htmlFor="pendency-note">Motivo / Observação da Pendência</Label>
+                        <Textarea 
+                            id="pendency-note" 
+                            className="min-h-32" 
+                            value={pendencyNote}
+                            onChange={(e) => setPendencyNote(e.target.value)}
+                            placeholder="Ex: Falta a certidão de nascimento do comprador."
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setPendencyModalOpen(false)}>Cancelar</Button>
+                        <Button onClick={handleSavePendency}>Salvar Pendência</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Modal de Finalização */}
+            <Dialog open={isFinalizeModalOpen} onOpenChange={setFinalizeModalOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Finalizar Processo</DialogTitle>
+                        <DialogDescription>
+                            Insira os detalhes finais sobre o que cada parte (corretor, gerente, etc.) tem a receber.
+                             Processo: <span className="font-bold">{selectedProcess?.id.toUpperCase()}</span>
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4 space-y-2">
+                        <Label htmlFor="finalization-note">Detalhes do Recebimento</Label>
+                        <Textarea 
+                            id="finalization-note" 
+                            className="min-h-32" 
+                            value={finalizationNote}
+                            onChange={(e) => setFinalizationNote(e.target.value)}
+                            placeholder="Ex: Corretor Vendedor: R$ 5.000,00. Corretor Captador: R$ 3.000,00. Gerente: R$ 1.000,00."
+                        />
+                    </div>
+                    <DialogFooter>
+                         <Button variant="outline" onClick={() => setFinalizeModalOpen(false)}>Cancelar</Button>
+                        <Button onClick={handleFinalizeProcess}>Concluir e Finalizar</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
