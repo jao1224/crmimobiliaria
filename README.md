@@ -72,29 +72,28 @@ Este é o repositório do seu projeto LeadFlow, desenvolvido no Firebase Studio.
     -   **Área de Ações e Acompanhamento (✅):**
         -   Abaixo do resumo, foram criadas áreas com abas onde os setores responsáveis (simulando Financeiro, Correspondente e Administrativo) podem dar andamento em suas tarefas.
     -   **Navegação e Acesso (✅):** Adicionado um botão "Ver Processo" na tabela de Negociações para simular o acesso ao detalhe do processo administrativo correspondente.
+- **Processos, Filtros e Relatórios (Funcionalidades Essenciais):**
+    -   **Código Único de Processo (✅):**
+        -   Gerado e exibido um código/ID único para cada negociação salva.
+        -   Garantido que este código seja visível nas tabelas de Negociações, Processos, Financeiro, etc., para fácil referência.
+    -   **Filtros Avançados e Detalhados (✅):**
+        -   Implementado filtros por **data** em todos os módulos relevantes (Negociações, Relatórios).
+        -   Adicionado filtros por **tipo de imóvel** (casa, apartamento, etc.) nas seções de Negociação e Relatórios.
+        -   Criado filtros para distinguir operações de **Captação vs. Venda**.
 
 
 ### 🟡 Em Progresso / A Fazer
 
-- **1. Processos, Filtros e Relatórios (Funcionalidades Essenciais):**
-    -   **Código Único de Processo (❌):**
-        -   Gerar e exibir um código/ID único para cada negociação salva.
-        -   Garantir que este código seja visível nas tabelas de Negociações, Processos, Financeiro, etc., para fácil referência.
-    -   **Filtros Avançados e Detalhados (❌):**
-        -   Implementar filtros por **data** em todos os módulos relevantes (Negociações, Relatórios).
-        -   Adicionar filtros por **tipo de imóvel** (casa, apartamento, etc.) nas seções de Negociação e Relatórios.
-        -   Criar filtros para distinguir operações de **Captação vs. Venda**.
-
-- **2. Persistência e Integração de Dados (Conectar ao Banco de Dados):**
+- **1. Persistência e Integração de Dados (Conectar ao Banco de Dados):**
     -   **Conectar Módulos ao Firestore (🟡):** A tarefa principal. Conectar todas as funcionalidades (CRM, Imóveis, Finanças, Equipes, etc.) ao banco de dados para salvar e carregar as informações de forma persistente.
     -   **Detalhamento Financeiro nas Comissões (❌):**
         -   Incluir detalhes completos do negócio na tela de comissão (requer conexão com o banco de dados): valor do imóvel, captador, vendedor, gerente, sinal do cliente, parcelamento com a construtora, etc.
     -   **Implementar Permissões de Edição Reais (❌):** A lógica simulada está pronta. O próximo passo é conectar ao sistema de autenticação para que as permissões funcionem com usuários e perfis reais.
 
-- **3. Sistema de Autenticação e Perfis:**
+- **2. Sistema de Autenticação e Perfis:**
     -   **Implementar Autenticação Real (🟡):** Integrar o Firebase Authentication para que o login e o cadastro funcionem com usuários reais.
     -   **Implementar Mudança de Senha (🟡):** Conectar a funcionalidade na página de configurações ("Minha Conta").
     -   **Conectar Perfis de Usuário (🟡):** Salvar os dados do perfil do usuário no Firestore.
 
-- **4. Sistema de Notificações Gerais:**
+- **3. Sistema de Notificações Gerais:**
     -   **Implementar Notificações (🟡):** Enviar alertas para ações importantes no sistema (e-mail, WhatsApp, etc.).
