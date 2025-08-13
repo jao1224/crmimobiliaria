@@ -42,7 +42,7 @@ const allModules = [
     { id: "/dashboard/properties", label: "Imóveis" },
     { id: "/dashboard/crm", label: "CRM" },
     { id: "/dashboard/negotiations", label: "Negociações" },
-    { id: "/dashboard/finance", label = "Financeiro" },
+    { id: "/dashboard/finance", label: "Financeiro" },
     { id: "/dashboard/reporting", label: "Relatórios" },
     { id: "/dashboard/settings", label: "Configurações" },
 ];
@@ -448,6 +448,6 @@ export default function SettingsPage() {
                     </div>
                 </DialogContent>
             </Dialog>
-
         </div>
-    
+    );
+}
