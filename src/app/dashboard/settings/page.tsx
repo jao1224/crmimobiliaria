@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -14,9 +14,10 @@ import { useToast } from "@/hooks/use-toast";
 import { MoreHorizontal, UserPlus, Trash2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import type { UserProfile } from "../layout";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ProfileContext } from "@/contexts/ProfileContext";
+
 
 type TeamMember = {
     id: string;
@@ -31,10 +32,8 @@ type Team = {
     memberIds: string[];
 };
 
-const roles = [
-    "Administrativo", "Financeiro", "Jurídico", "Correspondente Bancário",
-    "Locação", "Leilão", "Despachante", "Avaliador", "Gerente",
-    "Coordenador", "Corretor", "Secretária", "Viabilizador"
+const roles: UserProfile[] = [
+    'Admin', 'Imobiliária', 'Financeiro', 'Corretor Autônomo', 'Investidor', 'Construtora'
 ];
 
 const allModules = [
@@ -43,23 +42,25 @@ const allModules = [
     { id: "/dashboard/crm", label: "CRM" },
     { id: "/dashboard/negotiations", label: "Negociações" },
     { id: "/dashboard/finance", label: "Financeiro" },
+    { id: "/dashboard/agenda", label: "Agenda" },
     { id: "/dashboard/reporting", label: "Relatórios" },
     { id: "/dashboard/settings", label: "Configurações" },
 ];
 
 const menuConfig: Record<UserProfile, string[]> = {
-    'Admin': ['/dashboard', '/dashboard/properties', '/dashboard/crm', '/dashboard/negotiations', '/dashboard/finance', '/dashboard/reporting', '/dashboard/settings'],
-    'Imobiliária': ['/dashboard', '/dashboard/properties', '/dashboard/crm', '/dashboard/negotiations', '/dashboard/finance', '/dashboard/reporting', '/dashboard/settings'],
-    'Corretor Autônomo': ['/dashboard', '/dashboard/properties', '/dashboard/crm', '/dashboard/negotiations', '/dashboard/reporting'],
-    'Investidor': ['/dashboard', '/dashboard/properties', '/dashboard/finance', '/dashboard/negotiations'],
-    'Construtora': ['/dashboard', '/dashboard/properties', '/dashboard/negotiations', '/dashboard/finance'],
+    'Admin': ['/dashboard', '/dashboard/properties', '/dashboard/crm', '/dashboard/negotiations', '/dashboard/finance', '/dashboard/agenda', '/dashboard/reporting', '/dashboard/settings'],
+    'Imobiliária': ['/dashboard', '/dashboard/properties', '/dashboard/crm', '/dashboard/negotiations', '/dashboard/finance', '/dashboard/agenda', '/dashboard/reporting', '/dashboard/settings'],
+    'Corretor Autônomo': ['/dashboard', '/dashboard/properties', '/dashboard/crm', '/dashboard/negotiations', '/dashboard/agenda', '/dashboard/reporting', '/dashboard/finance'],
+    'Investidor': ['/dashboard', '/dashboard/properties', '/dashboard/finance', '/dashboard/negotiations', '/dashboard/agenda'],
+    'Construtora': ['/dashboard', '/dashboard/properties', '/dashboard/negotiations', '/dashboard/finance', '/dashboard/agenda'],
+    'Financeiro': ['/dashboard', '/dashboard/finance', '/dashboard/reporting', '/dashboard/settings'],
 };
 
 // Dados simulados
 const initialTeamMembers: TeamMember[] = [
-    { id: 'user1', name: 'Carlos Pereira', email: 'carlos@leadflow.com', role: 'Corretor' },
-    { id: 'user2', name: 'Sofia Lima', email: 'sofia@leadflow.com', role: 'Gerente' },
-    { id: 'user3', name: 'Admin User', email: 'admin@leadflow.com', role: 'Administrativo' },
+    { id: 'user1', name: 'Carlos Pereira', email: 'carlos@leadflow.com', role: 'Corretor Autônomo' },
+    { id: 'user2', name: 'Sofia Lima', email: 'sofia@leadflow.com', role: 'Admin' },
+    { id: 'user3', name: 'Admin User', email: 'admin@leadflow.com', role: 'Admin' },
 ];
 
 const initialTeams: Team[] = [
@@ -69,6 +70,9 @@ const initialTeams: Team[] = [
 
 
 export default function SettingsPage() {
+    const { activeProfile } = useContext(ProfileContext);
+    const hasPermission = activeProfile === 'Admin' || activeProfile === 'Imobiliária';
+
     const [teamMembers, setTeamMembers] = useState<TeamMember[]>(initialTeamMembers);
     const [teams, setTeams] = useState<Team[]>(initialTeams);
     const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
@@ -172,9 +176,9 @@ export default function SettingsPage() {
             <Tabs defaultValue="profile" className="w-full">
                 <TabsList>
                     <TabsTrigger value="profile">Perfil</TabsTrigger>
-                    <TabsTrigger value="team">Membros da Equipe</TabsTrigger>
-                    <TabsTrigger value="teams">Equipes</TabsTrigger>
-                    <TabsTrigger value="permissions">Permissões</TabsTrigger>
+                     {hasPermission && <TabsTrigger value="team">Membros da Equipe</TabsTrigger>}
+                     {hasPermission && <TabsTrigger value="teams">Equipes</TabsTrigger>}
+                     {hasPermission && <TabsTrigger value="permissions">Permissões</TabsTrigger>}
                 </TabsList>
                 <TabsContent value="profile">
                     <Card>
@@ -265,7 +269,7 @@ export default function SettingsPage() {
                                             <TableRow key={member.id} className="hover:bg-secondary">
                                                 <TableCell className="font-medium">{member.name}</TableCell>
                                                 <TableCell>{member.email}</TableCell>
-                                                <TableCell>{member.role}</TableCell>
+                                                <TableCell><Badge variant={member.role === 'Admin' || member.role === 'Imobiliária' ? 'default' : 'secondary'}>{member.role}</Badge></TableCell>
                                             </TableRow>
                                         ))
                                     ) : (
@@ -398,7 +402,7 @@ export default function SettingsPage() {
                                             <SelectValue placeholder="Selecione um membro para adicionar" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {teamMembers.map(member => <SelectItem key={member.id} value={member.id}>{member.name}</SelectItem>)}
+                                            {teamMembers.map(member => <SelectItem key={member.id} value={member.id} disabled={selectedTeam?.memberIds.includes(member.id)}>{member.name}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -451,3 +455,5 @@ export default function SettingsPage() {
         </div>
     );
 }
+
+    
