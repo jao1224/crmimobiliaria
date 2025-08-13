@@ -15,7 +15,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 
 // Tipos para os dados simulados
-type Negotiation = { id: string; property: string; propertyId: string; client: string; clientId: string; value: number; realtor: string; commissionRate: number; contractDetails?: ContractDetails; contractFile?: File | null; };
+type ContractFile = { content: ArrayBuffer; type: string; name: string; };
+type Negotiation = { id: string; property: string; propertyId: string; client: string; clientId: string; value: number; realtor: string; commissionRate: number; contractDetails?: ContractDetails; contractFile?: ContractFile | null; };
 type Property = { id: string; name: string; address: string; price: number; };
 type Client = { id: string; name: string; doc: string; address: string; };
 type ContractDetails = {
@@ -103,10 +104,11 @@ export default function ContractPage() {
             setContractData(prev => ({...prev, commissionClause: defaultCommissionClause}));
         }
     }, [negotiation]);
-
+    
     useEffect(() => {
         if (negotiation?.contractFile) {
-            const url = URL.createObjectURL(negotiation.contractFile);
+            const blob = new Blob([negotiation.contractFile.content], { type: negotiation.contractFile.type });
+            const url = URL.createObjectURL(blob);
             setContractUrl(url);
 
             return () => {
@@ -177,7 +179,20 @@ export default function ContractPage() {
     
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
-            setSelectedFile(e.target.files[0]);
+            const file = e.target.files[0];
+            const allowedTypes = ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
+
+            if (!allowedTypes.includes(file.type)) {
+                toast({
+                    variant: "destructive",
+                    title: "Formato de arquivo inválido",
+                    description: "Por favor, selecione um arquivo PDF, DOC, ou DOCX.",
+                });
+                e.target.value = ''; // Limpa o input
+                return;
+            }
+
+            setSelectedFile(file);
         }
     };
 
@@ -188,13 +203,27 @@ export default function ContractPage() {
         }
         setIsUploading(true);
         
-        // Simulação de delay de upload
-        setTimeout(() => {
-            setNegotiation(prev => prev ? { ...prev, contractFile: selectedFile } : null);
-            toast({ title: "Sucesso!", description: "Arquivo do contrato enviado." });
+        const reader = new FileReader();
+        reader.onload = (loadEvent) => {
+            const buffer = loadEvent.target?.result as ArrayBuffer;
+            if (buffer) {
+                 setNegotiation(prev => prev ? { ...prev, contractFile: { content: buffer, type: selectedFile.type, name: selectedFile.name } } : null);
+                 toast({ title: "Sucesso!", description: "Arquivo do contrato enviado." });
+            } else {
+                 toast({ variant: "destructive", title: "Erro", description: "Não foi possível ler o arquivo." });
+            }
             setIsUploading(false);
-            setSelectedFile(null);
-        }, 1000);
+            setSelectedFile(null); 
+            // Reset the input field
+            const inputFile = document.getElementById('contract-file') as HTMLInputElement;
+            if(inputFile) inputFile.value = "";
+        };
+        reader.onerror = () => {
+             toast({ variant: "destructive", title: "Erro", description: "Falha ao ler o arquivo." });
+             setIsUploading(false);
+        }
+        
+        reader.readAsArrayBuffer(selectedFile);
     };
 
 
@@ -229,12 +258,12 @@ export default function ContractPage() {
                 </CardHeader>
                  <CardContent className="space-y-4">
                      <p className="text-sm text-muted-foreground">
-                        Se preferir, você pode anexar um arquivo de contrato (PDF, DOCX) diretamente do seu computador.
+                        Se preferir, você pode anexar um arquivo de contrato (PDF, DOC, DOCX) diretamente do seu computador.
                      </p>
                     <div className="flex items-end gap-2">
                         <div className="grid w-full max-w-sm items-center gap-1.5">
                             <Label htmlFor="contract-file">Arquivo do Contrato</Label>
-                            <Input id="contract-file" type="file" onChange={handleFileChange} />
+                            <Input id="contract-file" type="file" onChange={handleFileChange} accept=".pdf,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
                         </div>
                         <Button onClick={handleFileUpload} disabled={!selectedFile || isUploading}>
                             <Upload className="mr-2 h-4 w-4" />
@@ -246,7 +275,7 @@ export default function ContractPage() {
                             <FileText className="h-5 w-5" />
                             <span className="font-medium">Contrato Anexado:</span>
                              <a href={contractUrl} target="_blank" rel="noopener noreferrer" className="underline hover:text-emerald-800">
-                                Visualizar Contrato <LinkIcon className="h-4 w-4 inline-block ml-1" />
+                                {negotiation?.contractFile?.name || 'Visualizar Contrato'} <LinkIcon className="h-4 w-4 inline-block ml-1" />
                             </a>
                         </div>
                     )}
@@ -382,3 +411,4 @@ export default function ContractPage() {
     
 
     
+
