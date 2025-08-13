@@ -16,6 +16,8 @@ const pathTranslations: { [key: string]: string } = {
     reporting: 'Relatórios',
     settings: 'Configurações',
     processes: 'Processos Admin',
+    correspondent: 'Correspondente Bancário',
+    services: 'Outros Serviços'
 };
 
 function translatePath(path: string) {
