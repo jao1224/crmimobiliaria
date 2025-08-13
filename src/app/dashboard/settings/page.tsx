@@ -180,7 +180,7 @@ export default function SettingsPage() {
                      {hasPermission && <TabsTrigger value="teams">Equipes</TabsTrigger>}
                      {hasPermission && <TabsTrigger value="permissions">Permissões</TabsTrigger>}
                 </TabsList>
-                <TabsContent value="profile">
+                <TabsContent value="profile" className="space-y-6">
                     <Card>
                         <CardHeader>
                             <CardTitle>Meu Perfil</CardTitle>
@@ -206,6 +206,26 @@ export default function SettingsPage() {
                         </CardContent>
                         <CardFooter>
                             <Button onClick={() => toast({ title: 'Simulado', description: 'A funcionalidade de salvar perfil não está conectada.' })}>Salvar Alterações</Button>
+                        </CardFooter>
+                    </Card>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Meu Plano</CardTitle>
+                            <CardDescription>Visualize e gerencie seu plano de assinatura.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="rounded-lg border bg-muted/30 p-4">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <h3 className="font-semibold">Plano Atual: <Badge variant="success">Anual</Badge></h3>
+                                        <p className="text-sm text-muted-foreground">Sua próxima cobrança de R$ 999,00 será em 15 de Julho de 2025.</p>
+                                    </div>
+                                    <Button variant="outline" disabled>Alterar Plano</Button>
+                                </div>
+                            </div>
+                        </CardContent>
+                        <CardFooter>
+                           <Button variant="secondary" disabled>Ver Histórico de Faturamento</Button>
                         </CardFooter>
                     </Card>
                 </TabsContent>
@@ -455,5 +475,3 @@ export default function SettingsPage() {
         </div>
     );
 }
-
-    

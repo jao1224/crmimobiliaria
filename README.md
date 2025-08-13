@@ -42,6 +42,9 @@ Este é o repositório do seu projeto LeadFlow, desenvolvido no Firebase Studio.
     -   **Sistema de lembretes para pagamentos e alertas de contas vencidas (✅).**
     -   **Relatórios Financeiros Detalhados (✅):**
         -   Filtros para analisar comissões e despesas por corretor, equipe, período, tipo de imóvel, etc.
+- **Sistema de Autenticação e Perfis:**
+    -   **Gestão de Plano (Minha Conta) (✅):** Interface para o usuário ver seu plano (mensal, anual, etc.).
+
 
 ### 🟡 Em Progresso / A Fazer
 
@@ -53,7 +56,6 @@ Este é o repositório do seu projeto LeadFlow, desenvolvido no Firebase Studio.
     -   **Implementar Autenticação Real (🟡):** Integrar o Firebase Authentication para que o login e o cadastro funcionem com usuários reais.
     -   **Implementar Mudança de Senha (🟡):** Conectar a funcionalidade na página de configurações ("Minha Conta").
     -   **Conectar Perfis de Usuário (🟡):** Salvar os dados do perfil do usuário no Firestore.
-    -   **Gestão de Plano (Minha Conta) (❌):** Interface para o usuário ver seu plano (mensal, anual, etc.).
 
 - **3. Relatórios e Filtros Avançados:**
     -   **Relatório de Captações (❌):** Criar relatório para imóveis captados, com filtros por corretor e período.
