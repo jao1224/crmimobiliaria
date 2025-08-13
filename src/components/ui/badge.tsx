@@ -24,9 +24,9 @@ const badgeVariants = cva(
         "status-blue":
           "border-transparent bg-status-blue text-status-blue-foreground hover:bg-status-blue/80",
         "status-orange":
-          "border-transparent bg-status-orange text-white hover:bg-status-orange/80",
+          "border-transparent bg-orange-500 text-white hover:bg-orange-500/80",
         "status-red-orange":
-          "border-transparent bg-status-red-orange text-white hover:bg-status-red-orange/80",
+          "border-transparent bg-red-500 text-white hover:bg-red-500/80",
         outline: "text-foreground",
       },
     },
@@ -47,3 +47,5 @@ function Badge({ className, variant, ...props }: BadgeProps) {
 }
 
 export { Badge, badgeVariants }
+
+    

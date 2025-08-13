@@ -47,14 +47,15 @@ import { Header } from "@/components/dashboard/header";
 import { useToast } from "@/hooks/use-toast";
 import { ProfileProvider } from "@/contexts/ProfileContext";
 
-export type UserProfile = 'Admin' | 'Imobiliária' | 'Corretor Autônomo' | 'Investidor' | 'Construtora';
+export type UserProfile = 'Admin' | 'Imobiliária' | 'Corretor Autônomo' | 'Investidor' | 'Construtora' | 'Financeiro';
 
 const menuConfig: Record<UserProfile, string[]> = {
     'Admin': ['/dashboard', '/dashboard/properties', '/dashboard/crm', '/dashboard/negotiations', '/dashboard/finance', '/dashboard/agenda', '/dashboard/reporting', '/dashboard/settings'],
     'Imobiliária': ['/dashboard', '/dashboard/properties', '/dashboard/crm', '/dashboard/negotiations', '/dashboard/finance', '/dashboard/agenda', '/dashboard/reporting', '/dashboard/settings'],
-    'Corretor Autônomo': ['/dashboard', '/dashboard/properties', '/dashboard/crm', '/dashboard/negotiations', '/dashboard/agenda', '/dashboard/reporting'],
+    'Corretor Autônomo': ['/dashboard', '/dashboard/properties', '/dashboard/crm', '/dashboard/negotiations', '/dashboard/agenda', '/dashboard/reporting', '/dashboard/finance'],
     'Investidor': ['/dashboard', '/dashboard/properties', '/dashboard/finance', '/dashboard/negotiations', '/dashboard/agenda'],
     'Construtora': ['/dashboard', '/dashboard/properties', '/dashboard/negotiations', '/dashboard/finance', '/dashboard/agenda'],
+    'Financeiro': ['/dashboard', '/dashboard/finance', '/dashboard/reporting', '/dashboard/settings'],
 };
 
 export default function DashboardLayout({
@@ -163,6 +164,7 @@ export default function DashboardLayout({
                           <DropdownMenuSubContent>
                             <DropdownMenuItem onClick={() => handleProfileSwitch('Admin')}>Admin</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleProfileSwitch('Imobiliária')}>Imobiliária</DropdownMenuItem>
+                             <DropdownMenuItem onClick={() => handleProfileSwitch('Financeiro')}>Financeiro</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleProfileSwitch('Corretor Autônomo')}>Corretor Autônomo</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleProfileSwitch('Investidor')}>Investidor</DropdownMenuItem>
                              <DropdownMenuItem onClick={() => handleProfileSwitch('Construtora')}>Construtora</DropdownMenuItem>
@@ -196,3 +198,5 @@ export default function DashboardLayout({
     </ProfileProvider>
   );
 }
+
+    

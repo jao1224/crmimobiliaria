@@ -28,13 +28,14 @@ Este é o repositório do seu projeto LeadFlow, desenvolvido no Firebase Studio.
         -   **Agenda Pessoal:** Para todos os usuários.
         -   **Agenda da Imobiliária:** Calendário geral editável apenas pelo Admin.
         -   **Agenda de Visitas da Equipe:** Para Corretores e Gerentes marcarem visitas.
+- **Módulo Financeiro (Aba "Financeiro"):**
+    -   **Gestão de Comissões (✅):**
+        -   Interface para o Financeiro lançar comissões (múltiplos envolvidos, valor, status, adiantamentos, data, nota fiscal).
+        -   Corretores podem visualizar suas próprias comissões.
 
 ### 🟡 Em Progresso / A Fazer
 
-- **1. Módulo Financeiro (Aba "Financeiro"):**
-    -   **Gestão de Comissões (❌):**
-        -   Interface para o Financeiro lançar comissões (múltiplos envolvidos, valor, status, adiantamentos, data, nota fiscal).
-        -   Corretores podem visualizar suas próprias comissões.
+- **1. Módulo Financeiro (Continuação):**
     -   **Gestão de Pagamentos (CLT) (❌):**
         -   Interface para registrar salários, impostos, férias, 13º.
     -   **Gestão de Despesas (❌):**
@@ -58,3 +59,5 @@ Este é o repositório do seu projeto LeadFlow, desenvolvido no Firebase Studio.
 
 - **5. Sistema de Notificações:**
     -   **Implementar Notificações (🟡):** Enviar alertas para ações importantes no sistema (e-mail, WhatsApp, etc.).
+
+    
