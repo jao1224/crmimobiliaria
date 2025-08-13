@@ -268,7 +268,11 @@ export default function NegotiationsPage() {
                         <TableBody>
                             {negotiations.length > 0 ? (
                                 negotiations.map((neg) => (
-                                <TableRow key={neg.id} className="hover:bg-secondary">
+                                <TableRow 
+                                    key={neg.id} 
+                                    className="cursor-pointer hover:bg-secondary"
+                                    onClick={() => router.push(`/dashboard/negotiations/${neg.id}/contract`)}
+                                >
                                     <TableCell className="font-medium">{neg.property}</TableCell>
                                     <TableCell>{neg.client}</TableCell>
                                     <TableCell>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(neg.value)}</TableCell>
@@ -280,7 +284,7 @@ export default function NegotiationsPage() {
                                     </TableCell>
                                     <TableCell>{neg.salesperson}</TableCell>
                                     <TableCell>{neg.realtor}</TableCell>
-                                    <TableCell>
+                                    <TableCell onClick={(e) => e.stopPropagation()}>
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
                                                 <Button aria-haspopup="true" size="icon" variant="ghost">
@@ -312,5 +316,7 @@ export default function NegotiationsPage() {
         </div>
     );
 }
+
+    
 
     
