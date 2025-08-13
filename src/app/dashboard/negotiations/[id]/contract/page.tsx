@@ -106,7 +106,7 @@ export default function ContractPage() {
     }, [negotiation]);
     
     useEffect(() => {
-        if (negotiation?.contractFile) {
+        if (negotiation?.contractFile?.content) {
             const blob = new Blob([negotiation.contractFile.content], { type: negotiation.contractFile.type });
             const url = URL.createObjectURL(blob);
             setContractUrl(url);
@@ -252,7 +252,7 @@ export default function ContractPage() {
                 </div>
             </div>
 
-            <Card>
+            <Card className="print:hidden">
                 <CardHeader>
                     <CardTitle>Anexar Contrato Externo</CardTitle>
                 </CardHeader>
@@ -282,13 +282,13 @@ export default function ContractPage() {
                  </CardContent>
             </Card>
 
-            <div className="relative">
+            <div className="relative print:hidden">
                 <Separator />
                 <div className="absolute left-1/2 -translate-x-1/2 -top-3 bg-background px-2 text-sm text-muted-foreground">OU</div>
             </div>
             
             <Card className="print:shadow-none print:border-none">
-                <CardHeader>
+                <CardHeader className="print:hidden">
                     <CardTitle>Editor de Contrato de Compra e Venda</CardTitle>
                 </CardHeader>
                 <CardContent className="p-8">
@@ -411,4 +411,5 @@ export default function ContractPage() {
     
 
     
+
 
