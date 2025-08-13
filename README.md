@@ -39,28 +39,26 @@ Este é o repositório do seu projeto LeadFlow, desenvolvido no Firebase Studio.
         -   Interface para registrar salários, impostos, férias, 13º.
     -   **Gestão de Despesas (✅):**
         -   Separar despesas fixas e variáveis.
+    -   **Sistema de lembretes para pagamentos e alertas de contas vencidas (✅).**
+    -   **Relatórios Financeiros Detalhados (✅):**
+        -   Filtros para analisar comissões e despesas por corretor, equipe, período, tipo de imóvel, etc.
 
 ### 🟡 Em Progresso / A Fazer
 
-- **1. Módulo Financeiro (Continuação):**
-    -   **Sistema de lembretes para pagamentos e alertas de contas vencidas (❌).**
-    -   **Relatórios Financeiros Detalhados (❌):**
-        -   Filtros para analisar comissões e despesas por corretor, equipe, período, tipo de imóvel, etc.
-
-- **2. Persistência de Dados (Conectar ao Banco de Dados):**
+- **1. Persistência de Dados (Conectar ao Banco de Dados):**
     -   **Conectar Módulos ao Firestore (🟡):** A tarefa principal. Conectar todas as funcionalidades (CRM, Imóveis, Finanças, Equipes, etc.) ao banco de dados para salvar e carregar as informações de forma persistente.
 
-- **3. Sistema de Autenticação e Perfis:**
+- **2. Sistema de Autenticação e Perfis:**
     -   **Implementar Autenticação Real (🟡):** Integrar o Firebase Authentication para que o login e o cadastro funcionem com usuários reais.
     -   **Implementar Mudança de Senha (🟡):** Conectar a funcionalidade na página de configurações.
     -   **Conectar Perfis de Usuário (🟡):** Salvar os dados do perfil do usuário no Firestore.
     -   **Lógica de Permissões da Agenda (❌):** Ajustar a visibilidade das agendas para que cada perfil de usuário veja apenas as agendas relevantes para sua função (ex: Admin vê todas, Corretor vê a sua e a da equipe).
 
-- **4. Relatórios e Filtros Avançados:**
+- **3. Relatórios e Filtros Avançados:**
     -   **Filtros em Módulos (❌):** Adicionar filtros avançados nas páginas de Negociação, Contratos, Processos e Comissões.
     -   **Filtros de Relatórios (🟡):** Implementar os filtros na página de relatórios para que funcionem com os dados reais.
 
-- **5. Sistema de Notificações:**
+- **4. Sistema de Notificações:**
     -   **Implementar Notificações (🟡):** Enviar alertas para ações importantes no sistema (e-mail, WhatsApp, etc.).
 
     
