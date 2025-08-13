@@ -211,7 +211,7 @@ export default function CrmPage() {
                                 <TableBody>
                                     {leads.length > 0 ? (
                                         leads.map(lead => (
-                                            <TableRow key={lead.id}>
+                                            <TableRow key={lead.id} className="hover:bg-secondary">
                                                 <TableCell className="font-medium">{lead.name}</TableCell>
                                                 <TableCell>{lead.source}</TableCell>
                                                 <TableCell><Badge variant="secondary">{lead.status}</Badge></TableCell>
@@ -260,7 +260,7 @@ export default function CrmPage() {
                                 <TableBody>
                                     {deals.length > 0 ? (
                                         deals.map(deal => (
-                                            <TableRow key={deal.id}>
+                                            <TableRow key={deal.id} className="hover:bg-secondary">
                                                 <TableCell className="font-medium">{deal.property}</TableCell>
                                                 <TableCell>{deal.client}</TableCell>
                                                 <TableCell><Badge variant="outline">{deal.stage}</Badge></TableCell>
@@ -297,7 +297,7 @@ export default function CrmPage() {
                                 <TableBody>
                                     {clients.length > 0 ? (
                                         clients.map(client => (
-                                            <TableRow key={client.id}>
+                                            <TableRow key={client.id} className="hover:bg-secondary">
                                                 <TableCell className="font-medium">{client.name}</TableCell>
                                                 <TableCell>{client.source}</TableCell>
                                                 <TableCell>{client.assignedTo}</TableCell>

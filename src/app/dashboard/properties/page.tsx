@@ -188,7 +188,7 @@ export default function PropertiesPage() {
             </TableHeader>
             <TableBody>
               {properties.map((property) => (
-                <TableRow key={property.id} onClick={() => handleRowClick(property)} className="cursor-pointer">
+                <TableRow key={property.id} onClick={() => handleRowClick(property)} className="cursor-pointer hover:bg-secondary">
                   <TableCell className="hidden sm:table-cell">
                     <Image
                       alt="Imagem do imóvel"
@@ -299,5 +299,3 @@ export default function PropertiesPage() {
     </div>
   );
 }
-
-    

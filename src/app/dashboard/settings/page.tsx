@@ -261,7 +261,7 @@ export default function SettingsPage() {
                                 <TableBody>
                                     {teamMembers.length > 0 ? (
                                         teamMembers.map((member) => (
-                                            <TableRow key={member.id}>
+                                            <TableRow key={member.id} className="hover:bg-secondary">
                                                 <TableCell className="font-medium">{member.name}</TableCell>
                                                 <TableCell>{member.email}</TableCell>
                                                 <TableCell>{member.role}</TableCell>
@@ -317,7 +317,7 @@ export default function SettingsPage() {
                                 <TableBody>
                                     {teams.length > 0 ? (
                                         teams.map((team) => (
-                                            <TableRow key={team.id}>
+                                            <TableRow key={team.id} className="hover:bg-secondary">
                                                 <TableCell className="font-medium">{team.name}</TableCell>
                                                 <TableCell>{team.memberIds.length}</TableCell>
                                                 <TableCell>
@@ -421,7 +421,7 @@ export default function SettingsPage() {
                                         </TableHeader>
                                         <TableBody>
                                             {selectedTeam && getMembersForTeam(selectedTeam).map(member => (
-                                                <TableRow key={member.id}>
+                                                <TableRow key={member.id} className="hover:bg-secondary">
                                                     <TableCell className="font-medium">{member.name}</TableCell>
                                                     <TableCell><Badge variant="secondary">{member.role}</Badge></TableCell>
                                                     <TableCell className="text-right">

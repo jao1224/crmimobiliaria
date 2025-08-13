@@ -88,7 +88,7 @@ export default function FinancePage() {
                         <TableBody>
                              {commissions.length > 0 ? (
                                 commissions.map(commission => (
-                                    <TableRow key={commission.id}>
+                                    <TableRow key={commission.id} className="hover:bg-secondary">
                                         <TableCell className="font-medium">{commission.deal}</TableCell>
                                         <TableCell>{formatCurrency(commission.amount)}</TableCell>
                                         <TableCell>
