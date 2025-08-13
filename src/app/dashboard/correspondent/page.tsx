@@ -15,7 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, PlusCircle, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { initialFinancingProcesses, initialServiceRequests, realtors, addServiceRequest, type FinancingProcess, type ServiceRequest, type FinancingStatus, type EngineeringStatus, type GeneralProcessStatus } from "@/lib/data";
+import { initialFinancingProcesses, initialServiceRequests, realtors, addServiceRequest, type FinancingProcess, type ServiceRequest, type ServiceRequestType, type FinancingStatus, type EngineeringStatus, type GeneralProcessStatus } from "@/lib/data";
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount);
 
@@ -25,7 +25,7 @@ export default function CorrespondentPage() {
     const [selectedProcess, setSelectedProcess] = useState<FinancingProcess | null>(null);
     const [isDetailModalOpen, setDetailModalOpen] = useState(false);
     const [isRequestModalOpen, setRequestModalOpen] = useState(false);
-    const [requestType, setRequestType] = useState<'credit_approval' | 'engineering_report'>('credit_approval');
+    const [requestType, setRequestType] = useState<ServiceRequestType>('credit_approval');
 
     const { toast } = useToast();
     
@@ -124,7 +124,7 @@ export default function CorrespondentPage() {
                         <CardHeader className="flex-row items-center justify-between">
                             <div>
                                 <CardTitle>Solicitações de Corretores</CardTitle>
-                                <CardDescription>Gerencie as solicitações de aprovação de crédito e laudos de engenharia.</CardDescription>
+                                <CardDescription>Gerencie as solicitações de aprovação de crédito, laudos e outros serviços.</CardDescription>
                             </div>
                             <Dialog open={isRequestModalOpen} onOpenChange={setRequestModalOpen}>
                                 <DialogTrigger asChild><Button><PlusCircle className="mr-2 h-4 w-4"/>Nova Solicitação</Button></DialogTrigger>
@@ -142,6 +142,8 @@ export default function CorrespondentPage() {
                                                     <SelectContent>
                                                         <SelectItem value="credit_approval">Aprovação de Crédito</SelectItem>
                                                         <SelectItem value="engineering_report">Laudo de Engenharia</SelectItem>
+                                                        <SelectItem value="property_registration">Matrícula Atualizada</SelectItem>
+                                                        <SelectItem value="account_opening">Abertura de Conta</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                             </div>
@@ -154,13 +156,13 @@ export default function CorrespondentPage() {
                                                     </SelectContent>
                                                 </Select>
                                             </div>
-                                             {requestType === 'credit_approval' && (
+                                             {(requestType === 'credit_approval' || requestType === 'account_opening') && (
                                                 <div className="space-y-2">
                                                     <Label htmlFor="clientInfo">Informações do Cliente</Label>
                                                     <Textarea id="clientInfo" name="clientInfo" placeholder="Nome completo, CPF, Renda, etc." required/>
                                                 </div>
                                              )}
-                                             {requestType === 'engineering_report' && (
+                                             {(requestType === 'engineering_report' || requestType === 'property_registration') && (
                                                  <div className="space-y-2">
                                                     <Label htmlFor="propertyInfo">Informações do Imóvel</Label>
                                                     <Textarea id="propertyInfo" name="propertyInfo" placeholder="Endereço completo, matrícula, área, etc." required/>
@@ -188,7 +190,14 @@ export default function CorrespondentPage() {
                                     {requests.map(req => (
                                         <TableRow key={req.id}>
                                             <TableCell>{new Date(req.date).toLocaleDateString()}</TableCell>
-                                            <TableCell className="font-medium">{req.type === 'credit_approval' ? 'Aprovação de Crédito' : 'Laudo de Engenharia'}</TableCell>
+                                            <TableCell className="font-medium">{
+                                                {
+                                                    'credit_approval': 'Aprovação de Crédito',
+                                                    'engineering_report': 'Laudo de Engenharia',
+                                                    'property_registration': 'Matrícula Atualizada',
+                                                    'account_opening': 'Abertura de Conta'
+                                                }[req.type]
+                                            }</TableCell>
                                             <TableCell>{req.realtorName}</TableCell>
                                             <TableCell><Badge variant={req.status === 'Concluído' ? 'success' : 'secondary'}>{req.status}</Badge></TableCell>
                                         </TableRow>
@@ -203,7 +212,7 @@ export default function CorrespondentPage() {
             {/* Modal de Detalhes do Processo */}
             <Dialog open={isDetailModalOpen} onOpenChange={setDetailModalOpen}>
                 <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                    {selectedProcess && <ProcessDetailForm process={selectedProcess} onSave={handleSaveChanges} />}
+                    {selectedProcess && <ProcessDetailForm process={selectedProcess} onSave={handleSaveChanges} onCancel={() => setDetailModalOpen(false)} />}
                 </DialogContent>
             </Dialog>
         </div>
@@ -211,23 +220,24 @@ export default function CorrespondentPage() {
 }
 
 // Componente do formulário de detalhes do processo para evitar re-renderização massiva
-function ProcessDetailForm({ process, onSave }: { process: FinancingProcess, onSave: (p: FinancingProcess) => void }) {
+function ProcessDetailForm({ process, onSave, onCancel }: { process: FinancingProcess, onSave: (p: FinancingProcess) => void, onCancel: () => void }) {
     const [formData, setFormData] = useState<FinancingProcess>(process);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { id, value } = e.target;
         setFormData(prev => ({...prev, [id]: value }));
     };
+    
+    const handleNumberInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const { id, value } = e.target;
+        setFormData(prev => ({...prev, [id]: Number(value) }));
+    };
 
     const handleSelectChange = (id: keyof FinancingProcess, value: string) => {
         setFormData(prev => ({ ...prev, [id]: value }));
     };
 
-    const handleNestedSelectChange = (group: keyof FinancingProcess, id: string, value: string) => {
-        setFormData(prev => ({...prev, [group]: { ...(prev as any)[group], [id]: value } }));
-    };
-    
-    const handleNestedInputChange = (group: keyof FinancingProcess, id: string, value: string | number) => {
+    const handleNestedInputChange = (group: keyof FinancingProcess, id: string, value: string | boolean) => {
         setFormData(prev => ({ ...prev, [group]: { ...(prev as any)[group], [id]: value } }));
     };
     
@@ -267,7 +277,7 @@ function ProcessDetailForm({ process, onSave }: { process: FinancingProcess, onS
                             </div>
                              <div className="space-y-2">
                                 <Label htmlFor="approvedValue">Valor Aprovado (R$)</Label>
-                                <Input id="approvedValue" type="number" value={formData.approvedValue} onChange={e => handleSelectChange('approvedValue', e.target.value)} />
+                                <Input id="approvedValue" type="number" value={formData.approvedValue} onChange={handleNumberInputChange} />
                             </div>
                              <div className="space-y-2">
                                 <Label htmlFor="clientStatusReason">Motivo/Observação</Label>
@@ -310,7 +320,7 @@ function ProcessDetailForm({ process, onSave }: { process: FinancingProcess, onS
                                 </div>
                                 <div className="space-y-2 w-1/2">
                                     <Label htmlFor="appraisalValue">Valor Laudo</Label>
-                                    <Input id="appraisalValue" type="number" value={formData.appraisalValue} onChange={e => handleSelectChange('appraisalValue', e.target.value)} />
+                                    <Input id="appraisalValue" type="number" value={formData.appraisalValue} onChange={handleNumberInputChange} />
                                 </div>
                             </div>
                         </CardContent>
@@ -356,7 +366,7 @@ function ProcessDetailForm({ process, onSave }: { process: FinancingProcess, onS
                 </div>
             </div>
             <DialogFooter>
-                <Button type="button" variant="ghost" onClick={() => setDetailModalOpen(false)}>Cancelar</Button>
+                <Button type="button" variant="ghost" onClick={onCancel}>Cancelar</Button>
                 <Button type="submit">Salvar Alterações</Button>
             </DialogFooter>
         </form>

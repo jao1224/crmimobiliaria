@@ -81,7 +81,7 @@ export type FinancingProcess = {
     hasPendency: boolean; // para o ícone de alerta
 };
 
-export type ServiceRequestType = 'credit_approval' | 'engineering_report';
+export type ServiceRequestType = 'credit_approval' | 'engineering_report' | 'property_registration' | 'account_opening';
 
 export type ServiceRequest = {
     id: string;
@@ -156,8 +156,8 @@ export let initialFinancingProcesses: FinancingProcess[] = [
 ];
 
 export let initialServiceRequests: ServiceRequest[] = [
-    { id: 'req1', type: 'credit_approval', realtorName: 'Sofia Lima', clientInfo: 'Maria Investidora - CPF 123.456.789-10', propertyInfo: 'N/A', status: 'Concluído', date: '2024-08-01' },
-    { id: 'req2', type: 'engineering_report', realtorName: 'Joana Doe', clientInfo: 'N/A', propertyInfo: 'Loft Moderno - Rua Principal, Centro', status: 'Pendente', date: '2024-08-10' },
+    { id: 'req1', type: 'credit_approval', realtorName: 'Sofia Lima', clientInfo: 'Maria Investidora - CPF 123.456.789-10', propertyInfo: '', status: 'Concluído', date: '2024-08-01' },
+    { id: 'req2', type: 'engineering_report', realtorName: 'Joana Doe', clientInfo: '', propertyInfo: 'Loft Moderno - Rua Principal, Centro', status: 'Pendente', date: '2024-08-10' },
 ];
 
 // Função para adicionar uma nova comissão (simulando a atualização do "banco de dados")

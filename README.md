@@ -60,6 +60,11 @@ Este é o repositório do seu projeto LeadFlow, desenvolvido no Firebase Studio.
     - **Preenchimento Automático (✅):** Garantir que o código de um imóvel ou o CPF de um cliente preencha automaticamente os campos em outras seções (ex: negociações).
     - **Comissão Automática (✅):** Quando uma venda for concluída em "Negociações", a comissão é gerada automaticamente no módulo "Financeiro".
     - **Visão Detalhada do Processo (✅):** Criar uma visão detalhada para cada processo, onde é possível abrir e ver as informações relacionadas.
+- **Módulo de Correspondente Bancário (Implementação Detalhada e Simulada):**
+    -   **Integração Negociações -> Correspondente (✅):** Criado fluxo onde uma negociação "financiada" gera um processo para o correspondente.
+    -   **Visão do Correspondente - "Meus Processos" (✅):** Implementada a tabela de processos e o modal de edição detalhado com todas as seções (Status Cliente, Bacen, Engenharia, Docs, Etapas, etc.).
+    -   **Visão do Corretor - "Solicitações ao Correspondente" (✅):** Implementada a área para corretores solicitarem serviços (Aprovação de Crédito, Laudo, Matrícula, Abertura de Conta).
+    -   **Sistema de Notificações de Pendências (✅):** Implementado um sistema de alerta visual na tabela de processos para indicar pendências.
 
 
 ### 🟡 Em Progresso / A Fazer
@@ -69,29 +74,7 @@ Este é o repositório do seu projeto LeadFlow, desenvolvido no Firebase Studio.
     -   **Detalhamento Financeiro nas Comissões (❌):**
         -   Incluir detalhes completos do negócio na tela de comissão (requer conexão com o banco de dados): valor do imóvel, captador, vendedor, gerente, sinal do cliente, parcelamento com a construtora, etc.
 
-- **2. Módulo de Correspondente Bancário (Implementação Detalhada):**
-    -   **Integração Negociações -> Correspondente (❌):**
-        -   No formulário de "Nova Negociação", adicionar a opção "Financiado?".
-        -   Se "Sim", um novo processo deve ser criado automaticamente na aba "Meus Processos" do Correspondente Bancário.
-    -   **Visão do Correspondente - "Meus Processos" (❌):**
-        -   Criar uma tabela com todos os processos de financiamento.
-        -   Para cada processo, criar uma visão detalhada editável com seções para:
-            -   **Status do Cliente:** Aprovado, Reprovado, Condicionado, Bloqueado (com campo para motivo/valor).
-            -   **Consulta Bacen:** Campo para informações do Banco Central.
-            -   **Engenharia:** Status (Aprovado, Reprovado, Pendência), motivo da pendência, data e valor do laudo.
-            -   **Documentação:** Checklist com datas de vencimento para Matrícula, Contracheque, Endereço, Aprovação do Cliente, Laudo de Engenharia.
-            -   **Etapas do Processo:** Checklist/Status para "Assinatura de Formulários", "Conformidade", "Recursos para Financiar", "Assinatura no Banco", "Entrada no Cartório", "Garantia".
-            -   **Status Geral do Processo:** Ativo, Suspenso, Cancelado, Concluído, etc.
-    -   **Visão do Corretor - "Solicitações ao Correspondente" (❌):**
-        -   Criar uma área na página do Correspondente onde o Corretor possa:
-            -   Solicitar Aprovação de Crédito (com formulário para dados do cliente).
-            -   Solicitar Laudo de Engenharia (com formulário para dados do imóvel).
-            -   Solicitar Matrícula Atualizada.
-            -   Solicitar Abertura de Conta.
-    -   **Sistema de Notificações de Pendências (❌):**
-        -   Criar um sistema de alertas visuais para que, quando o correspondente marcar uma pendência (ex: na engenharia), todos os envolvidos (corretor, gerente) vejam essa pendência em sua visão do processo.
-
-- **3. Sistema de Permissões de Edição (❌):**
+- **2. Sistema de Permissões de Edição (❌):**
     -   **Edição por Competência:** Implementar a lógica para que, dentro de um mesmo processo de negociação, cada perfil só possa editar sua parte:
         -   **Correspondente:** Edita apenas os campos de financiamento.
         -   **Administrativo:** Edita apenas os campos de contrato.
@@ -99,10 +82,10 @@ Este é o repositório do seu projeto LeadFlow, desenvolvido no Firebase Studio.
         -   **Corretor Vendedor:** Edita/anexa a documentação do comprador.
         -   **Corretor Captador:** Edita/anexa a documentação do vendedor e do imóvel.
 
-- **4. Sistema de Autenticação e Perfis:**
+- **3. Sistema de Autenticação e Perfis:**
     -   **Implementar Autenticação Real (🟡):** Integrar o Firebase Authentication para que o login e o cadastro funcionem com usuários reais.
     -   **Implementar Mudança de Senha (🟡):** Conectar a funcionalidade na página de configurações ("Minha Conta").
     -   **Conectar Perfis de Usuário (🟡):** Salvar os dados do perfil do usuário no Firestore.
 
-- **5. Sistema de Notificações Gerais:**
+- **4. Sistema de Notificações Gerais:**
     -   **Implementar Notificações (🟡):** Enviar alertas para ações importantes no sistema (e-mail, WhatsApp, etc.).
