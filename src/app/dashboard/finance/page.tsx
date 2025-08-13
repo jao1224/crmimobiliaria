@@ -68,6 +68,8 @@ const initialExpenses: Expense[] = [
     { id: 'exp3', description: 'Conta de Energia', category: 'Fixa', amount: 450, dueDate: '2024-08-20', status: 'Pendente' },
 ];
 
+const employees = ['Secretária Admin', 'Gerente de Vendas', 'Corretor A'];
+
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount);
 
@@ -119,6 +121,38 @@ export default function FinancePage() {
         setCommissions(prev => [newCommission, ...prev]);
         toast({ title: "Sucesso!", description: "Comissão lançada com sucesso." });
         setCommissionDialogOpen(false);
+    };
+
+    const handleAddPayment = (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        const formData = new FormData(event.currentTarget);
+        const newPayment: PaymentCLT = {
+            id: `pay${Date.now()}`,
+            employee: formData.get('employee') as string,
+            type: formData.get('type') as PaymentCLT['type'],
+            amount: parseFloat(formData.get('amount') as string),
+            paymentDate: formData.get('paymentDate') as string,
+            status: formData.get('status') as PaymentCLT['status'],
+        };
+        setPayments(prev => [newPayment, ...prev]);
+        toast({ title: "Sucesso!", description: "Pagamento lançado com sucesso." });
+        setPaymentDialogOpen(false);
+    };
+
+    const handleAddExpense = (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        const formData = new FormData(event.currentTarget);
+        const newExpense: Expense = {
+            id: `exp${Date.now()}`,
+            description: formData.get('description') as string,
+            category: formData.get('category') as Expense['category'],
+            amount: parseFloat(formData.get('amount') as string),
+            dueDate: formData.get('dueDate') as string,
+            status: formData.get('status') as Expense['status'],
+        };
+        setExpenses(prev => [newExpense, ...prev]);
+        toast({ title: "Sucesso!", description: "Despesa lançada com sucesso." });
+        setExpenseDialogOpen(false);
     };
 
     return (
@@ -273,11 +307,59 @@ export default function FinancePage() {
                                 <CardTitle>Gestão de Pagamentos (CLT)</CardTitle>
                                 <CardDescription>Registre salários, impostos e outros pagamentos da equipe.</CardDescription>
                             </div>
-                            <Dialog>
+                            <Dialog open={isPaymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
                                 <DialogTrigger asChild><Button><PlusCircle className="mr-2 h-4 w-4" />Lançar Pagamento</Button></DialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader><DialogTitle>Novo Lançamento de Pagamento</DialogTitle></DialogHeader>
-                                    <p className="py-4 text-center text-muted-foreground">(Formulário de lançamento de pagamento simulado)</p>
+                                <DialogContent className="sm:max-w-md">
+                                    <DialogHeader>
+                                        <DialogTitle>Novo Lançamento de Pagamento</DialogTitle>
+                                        <DialogDescription>Preencha os detalhes para registrar um pagamento.</DialogDescription>
+                                    </DialogHeader>
+                                    <form onSubmit={handleAddPayment}>
+                                        <div className="grid gap-4 py-4">
+                                            <div className="space-y-2">
+                                                <Label htmlFor="employee">Colaborador</Label>
+                                                <Select name="employee" required>
+                                                    <SelectTrigger><SelectValue placeholder="Selecione o colaborador" /></SelectTrigger>
+                                                    <SelectContent>
+                                                        {employees.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="type">Tipo de Pagamento</Label>
+                                                <Select name="type" required>
+                                                    <SelectTrigger><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="Salário">Salário</SelectItem>
+                                                        <SelectItem value="13º Salário">13º Salário</SelectItem>
+                                                        <SelectItem value="Férias">Férias</SelectItem>
+                                                        <SelectItem value="Impostos">Impostos</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="amount_payment">Valor (R$)</Label>
+                                                <Input id="amount_payment" name="amount" type="number" step="0.01" required />
+                                            </div>
+                                             <div className="space-y-2">
+                                                <Label htmlFor="paymentDate_payment">Data de Pagamento</Label>
+                                                <Input id="paymentDate_payment" name="paymentDate" type="date" required />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="status_payment">Status</Label>
+                                                <Select name="status" defaultValue="Agendado" required>
+                                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="Agendado">Agendado</SelectItem>
+                                                        <SelectItem value="Pago">Pago</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        </div>
+                                        <DialogFooter>
+                                            <Button type="submit">Lançar Pagamento</Button>
+                                        </DialogFooter>
+                                    </form>
                                 </DialogContent>
                             </Dialog>
                         </CardHeader>
@@ -288,7 +370,7 @@ export default function FinancePage() {
                                 </TableHeader>
                                 <TableBody>
                                     {payments.map(p => (
-                                        <TableRow key={p.id}>
+                                        <TableRow key={p.id} className="hover:bg-secondary">
                                             <TableCell className="font-medium">{p.employee}</TableCell>
                                             <TableCell>{p.type}</TableCell><TableCell>{formatCurrency(p.amount)}</TableCell>
                                             <TableCell>{new Date(p.paymentDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</TableCell>
@@ -309,11 +391,52 @@ export default function FinancePage() {
                                 <CardTitle>Gestão de Despesas</CardTitle>
                                 <CardDescription>Controle as despesas fixas e variáveis da imobiliária.</CardDescription>
                             </div>
-                            <Dialog>
+                            <Dialog open={isExpenseDialogOpen} onOpenChange={setExpenseDialogOpen}>
                                 <DialogTrigger asChild><Button><PlusCircle className="mr-2 h-4 w-4" />Lançar Despesa</Button></DialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader><DialogTitle>Nova Despesa</DialogTitle></DialogHeader>
-                                    <p className="py-4 text-center text-muted-foreground">(Formulário de lançamento de despesa simulado)</p>
+                                <DialogContent className="sm:max-w-md">
+                                    <DialogHeader>
+                                        <DialogTitle>Lançar Nova Despesa</DialogTitle>
+                                        <DialogDescription>Preencha os detalhes para registrar uma despesa.</DialogDescription>
+                                    </DialogHeader>
+                                    <form onSubmit={handleAddExpense}>
+                                        <div className="grid gap-4 py-4">
+                                             <div className="space-y-2">
+                                                <Label htmlFor="description">Descrição</Label>
+                                                <Input id="description" name="description" placeholder="Ex: Conta de Energia" required />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="category">Categoria</Label>
+                                                <Select name="category" required>
+                                                    <SelectTrigger><SelectValue placeholder="Selecione a categoria" /></SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="Fixa">Fixa</SelectItem>
+                                                        <SelectItem value="Variável">Variável</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="amount_expense">Valor (R$)</Label>
+                                                <Input id="amount_expense" name="amount" type="number" step="0.01" required />
+                                            </div>
+                                             <div className="space-y-2">
+                                                <Label htmlFor="dueDate">Data de Vencimento</Label>
+                                                <Input id="dueDate" name="dueDate" type="date" required />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="status_expense">Status</Label>
+                                                <Select name="status" defaultValue="Pendente" required>
+                                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="Pendente">Pendente</SelectItem>
+                                                        <SelectItem value="Pago">Pago</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        </div>
+                                        <DialogFooter>
+                                            <Button type="submit">Lançar Despesa</Button>
+                                        </DialogFooter>
+                                    </form>
                                 </DialogContent>
                             </Dialog>
                         </CardHeader>
@@ -324,7 +447,7 @@ export default function FinancePage() {
                                 </TableHeader>
                                 <TableBody>
                                     {expenses.map(e => (
-                                        <TableRow key={e.id}>
+                                        <TableRow key={e.id} className="hover:bg-secondary">
                                             <TableCell className="font-medium">{e.description}</TableCell>
                                             <TableCell>{e.category}</TableCell><TableCell>{formatCurrency(e.amount)}</TableCell>
                                             <TableCell>{new Date(e.dueDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</TableCell>
@@ -340,5 +463,7 @@ export default function FinancePage() {
         </div>
     );
 }
+
+    
 
     
