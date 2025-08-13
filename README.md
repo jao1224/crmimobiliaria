@@ -50,9 +50,7 @@ Este é o repositório do seu projeto LeadFlow, desenvolvido no Firebase Studio.
     -   **Relatório de Desempenho (✅):** Criar relatórios para equipes e corretores.
     -   **Filtros Avançados em Módulos (✅):** Adicionar filtros avançados na página de Processos/Negociações para filtrar por tipo (venda, aluguel, leilão, etc.), status e responsável.
     -   **Filtros de Relatórios (✅):** Implementar a lógica dos filtros na página de relatórios para que funcionem com os dados reais.
-    -   **Módulo de Processos Administrativos (✅):** Criar uma seção para gerenciar processos internos.
 - **Novos Módulos e Funcionalidades:**
-    -   **Módulo de Correspondente Bancário (✅):** Criar uma nova seção principal no painel.
     -   **Módulo "Outros Serviços" (✅):**
         -   Criar uma seção principal "Outros Serviços" no menu.
         -   Dentro dela, criar as abas/submódulos: `Avaliador`, `Jurídico`, `Leilão`, `Despachante`, `Locação`.
@@ -67,6 +65,13 @@ Este é o repositório do seu projeto LeadFlow, desenvolvido no Firebase Studio.
     -   **Sistema de Notificações de Pendências (✅):** Implementado um sistema de alerta visual na tabela de processos para indicar pendências.
 - **Sistema de Permissões de Edição (Simulado):**
     -   **Edição por Competência (✅):** Implementada a lógica simulada para que, dentro de um mesmo processo, cada perfil só possa editar sua parte (ex: apenas Admin/Imobiliária podem editar contratos e processos de financiamento).
+- **Módulo de Processos Administrativos (Implementação Detalhada e Simulada):**
+    -   **Visão Resumida do Processo (Formato "PDF") (✅):**
+        -   Transformada a página "Processos Admin" em uma visão detalhada de uma negociação específica.
+        -   Criado um cabeçalho não-editável que consolida as informações mais importantes do negócio: Dados da Negociação, Equipe Envolvida, Valores e Responsáveis.
+    -   **Área de Ações e Acompanhamento (✅):**
+        -   Abaixo do resumo, foram criadas áreas com abas onde os setores responsáveis (simulando Financeiro, Correspondente e Administrativo) podem dar andamento em suas tarefas.
+    -   **Navegação e Acesso (✅):** Adicionado um botão "Ver Processo" na tabela de Negociações para simular o acesso ao detalhe do processo administrativo correspondente.
 
 
 ### 🟡 Em Progresso / A Fazer

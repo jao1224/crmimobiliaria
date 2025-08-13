@@ -50,9 +50,7 @@ Este é o repositório do seu projeto LeadFlow, desenvolvido no Firebase Studio.
     -   **Relatório de Desempenho (✅):** Criar relatórios para equipes e corretores.
     -   **Filtros Avançados em Módulos (✅):** Adicionar filtros avançados na página de Processos/Negociações para filtrar por tipo (venda, aluguel, leilão, etc.), status e responsável.
     -   **Filtros de Relatórios (✅):** Implementar a lógica dos filtros na página de relatórios para que funcionem com os dados reais.
-    -   **Módulo de Processos Administrativos (✅):** Criar uma seção para gerenciar processos internos.
 - **Novos Módulos e Funcionalidades:**
-    -   **Módulo de Correspondente Bancário (✅):** Criar uma nova seção principal no painel.
     -   **Módulo "Outros Serviços" (✅):**
         -   Criar uma seção principal "Outros Serviços" no menu.
         -   Dentro dela, criar as abas/submódulos: `Avaliador`, `Jurídico`, `Leilão`, `Despachante`, `Locação`.
@@ -67,31 +65,27 @@ Este é o repositório do seu projeto LeadFlow, desenvolvido no Firebase Studio.
     -   **Sistema de Notificações de Pendências (✅):** Implementado um sistema de alerta visual na tabela de processos para indicar pendências.
 - **Sistema de Permissões de Edição (Simulado):**
     -   **Edição por Competência (✅):** Implementada a lógica simulada para que, dentro de um mesmo processo, cada perfil só possa editar sua parte (ex: apenas Admin/Imobiliária podem editar contratos e processos de financiamento).
+- **Módulo de Processos Administrativos (Implementação Detalhada e Simulada):**
+    -   **Visão Resumida do Processo (Formato "PDF") (✅):**
+        -   Transformada a página "Processos Admin" em uma visão detalhada de uma negociação específica.
+        -   Criado um cabeçalho não-editável que consolida as informações mais importantes do negócio: Dados da Negociação, Equipe Envolvida, Valores e Responsáveis.
+    -   **Área de Ações e Acompanhamento (✅):**
+        -   Abaixo do resumo, foram criadas áreas com abas onde os setores responsáveis (simulando Financeiro, Correspondente e Administrativo) podem dar andamento em suas tarefas.
+    -   **Navegação e Acesso (✅):** Adicionado um botão "Ver Processo" na tabela de Negociações para simular o acesso ao detalhe do processo administrativo correspondente.
 
 
 ### 🟡 Em Progresso / A Fazer
 
-- **1. Módulo de Processos Administrativos (Implementação Detalhada):**
-    -   **Visão Resumida do Processo (Formato "PDF") (❌):**
-        -   Transformar a página "Processos Admin" em uma visão detalhada de uma negociação específica.
-        -   No topo, criar um cabeçalho não-editável (estilo PDF) que consolide as informações mais importantes do negócio:
-            -   **Dados da Negociação:** Tipo (repasse, financiamento), imóvel (endereço, matrícula), vendedor (nome, CPF, contato), comprador.
-            -   **Equipe Envolvida:** Captador, equipe do captador, corretor da venda, gerente da venda.
-            -   **Valores:** Valor da venda, valor negociado, valor da entrada (sinal).
-            -   **Responsáveis:** Setor (lote, leilão, etc.), correspondente bancário responsável.
-    -   **Área de Ações e Acompanhamento (❌):**
-        -   Abaixo do resumo, criar áreas onde os setores responsáveis (ex: correspondente, financeiro) possam dar andamento em suas tarefas específicas relacionadas àquele processo.
-
-- **2. Persistência e Integração de Dados (Conectar ao Banco de Dados):**
+- **1. Persistência e Integração de Dados (Conectar ao Banco de Dados):**
     -   **Conectar Módulos ao Firestore (🟡):** A tarefa principal. Conectar todas as funcionalidades (CRM, Imóveis, Finanças, Equipes, etc.) ao banco de dados para salvar e carregar as informações de forma persistente.
     -   **Detalhamento Financeiro nas Comissões (❌):**
         -   Incluir detalhes completos do negócio na tela de comissão (requer conexão com o banco de dados): valor do imóvel, captador, vendedor, gerente, sinal do cliente, parcelamento com a construtora, etc.
     -   **Implementar Permissões de Edição Reais (❌):** A lógica simulada está pronta. O próximo passo é conectar ao sistema de autenticação para que as permissões funcionem com usuários e perfis reais.
 
-- **3. Sistema de Autenticação e Perfis:**
+- **2. Sistema de Autenticação e Perfis:**
     -   **Implementar Autenticação Real (🟡):** Integrar o Firebase Authentication para que o login e o cadastro funcionem com usuários reais.
     -   **Implementar Mudança de Senha (🟡):** Conectar a funcionalidade na página de configurações ("Minha Conta").
     -   **Conectar Perfis de Usuário (🟡):** Salvar os dados do perfil do usuário no Firestore.
 
-- **4. Sistema de Notificações Gerais:**
+- **3. Sistema de Notificações Gerais:**
     -   **Implementar Notificações (🟡):** Enviar alertas para ações importantes no sistema (e-mail, WhatsApp, etc.).
