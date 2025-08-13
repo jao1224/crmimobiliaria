@@ -7,7 +7,7 @@ import { Badge, badgeVariants } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MoreHorizontal, Search } from "lucide-react";
@@ -16,7 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { initialNegotiations, mockProperties, mockClients, realtors, type Negotiation, type Property, type Client } from "@/lib/data";
+import { initialNegotiations, mockProperties, mockClients, realtors, type Negotiation, type Property, type Client, addCommission } from "@/lib/data";
 
 export default function NegotiationsPage() {
     const router = useRouter();
@@ -104,7 +104,7 @@ export default function NegotiationsPage() {
             value: Number(proposalValue),
             salesperson: "Joana Doe",
             realtor: "Carlos Pereira",
-            completionDate: new Date().toISOString(), // Simulado
+            completionDate: null,
         };
         setNegotiations(prev => [...prev, newNegotiation]);
         setNewNegotiationOpen(false);
@@ -118,6 +118,31 @@ export default function NegotiationsPage() {
         toast({ title: "Sucesso!", description: "Contrato gerado. Redirecionando..." });
         router.push(`/dashboard/negotiations/${negotiationId}/contract`);
     }
+
+    const handleCompleteSale = (neg: Negotiation) => {
+        // Atualiza a negociação para "Venda Concluída"
+        setNegotiations(prev => prev.map(n => 
+            n.id === neg.id ? { ...n, stage: "Venda Concluída", contractStatus: "Assinado", completionDate: new Date().toISOString() } : n
+        ));
+
+        // Simula a geração automática de comissão
+        const commissionAmount = neg.value * 0.05; // Simulação de 5%
+        const newCommission = {
+            id: `comm-from-${neg.id}`,
+            deal: `Venda ${neg.property} (ID: ${neg.id})`,
+            amount: commissionAmount,
+            status: 'Pendente' as 'Pendente' | 'Pago' | 'Vencido',
+            paymentDate: new Date(new Date().setDate(new Date().getDate() + 30)).toISOString().split('T')[0], // Pagar em 30 dias
+            involved: `${neg.salesperson} (Vendedor), ${neg.realtor} (Captador)`,
+            realtorId: neg.salesperson // Apenas para simulação de permissão de visualização
+        };
+        addCommission(newCommission); // Adiciona a comissão à lista de dados globais
+        
+        toast({
+            title: "Venda Concluída!",
+            description: `A comissão para a venda de "${neg.property}" foi gerada no módulo Financeiro.`
+        });
+    };
 
     const filteredNegotiations = useMemo(() => {
         return negotiations.filter(neg => {
@@ -329,9 +354,16 @@ export default function NegotiationsPage() {
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuLabel>Ações</DropdownMenuLabel>
                                                 <DropdownMenuItem onClick={() => router.push(`/dashboard/negotiations/${neg.id}/contract`)}>Ver Detalhes</DropdownMenuItem>
-                                                <DropdownMenuItem>Mover para Contrato</DropdownMenuItem>
                                                 <DropdownMenuItem onClick={() => handleGenerateContract(neg.id)} disabled={neg.contractStatus !== 'Não Gerado'}>
                                                     Gerar Contrato
+                                                </DropdownMenuItem>
+                                                 <DropdownMenuSeparator />
+                                                <DropdownMenuItem 
+                                                    onClick={() => handleCompleteSale(neg)}
+                                                    disabled={neg.stage === 'Venda Concluída' || neg.stage === 'Aluguel Ativo'}
+                                                    className="text-green-600 focus:text-green-600 focus:bg-green-50"
+                                                >
+                                                    Concluir Venda
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
@@ -350,3 +382,5 @@ export default function NegotiationsPage() {
         </div>
     );
 }
+
+    

@@ -18,20 +18,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import type { UserProfile } from "../layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { initialCommissions, type Commission } from "@/lib/data";
 
 // Tipos
-type Commission = {
-    id: string;
-    deal: string;
-    amount: number;
-    status: 'Pago' | 'Pendente' | 'Vencido';
-    paymentDate: string;
-    involved: string;
-    advance?: number;
-    invoiceFile?: File | null;
-    realtorId: string;
-};
-
 type PaymentCLT = {
     id: string;
     employee: string;
@@ -51,12 +40,6 @@ type Expense = {
 };
 
 // Dados Simulados
-const initialCommissions: Commission[] = [
-    { id: 'comm1', deal: 'Venda Apartamento Central', amount: 15000, status: 'Pendente', paymentDate: '2024-08-15', involved: 'Carlos Pereira (50%), Sofia Lima (50%)', realtorId: 'user1' },
-    { id: 'comm2', deal: 'Venda Casa de Campo', amount: 22000, status: 'Pago', paymentDate: '2024-07-20', involved: 'Carlos Pereira (100%)', realtorId: 'user1' },
-    { id: 'comm3', deal: 'Aluguel Sala Comercial', amount: 1200, status: 'Vencido', paymentDate: '2024-06-10', involved: 'Imobiliária (100%)', realtorId: 'user2' },
-];
-
 const initialPayments: PaymentCLT[] = [
     { id: 'pay1', employee: 'Secretária Admin', type: 'Salário', amount: 2500, paymentDate: '2024-08-05', status: 'Pago' },
     { id: 'pay2', employee: 'Gerente de Vendas', type: 'Salário', amount: 6000, paymentDate: '2024-08-05', status: 'Pago' },
@@ -101,7 +84,8 @@ export default function FinancePage() {
     // Lógica de Comissões
     const visibleCommissions = commissions.filter(c => {
         if (hasPermission) return true;
-        if (activeProfile === 'Corretor Autônomo') return c.realtorId === 'user1'; // Simulado
+        // Simulado: 'user1' é o ID do Carlos Pereira, que pode ser o vendedor ou captador
+        if (activeProfile === 'Corretor Autônomo') return c.realtorId === 'Carlos Pereira'; 
         return false;
     });
     const totalCommission = visibleCommissions.reduce((sum, item) => sum + item.amount, 0);
@@ -472,3 +456,5 @@ export default function FinancePage() {
         </div>
     );
 }
+
+    
