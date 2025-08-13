@@ -9,10 +9,12 @@ interface ProfileContextType {
     setActiveProfile: Dispatch<SetStateAction<UserProfile>>;
 }
 
-export const ProfileContext = createContext<ProfileContextType>({
+const defaultProfileContext: ProfileContextType = {
     activeProfile: 'Admin',
     setActiveProfile: () => {},
-});
+};
+
+export const ProfileContext = createContext<ProfileContextType>(defaultProfileContext);
 
 export const ProfileProvider = ({ children, value }: { children: React.ReactNode, value: ProfileContextType }) => {
     return (
