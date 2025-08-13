@@ -5,8 +5,8 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { notFound, useParams } from "next/navigation";
-import { Printer, Save, Upload, FileText, Link as LinkIcon } from "lucide-react";
+import { notFound, useParams, useRouter } from "next/navigation";
+import { Printer, Save, Upload, FileText, Link as LinkIcon, ArrowLeft } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -67,6 +67,7 @@ const mockRealtors = {
 
 export default function ContractPage() {
     const params = useParams();
+    const router = useRouter();
     const { toast } = useToast();
     const negotiationId = params.id as string;
 
@@ -187,6 +188,12 @@ export default function ContractPage() {
         <div className="flex flex-col gap-6">
             <div className="flex items-center justify-between print:hidden">
                 <div>
+                    <Button variant="outline" size="icon" className="mr-4" onClick={() => router.back()}>
+                        <ArrowLeft className="h-4 w-4" />
+                        <span className="sr-only">Voltar</span>
+                    </Button>
+                </div>
+                <div className="flex-1">
                     <h1 className="text-2xl font-bold">Gestão de Contratos</h1>
                     <p className="text-muted-foreground">Negociação ID: {negotiation.id}</p>
                 </div>
@@ -358,3 +365,5 @@ export default function ContractPage() {
         </div>
     );
 }
+
+    
