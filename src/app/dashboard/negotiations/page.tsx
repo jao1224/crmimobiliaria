@@ -16,7 +16,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { initialNegotiations, mockProperties, mockClients, realtors, type Negotiation, type Property, type Client, addCommission } from "@/lib/data";
+import { Checkbox } from "@/components/ui/checkbox";
+import { initialNegotiations, mockProperties, mockClients, realtors, type Negotiation, type Property, type Client, addCommission, addFinancingProcess } from "@/lib/data";
 
 export default function NegotiationsPage() {
     const router = useRouter();
@@ -32,6 +33,7 @@ export default function NegotiationsPage() {
 
     const [propertyCode, setPropertyCode] = useState("");
     const [clientDoc, setClientDoc] = useState("");
+    const [isFinanced, setIsFinanced] = useState(false);
     const [foundProperty, setFoundProperty] = useState<Property | null>(null);
     const [foundClient, setFoundClient] = useState<Client | null>(null);
     const [proposalValue, setProposalValue] = useState("");
@@ -74,6 +76,7 @@ export default function NegotiationsPage() {
         setFoundClient(null);
         setProposalValue("");
         setProposalDate("");
+        setIsFinanced(false);
     };
 
     useEffect(() => {
@@ -105,10 +108,43 @@ export default function NegotiationsPage() {
             salesperson: "Joana Doe",
             realtor: "Carlos Pereira",
             completionDate: null,
+            isFinanced: isFinanced,
         };
         setNegotiations(prev => [...prev, newNegotiation]);
+        
+        // Se for financiado, cria o processo para o correspondente
+        if (isFinanced) {
+             addFinancingProcess({
+                id: `finproc-from-${newNegotiation.id}`,
+                negotiationId: newNegotiation.id,
+                clientName: newNegotiation.client,
+                propertyName: newNegotiation.property,
+                realtorName: newNegotiation.salesperson,
+                clientStatus: 'Pendente',
+                clientStatusReason: 'Aguardando documentação inicial',
+                approvedValue: 0,
+                bacenInfo: '',
+                engineeringStatus: 'Não solicitado',
+                engineeringReason: '',
+                appraisalValue: 0,
+                appraisalDate: '',
+                docs: {
+                    propertyRegistration: { updated: false, dueDate: '' },
+                    paycheck: { updated: false, dueDate: '' },
+                    addressProof: { updated: false, dueDate: '' },
+                    clientApproval: { updated: false, dueDate: '' },
+                    engineeringReport: { updated: false, dueDate: '' },
+                },
+                stages: { formSignature: false, compliance: false, financingResources: false, bankSignature: '', registryEntry: '', warranty: '' },
+                generalStatus: 'Ativo',
+                hasPendency: true,
+            });
+            toast({ title: "Sucesso!", description: "Nova negociação iniciada e processo de financiamento criado para o correspondente." });
+        } else {
+            toast({ title: "Sucesso!", description: "Nova negociação iniciada (simulado)." });
+        }
+        
         setNewNegotiationOpen(false);
-        toast({ title: "Sucesso!", description: "Nova negociação iniciada (simulado)." });
     };
     
     const handleGenerateContract = (negotiationId: string) => {
@@ -240,6 +276,10 @@ export default function NegotiationsPage() {
                                             <Label htmlFor="date">Data da Proposta</Label>
                                             <Input id="date" name="date" type="date" required value={proposalDate} onChange={e => setProposalDate(e.target.value)} disabled={!foundProperty || !foundClient} />
                                         </div>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <Checkbox id="financed" checked={isFinanced} onCheckedChange={(checked) => setIsFinanced(checked as boolean)} disabled={!foundProperty || !foundClient} />
+                                        <Label htmlFor="financed">É financiado?</Label>
                                     </div>
                                     {(!foundProperty || !foundClient) && (
                                         <p className="text-xs text-muted-foreground text-center">
@@ -382,5 +422,3 @@ export default function NegotiationsPage() {
         </div>
     );
 }
-
-    
