@@ -10,16 +10,29 @@ import type { UserProfile } from "./layout";
 import { ProfileContext } from "@/contexts/ProfileContext";
 
 const welcomeMessages: Record<UserProfile, { title: string; subtitle: string }> = {
-  'Admin': { title: "Bem-vindo(a) de volta, Admin!", subtitle: "Visão geral completa do sistema. Monitore o desempenho e gerencie todas as operações." },
-  'Imobiliária': { title: "Bem-vindo(a) à sua Imobiliária!", subtitle: "Gerencie suas equipes, imóveis e negociações com eficiência. Um ótimo dia de vendas!" },
-  'Corretor Autônomo': { title: "Bem-vindo(a), Corretor(a)!", subtitle: "Visão geral do dia: seus resultados em destaque." },
-  'Investidor': { title: "Olá, Investidor(a)!", subtitle: "Acompanhe seus imóveis e as melhores oportunidades de negociação do mercado." },
-  'Construtora': { title: "Bem-vindo(a), Construtora!", subtitle: "Gerencie seus empreendimentos, vendas e parcerias de forma integrada." },
+  'Admin': { title: "Admin!", subtitle: "Visão geral completa do sistema. Monitore o desempenho e gerencie todas as operações." },
+  'Imobiliária': { title: "à sua Imobiliária!", subtitle: "Gerencie suas equipes, imóveis e negociações com eficiência. Um ótimo dia de vendas!" },
+  'Corretor Autônomo': { title: "Corretor(a)!", subtitle: "Visão geral do dia: seus resultados em destaque." },
+  'Investidor': { title: "Investidor(a)!", subtitle: "Acompanhe seus imóveis e as melhores oportunidades de negociação do mercado." },
+  'Construtora': { title: "Construtora!", subtitle: "Gerencie seus empreendimentos, vendas e parcerias de forma integrada." },
 };
 
 export default function DashboardPage() {
   const { activeProfile } = useContext(ProfileContext);
+  const [greeting, setGreeting] = useState("Bem-vindo(a) de volta,");
   const { title, subtitle } = welcomeMessages[activeProfile] || welcomeMessages['Admin'];
+
+  useEffect(() => {
+    const currentHour = new Date().getHours();
+    if (currentHour >= 5 && currentHour < 12) {
+      setGreeting("Bom dia,");
+    } else if (currentHour >= 12 && currentHour < 18) {
+      setGreeting("Boa tarde,");
+    } else {
+      setGreeting("Boa noite,");
+    }
+  }, []);
+
 
   // Os dados agora são estáticos para simulação
   const stats = {
@@ -64,7 +77,7 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold">{title}</h1>
+        <h1 className="text-2xl font-bold">{`${greeting} ${title}`}</h1>
         <p className="text-muted-foreground">{subtitle}</p>
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
