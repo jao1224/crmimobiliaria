@@ -254,7 +254,7 @@ export default function NegotiationsPage() {
                         <TableBody>
                             {negotiations.length > 0 ? (
                                 negotiations.map((neg) => (
-                                <TableRow key={neg.id}>
+                                <TableRow key={neg.id} className="hover:bg-secondary">
                                     <TableCell className="font-medium">{neg.property}</TableCell>
                                     <TableCell>{neg.client}</TableCell>
                                     <TableCell>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(neg.value)}</TableCell>
@@ -298,3 +298,5 @@ export default function NegotiationsPage() {
         </div>
     );
 }
+
+    
