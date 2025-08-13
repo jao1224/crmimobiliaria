@@ -33,6 +33,25 @@ export default function ReportingPage() {
                         <div className="flex flex-wrap items-center gap-2">
                              <Select>
                                 <SelectTrigger className="w-[180px]">
+                                    <SelectValue placeholder="Filtrar por Período" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="last-30">Últimos 30 dias</SelectItem>
+                                    <SelectItem value="this-month">Este Mês</SelectItem>
+                                    <SelectItem value="this-year">Este Ano</SelectItem>
+                                </SelectContent>
+                            </Select>
+                             <Select>
+                                <SelectTrigger className="w-[180px]">
+                                    <SelectValue placeholder="Filtrar por Corretor" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="realtor-1">Carlos Pereira</SelectItem>
+                                    <SelectItem value="realtor-2">Sofia Lima</SelectItem>
+                                </SelectContent>
+                            </Select>
+                             <Select>
+                                <SelectTrigger className="w-[180px]">
                                     <SelectValue placeholder="Filtrar por Equipe" />
                                 </SelectTrigger>
                                 <SelectContent>

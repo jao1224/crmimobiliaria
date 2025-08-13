@@ -65,7 +65,7 @@ const initialPayments: PaymentCLT[] = [
 const initialExpenses: Expense[] = [
     { id: 'exp1', description: 'Aluguel do Escritório', category: 'Fixa', amount: 3500, dueDate: '2024-08-10', status: 'Pendente' },
     { id: 'exp2', description: 'Marketing Digital (Google Ads)', category: 'Variável', amount: 1200, dueDate: '2024-08-15', status: 'Pago' },
-    { id: 'exp3', description: 'Conta de Energia', category: 'Fixa', amount: 450, dueDate: '2024-08-20', status: 'Pendente' },
+    { id: 'exp3', description: 'Conta de Energia', category: 'Fixa', amount: 450, dueDate: new Date(new Date().setDate(new Date().getDate() - 5)).toISOString().split('T')[0], status: 'Pendente' }, // Vencida
 ];
 
 const employees = ['Secretária Admin', 'Gerente de Vendas', 'Corretor A'];
@@ -74,6 +74,10 @@ const employees = ['Secretária Admin', 'Gerente de Vendas', 'Corretor A'];
 const formatCurrency = (amount: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount);
 
 const financePermissions: UserProfile[] = ['Admin', 'Imobiliária', 'Financeiro'];
+
+const isExpenseOverdue = (expense: Expense) => {
+    return new Date(expense.dueDate) < new Date() && expense.status === 'Pendente';
+};
 
 
 export default function FinancePage() {
@@ -449,9 +453,14 @@ export default function FinancePage() {
                                     {expenses.map(e => (
                                         <TableRow key={e.id} className="hover:bg-secondary">
                                             <TableCell className="font-medium">{e.description}</TableCell>
-                                            <TableCell>{e.category}</TableCell><TableCell>{formatCurrency(e.amount)}</TableCell>
+                                            <TableCell>{e.category}</TableCell>
+                                            <TableCell>{formatCurrency(e.amount)}</TableCell>
                                             <TableCell>{new Date(e.dueDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</TableCell>
-                                            <TableCell><Badge variant={e.status === 'Pago' ? 'success' : 'destructive'}>{e.status}</Badge></TableCell>
+                                            <TableCell>
+                                                <Badge variant={e.status === 'Pago' ? 'success' : isExpenseOverdue(e) ? 'destructive' : 'secondary'}>
+                                                    {e.status === 'Pendente' && isExpenseOverdue(e) ? 'Vencido' : e.status}
+                                                </Badge>
+                                            </TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
@@ -463,5 +472,3 @@ export default function FinancePage() {
         </div>
     );
 }
-
-    
