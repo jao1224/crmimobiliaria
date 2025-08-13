@@ -100,7 +100,7 @@ export default function PropertiesPage() {
       case "Vendido":
         return "destructive";
       case "Alugado":
-        return "secondary";
+        return "info";
       default:
         return "outline";
     }
