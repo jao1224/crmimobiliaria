@@ -2,7 +2,7 @@
 "use client";
 
 import Image from "next/image";
-import { MoreHorizontal, Upload } from "lucide-react";
+import { MoreHorizontal, Upload, Trash2 } from "lucide-react";
 import { Badge, badgeVariants } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -105,7 +105,7 @@ export default function PropertiesPage() {
       status: "Disponível",
       price: Number(formData.get("price")),
       commission: Number(formData.get("commission")),
-      imageUrl: imagePreview || "https://placehold.co/80x80.png",
+      imageUrl: imagePreview || "https://placehold.co/600x400.png",
       imageHint: "novo imovel",
       description: formData.get("description") as string,
       ownerInfo: formData.get("owner") as string,
@@ -148,6 +148,15 @@ export default function PropertiesPage() {
     setEditingProperty(property);
     setImagePreview(property.imageUrl);
     setEditDialogOpen(true);
+  };
+
+  const handleRemoveImage = () => {
+    if (editingProperty) {
+      setEditingProperty(prev => prev ? { ...prev, imageUrl: "https://placehold.co/600x400.png" } : null);
+    }
+    setImagePreview("https://placehold.co/600x400.png");
+    setSelectedFile(null);
+    toast({ title: "Imagem Removida", description: "A imagem do imóvel foi redefinida para a padrão. Salve para confirmar." });
   };
   
   // Limpar o preview ao fechar o dialog
@@ -427,7 +436,13 @@ export default function PropertiesPage() {
                                 <Upload className="h-6 w-6"/>
                             </div>
                         )}
-                        <Input id="edit-image" name="image" type="file" onChange={handleFileChange} accept="image/png, image/jpeg, image/gif, image/webp" />
+                        <div className="flex flex-col gap-2">
+                          <Input id="edit-image" name="image" type="file" onChange={handleFileChange} accept="image/png, image/jpeg, image/gif, image/webp" />
+                          <Button type="button" variant="outline" size="sm" onClick={handleRemoveImage} disabled={!imagePreview || imagePreview.includes('placehold.co')}>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Remover Foto
+                          </Button>
+                        </div>
                     </div>
                 </div>
               </div>
