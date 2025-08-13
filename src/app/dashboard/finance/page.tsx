@@ -156,7 +156,7 @@ export default function FinancePage() {
                                         </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="invoiceFile">Nota Fiscal (Opcional)</Label>
-                                            <Input id="invoiceFile" name="invoiceFile" type="file" />
+                                            <Input id="invoiceFile" name="invoiceFile" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" />
                                         </div>
                                     </div>
                                 </div>
