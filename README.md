@@ -84,16 +84,26 @@ Este é o repositório do seu projeto LeadFlow, desenvolvido no Firebase Studio.
 
 ### 🟡 Em Progresso / A Fazer
 
-- **1. Persistência e Integração de Dados (Conectar ao Banco de Dados):**
+- **1. Gestão de Processos (Funcionalidade Essencial):**
+    -   **Tabela de Processos (❌):**
+        -   Na seção "Processos", criar uma tabela listando todos os processos em que o usuário está envolvido.
+        -   **Colunas:** Adicionar colunas para: `Status do Processo` (Ativo, Suspenso, etc.), `Código`, `Status de Andamento` (Em andamento, Pendência), `Tipo de Negociação` (Repasse, Novo, Lote, etc. - deve ser customizável), `Categoria` (Novo, Usado), `Imóvel`, `Vendedor`, `Captador`, `Equipe` e `Observações`.
+    -   **Sistema de Pendências (❌):**
+        -   Permitir que qualquer envolvido no processo possa marcar uma "Pendência" e adicionar uma observação.
+        -   Notificar todos os outros envolvidos sobre a nova pendência e sua descrição.
+    -   **Finalização de Processo (❌):**
+        -   Quando o processo for finalizado, permitir que o setor Administrativo insira os detalhes finais sobre o que cada parte (corretor, gerente, etc.) tem a receber.
+
+- **2. Persistência e Integração de Dados (Conectar ao Banco de Dados):**
     -   **Conectar Módulos ao Firestore (🟡):** A tarefa principal. Conectar todas as funcionalidades (CRM, Imóveis, Finanças, Equipes, etc.) ao banco de dados para salvar e carregar as informações de forma persistente.
     -   **Detalhamento Financeiro nas Comissões (❌):**
         -   Incluir detalhes completos do negócio na tela de comissão (requer conexão com o banco de dados): valor do imóvel, captador, vendedor, gerente, sinal do cliente, parcelamento com a construtora, etc.
     -   **Implementar Permissões de Edição Reais (❌):** A lógica simulada está pronta. O próximo passo é conectar ao sistema de autenticação para que as permissões funcionem com usuários e perfis reais.
 
-- **2. Sistema de Autenticação e Perfis:**
+- **3. Sistema de Autenticação e Perfis:**
     -   **Implementar Autenticação Real (🟡):** Integrar o Firebase Authentication para que o login e o cadastro funcionem com usuários reais.
     -   **Implementar Mudança de Senha (🟡):** Conectar a funcionalidade na página de configurações ("Minha Conta").
     -   **Conectar Perfis de Usuário (🟡):** Salvar os dados do perfil do usuário no Firestore.
 
-- **3. Sistema de Notificações Gerais:**
+- **4. Sistema de Notificações Gerais:**
     -   **Implementar Notificações (🟡):** Enviar alertas para ações importantes no sistema (e-mail, WhatsApp, etc.).
