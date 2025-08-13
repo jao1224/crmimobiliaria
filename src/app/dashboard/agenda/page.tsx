@@ -42,30 +42,42 @@ export default function AgendaPage() {
 
     const selectedDayEvents = useMemo(() => {
         if (!selectedDate) return [];
-        return events.filter(event => 
-            event.date.getDate() === selectedDate.getDate() &&
-            event.date.getMonth() === selectedDate.getMonth() &&
-            event.date.getFullYear() === selectedDate.getFullYear() &&
-            (event.type === activeTab || (activeTab === 'team' && event.type === 'team_visit'))
-        );
+        const selectedDay = selectedDate.getDate();
+        const selectedMonth = selectedDate.getMonth();
+        const selectedYear = selectedDate.getFullYear();
+
+        return events.filter(event => {
+            const eventDay = event.date.getDate();
+            const eventMonth = event.date.getMonth();
+            const eventYear = event.date.getFullYear();
+            
+            return eventDay === selectedDay &&
+                   eventMonth === selectedMonth &&
+                   eventYear === selectedYear &&
+                   event.type === activeTab;
+        });
     }, [selectedDate, events, activeTab]);
     
     const handleAddEvent = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         const formData = new FormData(event.currentTarget);
         const dateStr = formData.get("date") as string;
-        const [year, month, day] = dateStr.split('-').map(Number);
         
+        // Corrige o problema de fuso horário criando a data com base em UTC
+        const date = new Date(dateStr);
+        const userTimezoneOffset = date.getTimezoneOffset() * 60000;
+        const correctDate = new Date(date.getTime() + userTimezoneOffset);
+
         const newEvent: Event = {
             id: `evt${Date.now()}`,
-            date: new Date(year, month - 1, day),
+            date: correctDate,
             title: formData.get("title") as string,
             time: formData.get("time") as string,
             description: formData.get("description") as string,
-            type: 'personal', // Simulado
+            type: activeTab, // Adiciona o evento na agenda ativa
         };
         setEvents(prev => [...prev, newEvent]);
-        toast({ title: "Sucesso!", description: "Evento adicionado com sucesso (simulado)." });
+        toast({ title: "Sucesso!", description: "Evento adicionado com sucesso." });
         setEventDialogOpen(false);
     };
 
@@ -93,7 +105,7 @@ export default function AgendaPage() {
                     <DialogContent>
                         <DialogHeader>
                             <DialogTitle>Adicionar Novo Evento</DialogTitle>
-                            <DialogDescription>Preencha os detalhes para criar um novo evento na sua agenda pessoal.</DialogDescription>
+                            <DialogDescription>Preencha os detalhes para criar um novo evento na agenda de <span className="font-bold">{getEventTypeLabel(activeTab).label}</span>.</DialogDescription>
                         </DialogHeader>
                         <form onSubmit={handleAddEvent}>
                             <div className="grid gap-4 py-4">
@@ -185,7 +197,7 @@ export default function AgendaPage() {
                         </div>
                         <aside className="w-full md:w-1/3 border-l bg-muted/20 p-4 md:p-6">
                             <h2 className="text-lg font-semibold mb-4">
-                                {selectedDate ? `Compromissos para ${selectedDate.toLocaleDateString('pt-BR')}` : 'Selecione uma data'}
+                                {selectedDate ? `Compromissos para ${selectedDate.toLocaleDateString('pt-BR', { timeZone: 'UTC' })}` : 'Selecione uma data'}
                             </h2>
                             <div className="space-y-4">
                                 {selectedDayEvents.length > 0 ? (
