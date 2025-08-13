@@ -42,7 +42,7 @@ const allModules = [
     { id: "/dashboard/properties", label: "Imóveis" },
     { id: "/dashboard/crm", label: "CRM" },
     { id: "/dashboard/negotiations", label: "Negociações" },
-    { id: "/dashboard/finance", label: "Financeiro" },
+    { id: "/dashboard/finance", label = "Financeiro" },
     { id: "/dashboard/reporting", label: "Relatórios" },
     { id: "/dashboard/settings", label: "Configurações" },
 ];
@@ -139,8 +139,9 @@ export default function SettingsPage() {
         }
 
         const updatedTeam = { ...selectedTeam, memberIds: [...selectedTeam.memberIds, memberId] };
-        setSelectedTeam(updatedTeam);
+        
         setTeams(prevTeams => prevTeams.map(t => t.id === updatedTeam.id ? updatedTeam : t));
+        setSelectedTeam(updatedTeam);
         
         toast({ title: "Sucesso!", description: "Membro adicionado à equipe (simulado)." });
         setIsSaving(false);
@@ -150,8 +151,8 @@ export default function SettingsPage() {
         if (!selectedTeam) return;
 
         const updatedTeam = { ...selectedTeam, memberIds: selectedTeam.memberIds.filter(id => id !== memberId) };
-        setSelectedTeam(updatedTeam);
         setTeams(prevTeams => prevTeams.map(t => t.id === updatedTeam.id ? updatedTeam : t));
+        setSelectedTeam(updatedTeam);
 
         toast({ title: "Sucesso!", description: "Membro removido da equipe (simulado)." });
     };
@@ -386,7 +387,7 @@ export default function SettingsPage() {
                         <DialogTitle>Gerenciar Membros da Equipe: {selectedTeam?.name}</DialogTitle>
                         <DialogDescription>Adicione ou remova membros desta equipe.</DialogDescription>
                     </DialogHeader>
-                    <div className="grid grid-cols-2 gap-8 py-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-4">
                         <div className="space-y-4">
                             <h3 className="font-semibold">Adicionar Novo Membro</h3>
                              <form onSubmit={handleAddMemberToTeam} className="space-y-4">
@@ -420,18 +421,19 @@ export default function SettingsPage() {
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {selectedTeam && getMembersForTeam(selectedTeam).map(member => (
-                                                <TableRow key={member.id} className="hover:bg-secondary">
-                                                    <TableCell className="font-medium">{member.name}</TableCell>
-                                                    <TableCell><Badge variant="secondary">{member.role}</Badge></TableCell>
-                                                    <TableCell className="text-right">
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleRemoveMemberFromTeam(member.id)}>
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))}
-                                             {selectedTeam && getMembersForTeam(selectedTeam).length === 0 && (
+                                            {selectedTeam && getMembersForTeam(selectedTeam).length > 0 ? (
+                                                getMembersForTeam(selectedTeam).map(member => (
+                                                    <TableRow key={member.id} className="hover:bg-secondary">
+                                                        <TableCell className="font-medium">{member.name}</TableCell>
+                                                        <TableCell><Badge variant="secondary">{member.role}</Badge></TableCell>
+                                                        <TableCell className="text-right">
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleRemoveMemberFromTeam(member.id)}>
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))
+                                            ) : (
                                                 <TableRow>
                                                     <TableCell colSpan={3} className="text-center h-24 text-muted-foreground">
                                                         Nenhum membro nesta equipe.
@@ -448,5 +450,4 @@ export default function SettingsPage() {
             </Dialog>
 
         </div>
-    )
-}
+    
