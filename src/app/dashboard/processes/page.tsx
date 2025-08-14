@@ -120,7 +120,7 @@ export default function ProcessesPage() {
                                 <TableRow key={process.id} className="hover:bg-secondary">
                                     <TableCell><Badge variant={getStatusVariant(process.status)}>{process.status}</Badge></TableCell>
                                     <TableCell className="font-mono text-xs">{process.id.toUpperCase()}</TableCell>
-                                    <TableCell>
+                                    <TableCell className="whitespace-nowrap">
                                         <div className="flex items-center gap-2">
                                             {process.stage === 'Pendência' && <AlertCircle className="h-4 w-4 text-status-orange" />}
                                             {process.stage === 'Em andamento' && <Hourglass className="h-4 w-4 text-status-blue" />}
