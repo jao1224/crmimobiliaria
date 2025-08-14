@@ -270,7 +270,7 @@ export default function FinancePage() {
                                                     <TableCell className="font-medium">{commission.deal}</TableCell>
                                                     {hasPermission && <TableCell className="text-muted-foreground text-xs">{commission.involved}</TableCell>}
                                                     <TableCell>{formatCurrency(commission.amount)}</TableCell>
-                                                    <TableCell><Badge variant={commission.status === 'Pago' ? 'success' : commission.status === 'Pendente' ? 'secondary' : 'destructive'}>{commission.status}</Badge></TableCell>
+                                                    <TableCell><Badge variant={commission.status === 'Pago' ? 'success' : commission.status === 'Pendente' ? 'status-orange' : 'destructive'}>{commission.status}</Badge></TableCell>
                                                     <TableCell>{new Date(commission.paymentDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</TableCell>
                                                     <TableCell>
                                                         {hasPermission && (
@@ -449,7 +449,7 @@ export default function FinancePage() {
                                             <TableCell>{formatCurrency(e.amount)}</TableCell>
                                             <TableCell>{new Date(e.dueDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</TableCell>
                                             <TableCell>
-                                                <Badge variant={e.status === 'Pago' ? 'success' : isExpenseOverdue(e) ? 'destructive' : 'secondary'}>
+                                                <Badge variant={e.status === 'Pago' ? 'success' : isExpenseOverdue(e) ? 'destructive' : 'status-orange'}>
                                                     {e.status === 'Pendente' && isExpenseOverdue(e) ? 'Vencido' : e.status}
                                                 </Badge>
                                             </TableCell>
@@ -464,5 +464,7 @@ export default function FinancePage() {
         </div>
     );
 }
+
+    
 
     
