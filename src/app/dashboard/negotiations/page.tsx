@@ -192,7 +192,7 @@ export default function NegotiationsPage() {
         switch (stage) {
             case 'Proposta Enviada': return 'status-blue';
             case 'Em Negociação': return 'status-orange';
-            case 'Contrato Gerado': return 'info';
+            case 'Contrato Gerado': return 'secondary';
             case 'Venda Concluída': return 'success';
             case 'Aluguel Ativo': return 'success';
             default: return 'secondary';
@@ -381,7 +381,12 @@ export default function NegotiationsPage() {
                                     <TableCell className="hidden md:table-cell">{neg.type}</TableCell>
                                     <TableCell>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(neg.value)}</TableCell>
                                     <TableCell>
-                                        <Badge variant={getStageVariant(neg.stage)} className="whitespace-nowrap">{neg.stage}</Badge>
+                                        <Badge
+                                            variant={getStageVariant(neg.stage)}
+                                            className={neg.stage === 'Contrato Gerado' ? 'whitespace-nowrap bg-green-100 text-green-800' : 'whitespace-nowrap'}
+                                        >
+                                            {neg.stage}
+                                        </Badge>
                                     </TableCell>
                                      <TableCell>
                                         <Badge variant={getContractStatusVariant(neg.contractStatus)} className="whitespace-nowrap">{neg.contractStatus}</Badge>
@@ -427,3 +432,5 @@ export default function NegotiationsPage() {
         </div>
     );
 }
+
+    
