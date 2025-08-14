@@ -404,9 +404,15 @@ export default function NegotiationsPage() {
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuLabel>Ações</DropdownMenuLabel>
                                                 <DropdownMenuItem onClick={() => router.push(`/dashboard/processes`)}>Ver Processo</DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => handleGenerateContract(neg.id)} disabled={neg.contractStatus !== 'Não Gerado'}>
-                                                    Gerar Contrato
-                                                </DropdownMenuItem>
+                                                {neg.contractStatus === 'Não Gerado' ? (
+                                                    <DropdownMenuItem onClick={() => handleGenerateContract(neg.id)}>
+                                                        Gerar Contrato
+                                                    </DropdownMenuItem>
+                                                ) : (
+                                                    <DropdownMenuItem onClick={() => router.push(`/dashboard/negotiations/${neg.id}/contract`)}>
+                                                        Ver/Editar Contrato
+                                                    </DropdownMenuItem>
+                                                )}
                                                  <DropdownMenuSeparator />
                                                 <DropdownMenuItem 
                                                     onClick={() => handleCompleteSale(neg)}
@@ -432,5 +438,3 @@ export default function NegotiationsPage() {
         </div>
     );
 }
-
-    
