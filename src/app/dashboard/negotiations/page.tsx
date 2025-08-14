@@ -85,6 +85,14 @@ export default function NegotiationsPage() {
             resetForm();
         }
     }, [isNewNegotiationOpen]);
+    
+    // Busca automática ao selecionar
+    useEffect(() => {
+        if (propertyCode && clientCode) {
+            handleSearch();
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [propertyCode, clientCode]);
 
 
     const handleAddNegotiation = (event: React.FormEvent<HTMLFormElement>) => {
@@ -225,46 +233,63 @@ export default function NegotiationsPage() {
                         <DialogHeader>
                             <DialogTitle>Iniciar Nova Negociação</DialogTitle>
                             <DialogDescription>
-                                Insira o ID do imóvel e do cliente para buscar os dados.
+                                Selecione um imóvel e um cliente da lista para buscar os dados.
                             </DialogDescription>
                         </DialogHeader>
                         <form onSubmit={handleAddNegotiation}>
                             <div className="space-y-4 py-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <Label htmlFor="property-code">Imóvel (ID)</Label>
-                                        <Input id="property-code" value={propertyCode} onChange={e => setPropertyCode(e.target.value)} placeholder="Ex: prop1" required />
+                                        <Label>Imóvel</Label>
+                                        <Select value={propertyCode} onValueChange={setPropertyCode} required>
+                                            <SelectTrigger><SelectValue placeholder="Selecione um imóvel" /></SelectTrigger>
+                                            <SelectContent>
+                                                {initialProperties.map(prop => (
+                                                    <SelectItem key={prop.id} value={prop.id}>
+                                                        {prop.name} ({prop.id.toUpperCase()})
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="client-code">Cliente (ID)</Label>
-                                        <Input id="client-code" value={clientCode} onChange={e => setClientCode(e.target.value)} placeholder="Ex: cli1" required />
+                                        <Label>Cliente</Label>
+                                        <Select value={clientCode} onValueChange={setClientCode} required>
+                                            <SelectTrigger><SelectValue placeholder="Selecione um cliente" /></SelectTrigger>
+                                            <SelectContent>
+                                                {initialClients.map(cli => (
+                                                    <SelectItem key={cli.id} value={cli.id}>
+                                                        {cli.name} ({cli.id.toUpperCase()})
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                     </div>
                                 </div>
 
-                                {(foundProperty || foundClient) && (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 rounded-lg border p-4">
+                                {(isSearching || foundProperty || foundClient) && (
+                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 rounded-lg border p-4">
                                          <div className="space-y-2">
                                             <h4 className="font-semibold text-sm">Imóvel Encontrado</h4>
-                                            {foundProperty ? (
+                                            {isSearching ? <Skeleton className="h-12 w-full" /> : foundProperty ? (
                                                 <div className="text-sm text-muted-foreground">
                                                     <p className="font-medium text-foreground">{foundProperty.name}</p>
                                                     <p>{foundProperty.address}</p>
                                                     <p>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(foundProperty.price)}</p>
                                                 </div>
-                                            ) : <p className="text-sm text-destructive">Nenhum imóvel encontrado.</p>}
+                                            ) : <p className="text-sm text-destructive">Selecione um imóvel.</p>}
                                         </div>
                                          <div className="space-y-2">
                                             <h4 className="font-semibold text-sm">Cliente Encontrado</h4>
-                                            {foundClient ? (
+                                             {isSearching ? <Skeleton className="h-12 w-full" /> : foundClient ? (
                                                 <div className="text-sm text-muted-foreground">
                                                     <p className="font-medium text-foreground">{foundClient.name}</p>
                                                     <p>Fonte: {foundClient.source}</p>
                                                 </div>
-                                            ) : <p className="text-sm text-destructive">Nenhum cliente encontrado.</p>}
+                                            ) : <p className="text-sm text-destructive">Selecione um cliente.</p>}
                                         </div>
                                     </div>
                                 )}
-
 
                                 <div className="border-t pt-4 space-y-4">
                                     <div className="grid grid-cols-2 gap-4">
@@ -281,18 +306,9 @@ export default function NegotiationsPage() {
                                         <Checkbox id="financed" checked={isFinanced} onCheckedChange={(checked) => setIsFinanced(checked as boolean)} disabled={!foundProperty || !foundClient} />
                                         <Label htmlFor="financed">É financiado?</Label>
                                     </div>
-                                    {(!foundProperty || !foundClient) && (
-                                        <p className="text-xs text-muted-foreground text-center">
-                                            Os campos de proposta serão liberados após a busca e confirmação dos dados do imóvel e do cliente.
-                                        </p>
-                                    )}
                                 </div>
                             </div>
-                            <DialogFooter className="border-t pt-4 gap-2 sm:justify-between">
-                                <Button type="button" variant="outline" onClick={handleSearch} disabled={isSearching || !propertyCode || !clientCode}>
-                                    <Search className="mr-2 h-4 w-4" />
-                                    {isSearching ? "Buscando..." : "Buscar Dados"}
-                                </Button>
+                            <DialogFooter className="border-t pt-4">
                                 <Button type="submit" disabled={!foundProperty || !foundClient || !proposalValue || !proposalDate}>Criar Negociação</Button>
                             </DialogFooter>
                         </form>
