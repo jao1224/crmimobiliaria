@@ -17,7 +17,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { initialNegotiations, mockProperties, mockClients, realtors, type Negotiation, type Property, type Client, addFinancingProcess, completeSaleAndGenerateCommission } from "@/lib/data";
+import { initialNegotiations, realtors, type Negotiation, addFinancingProcess, completeSaleAndGenerateCommission } from "@/lib/data";
+import { initialProperties, type Property } from "@/app/dashboard/properties/page";
+import { initialClients, type Client } from "@/lib/crm-data";
 
 export default function NegotiationsPage() {
     const router = useRouter();
@@ -32,33 +34,32 @@ export default function NegotiationsPage() {
 
 
     const [propertyCode, setPropertyCode] = useState("");
-    const [clientDoc, setClientDoc] = useState("");
+    const [clientCode, setClientCode] = useState("");
     const [isFinanced, setIsFinanced] = useState(false);
     const [foundProperty, setFoundProperty] = useState<Property | null>(null);
     const [foundClient, setFoundClient] = useState<Client | null>(null);
     const [proposalValue, setProposalValue] = useState("");
     const [proposalDate, setProposalDate] = useState("");
     const [isSearching, setIsSearching] = useState(false);
-    const [isLoading, setIsLoading] = useState(false); // No longer loading from DB
 
     const handleSearch = async () => {
         setIsSearching(true);
         // Simulação de busca
         setTimeout(() => {
-            const prop = mockProperties.find(p => p.id === propertyCode);
-            const cli = mockClients.find(c => c.doc === clientDoc);
+            const prop = initialProperties.find(p => p.id === propertyCode);
+            const cli = initialClients.find(c => c.id === clientCode);
 
             if (prop) {
                 setFoundProperty(prop);
             } else {
-                toast({ variant: 'destructive', title: "Erro", description: "Imóvel não encontrado." });
+                toast({ variant: 'destructive', title: "Erro", description: "Imóvel não encontrado com este ID." });
                 setFoundProperty(null);
             }
 
             if (cli) {
                 setFoundClient(cli);
             } else {
-                 toast({ variant: 'destructive', title: "Erro", description: "Cliente não encontrado." });
+                 toast({ variant: 'destructive', title: "Erro", description: "Cliente não encontrado com este ID." });
                  setFoundClient(null);
             }
 
@@ -71,7 +72,7 @@ export default function NegotiationsPage() {
 
     const resetForm = () => {
         setPropertyCode("");
-        setClientDoc("");
+        setClientCode("");
         setFoundProperty(null);
         setFoundClient(null);
         setProposalValue("");
@@ -98,22 +99,22 @@ export default function NegotiationsPage() {
             id: `neg${Date.now()}`,
             property: foundProperty.name,
             propertyId: foundProperty.id,
-            propertyType: 'Revenda', // Simulado
+            propertyType: foundProperty.type, // Usando o tipo do imóvel
             client: foundClient.name,
             clientId: foundClient.id,
             stage: "Proposta Enviada",
             type: 'Venda', // Default
             contractStatus: "Não Gerado",
             value: Number(proposalValue),
-            salesperson: "Joana Doe",
-            realtor: "Carlos Pereira",
+            salesperson: "Joana Doe", // Simulado
+            realtor: foundProperty.capturedBy, // Usando o captador do imóvel
             completionDate: null,
             isFinanced: isFinanced,
             status: 'Ativo',
             processStage: 'Em andamento',
             negotiationType: 'Novo',
             category: 'Novo',
-            team: 'Equipe A',
+            team: 'Equipe A', // Simulado
         };
         setNegotiations(prev => [...prev, newNegotiation]);
         
@@ -224,7 +225,7 @@ export default function NegotiationsPage() {
                         <DialogHeader>
                             <DialogTitle>Iniciar Nova Negociação</DialogTitle>
                             <DialogDescription>
-                                Insira o ID do imóvel e o documento do cliente para buscar os dados.
+                                Insira o ID do imóvel e do cliente para buscar os dados.
                             </DialogDescription>
                         </DialogHeader>
                         <form onSubmit={handleAddNegotiation}>
@@ -235,8 +236,8 @@ export default function NegotiationsPage() {
                                         <Input id="property-code" value={propertyCode} onChange={e => setPropertyCode(e.target.value)} placeholder="Ex: prop1" required />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="client-doc">Cliente (CPF ou CNPJ)</Label>
-                                        <Input id="client-doc" value={clientDoc} onChange={e => setClientDoc(e.target.value)} placeholder="Ex: 111.222.333-44" required />
+                                        <Label htmlFor="client-code">Cliente (ID)</Label>
+                                        <Input id="client-code" value={clientCode} onChange={e => setClientCode(e.target.value)} placeholder="Ex: cli1" required />
                                     </div>
                                 </div>
 
@@ -257,7 +258,7 @@ export default function NegotiationsPage() {
                                             {foundClient ? (
                                                 <div className="text-sm text-muted-foreground">
                                                     <p className="font-medium text-foreground">{foundClient.name}</p>
-                                                    <p>Doc: {foundClient.doc}</p>
+                                                    <p>Fonte: {foundClient.source}</p>
                                                 </div>
                                             ) : <p className="text-sm text-destructive">Nenhum cliente encontrado.</p>}
                                         </div>
@@ -288,7 +289,7 @@ export default function NegotiationsPage() {
                                 </div>
                             </div>
                             <DialogFooter className="border-t pt-4 gap-2 sm:justify-between">
-                                <Button type="button" variant="outline" onClick={handleSearch} disabled={isSearching || !propertyCode || !clientDoc}>
+                                <Button type="button" variant="outline" onClick={handleSearch} disabled={isSearching || !propertyCode || !clientCode}>
                                     <Search className="mr-2 h-4 w-4" />
                                     {isSearching ? "Buscando..." : "Buscar Dados"}
                                 </Button>
@@ -438,3 +439,5 @@ export default function NegotiationsPage() {
         </div>
     );
 }
+
+    
