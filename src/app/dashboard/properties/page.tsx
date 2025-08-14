@@ -298,14 +298,22 @@ export default function PropertiesPage() {
                   )}
                 >
                   <TableCell className="hidden sm:table-cell">
-                    <Image
-                      alt="Imagem do imóvel"
-                      className="aspect-square rounded-md object-cover"
-                      height="64"
-                      src={property.imageUrl}
-                      width="64"
-                      data-ai-hint={property.imageHint}
-                    />
+                    <div className="relative w-16 h-16">
+                      <Image
+                        alt="Imagem do imóvel"
+                        className="aspect-square rounded-md object-cover"
+                        layout="fill"
+                        src={property.imageUrl}
+                        data-ai-hint={property.imageHint}
+                      />
+                      {property.status === 'Vendido' && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-md">
+                           <div className="absolute w-full bg-red-500 text-white text-xs font-bold uppercase text-center py-0.5 transform -rotate-45">
+                                Vendido
+                           </div>
+                        </div>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <Badge variant="secondary">{property.id.toUpperCase()}</Badge>
@@ -484,5 +492,7 @@ export default function PropertiesPage() {
     </div>
   );
 }
+
+    
 
     
