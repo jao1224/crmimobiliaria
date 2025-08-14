@@ -244,7 +244,7 @@ export default function NegotiationsPage() {
                                         <Select value={propertyCode} onValueChange={setPropertyCode} required>
                                             <SelectTrigger><SelectValue placeholder="Selecione um imóvel" /></SelectTrigger>
                                             <SelectContent>
-                                                {initialProperties.map(prop => (
+                                                {initialProperties.filter(p => p.status === 'Disponível').map(prop => (
                                                     <SelectItem key={prop.id} value={prop.id}>
                                                         {prop.name} ({prop.id.toUpperCase()})
                                                     </SelectItem>
@@ -455,5 +455,7 @@ export default function NegotiationsPage() {
         </div>
     );
 }
+
+    
 
     

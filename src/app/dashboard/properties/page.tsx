@@ -289,7 +289,14 @@ export default function PropertiesPage() {
             </TableHeader>
             <TableBody>
               {properties.map((property) => (
-                <TableRow key={property.id} onClick={() => handleRowClick(property)} className="cursor-pointer hover:bg-secondary">
+                <TableRow 
+                  key={property.id} 
+                  onClick={() => handleRowClick(property)} 
+                  className={cn(
+                      "cursor-pointer hover:bg-secondary",
+                      property.status !== 'Disponível' && 'opacity-50 hover:opacity-75'
+                  )}
+                >
                   <TableCell className="hidden sm:table-cell">
                     <Image
                       alt="Imagem do imóvel"
@@ -477,3 +484,5 @@ export default function PropertiesPage() {
     </div>
   );
 }
+
+    
