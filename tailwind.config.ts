@@ -78,7 +78,7 @@ export default {
           ring: 'hsl(var(--sidebar-ring))',
         },
         'status-blue': 'hsl(var(--status-blue))',
-        'status-orange': '#F59E0B',
+        'status-orange': 'hsl(var(--accent))',
         'status-red-orange': '#ff6e49',
       },
       borderRadius: {
