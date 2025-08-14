@@ -2,7 +2,7 @@
 "use client";
 
 import Image from "next/image";
-import { MoreHorizontal, Upload, Trash2 } from "lucide-react";
+import { MoreHorizontal, Upload, Trash2, ArrowUpDown } from "lucide-react";
 import { Badge, badgeVariants } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,7 +28,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PropertyMatcher } from "@/components/dashboard/property-matcher";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,6 +38,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 import type { PropertyType } from "@/lib/data";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { realtors } from "@/lib/data";
 
 // Define o tipo para um imóvel
 export type Property = {
@@ -61,8 +63,8 @@ export const initialProperties: Property[] = [
     { id: "prop2", name: "Casa com Piscina", address: "Rua das Flores, 456, Eusébio", status: "Vendido", price: 1200000, commission: 3.0, imageUrl: "https://placehold.co/600x400.png", imageHint: "casa piscina", capturedBy: "Sofia Lima", description: "Espaçosa casa com 4 suítes, piscina, área gourmet com churrasqueira e um grande quintal gramado. Ideal para famílias que buscam conforto e lazer.", ownerInfo: "Bruno Costa - (85) 99988-7766", type: 'Revenda' },
     { id: "prop3", name: "Terreno Comercial", address: "Av. das Américas, 789, Fortaleza", status: "Disponível", price: 2500000, commission: 4.0, imageUrl: "https://placehold.co/600x400.png", imageHint: "terreno comercial", capturedBy: "Carlos Pereira", description: "Terreno plano de esquina em avenida movimentada, perfeito para construção de lojas, galpões ou centros comerciais. Excelente visibilidade e acesso.", ownerInfo: "Construtora Invest S.A. - (85) 3222-1100", type: 'Terreno' },
     { id: "prop4", name: "Loft Moderno", address: "Centro, Rua Principal, 100, Fortaleza", status: "Alugado", price: 450000, commission: 1.5, imageUrl: "https://placehold.co/600x400.png", imageHint: "loft moderno", capturedBy: "Joana Doe", description: "Loft no coração da cidade, com design industrial, pé-direito duplo, 1 quarto, cozinha integrada e totalmente mobiliado. Perfeito para solteiros ou casais.", ownerInfo: "Maria Investidora - (85) 98765-4321", type: 'Lançamento' },
-    { id: "prop5", name: "Sítio Ecológico", address: "Guaramiranga, CE", status: "Vendido", price: 780000, commission: 3.5, imageUrl: "https://placehold.co/600x400.png", imageHint: "sitio ecologico", capturedBy: "Sofia Lima", description: "Belo sítio em meio à natureza, com casa principal, casa de hóspedes, pomar e acesso a uma cachoeira. Ideal para quem busca paz e tranquilidade.", ownerInfo: "Família Verde - (85) 91122-3344", type: 'Casa' },
-    { id: "prop6", name: "Apartamento Centro", address: "Rua do Centro, 50, Fortaleza", status: "Vendido", price: 450000, commission: 2.0, imageUrl: "https://placehold.co/600x400.png", imageHint: "apartamento centro", capturedBy: "Joana Doe", description: "Apartamento de 2 quartos no centro da cidade, próximo a tudo. Recém-reformado, com móveis planejados na cozinha.", ownerInfo: "Investidor Anônimo - (85) 95544-3322", type: 'Apartamento' },
+    { id: "prop5", name: "Sítio Ecológico", address: "Guaramiranga, CE", status: "Disponível", price: 780000, commission: 3.5, imageUrl: "https://placehold.co/600x400.png", imageHint: "sitio ecologico", capturedBy: "Sofia Lima", description: "Belo sítio em meio à natureza, com casa principal, casa de hóspedes, pomar e acesso a uma cachoeira. Ideal para quem busca paz e tranquilidade.", ownerInfo: "Família Verde - (85) 91122-3344", type: 'Casa' },
+    { id: "prop6", name: "Apartamento Centro", address: "Rua do Centro, 50, Fortaleza", status: "Disponível", price: 450000, commission: 2.0, imageUrl: "https://placehold.co/600x400.png", imageHint: "apartamento centro", capturedBy: "Joana Doe", description: "Apartamento de 2 quartos no centro da cidade, próximo a tudo. Recém-reformado, com móveis planejados na cozinha.", ownerInfo: "Investidor Anônimo - (85) 95544-3322", type: 'Apartamento' },
 ];
 
 
@@ -76,6 +78,37 @@ export default function PropertiesPage() {
   const { toast } = useToast();
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  // Estados para filtros e ordenação
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [captadorFilter, setCaptadorFilter] = useState('all');
+  const [sortOrder, setSortOrder] = useState('default'); // 'price-asc', 'price-desc'
+
+  const captadores = useMemo(() => {
+    const captadorSet = new Set(initialProperties.map(p => p.capturedBy));
+    return ['all', ...Array.from(captadorSet)];
+  }, []);
+
+  const filteredAndSortedProperties = useMemo(() => {
+    let filtered = [...properties];
+
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(p => p.status === statusFilter);
+    }
+
+    if (captadorFilter !== 'all') {
+      filtered = filtered.filter(p => p.capturedBy === captadorFilter);
+    }
+    
+    if (sortOrder === 'price-asc') {
+      filtered.sort((a, b) => a.price - b.price);
+    } else if (sortOrder === 'price-desc') {
+      filtered.sort((a, b) => b.price - a.price);
+    }
+
+    return filtered;
+  }, [properties, statusFilter, captadorFilter, sortOrder]);
+
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -266,9 +299,42 @@ export default function PropertiesPage() {
       <Card>
         <CardHeader>
           <CardTitle>Imóveis</CardTitle>
-          <CardDescription>
-            Uma lista de todos os imóveis em seu portfólio.
-          </CardDescription>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+             <CardDescription>
+                Uma lista de todos os imóveis em seu portfólio.
+             </CardDescription>
+              <div className="flex flex-wrap items-center gap-2">
+                 <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-full sm:w-auto min-w-[150px]">
+                        <SelectValue placeholder="Filtrar por Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">Todos os Status</SelectItem>
+                        <SelectItem value="Disponível">Disponível</SelectItem>
+                        <SelectItem value="Vendido">Vendido</SelectItem>
+                        <SelectItem value="Alugado">Alugado</SelectItem>
+                    </SelectContent>
+                </Select>
+                 <Select value={captadorFilter} onValueChange={setCaptadorFilter}>
+                    <SelectTrigger className="w-full sm:w-auto min-w-[180px]">
+                        <SelectValue placeholder="Filtrar por Captador" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {captadores.map(c => <SelectItem key={c} value={c}>{c === 'all' ? 'Todos os Captadores' : c}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+                 <Select value={sortOrder} onValueChange={setSortOrder}>
+                    <SelectTrigger className="w-full sm:w-auto min-w-[180px]">
+                        <SelectValue placeholder="Ordenar por..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="default">Padrão</SelectItem>
+                        <SelectItem value="price-asc">Preço (Crescente)</SelectItem>
+                        <SelectItem value="price-desc">Preço (Decrescente)</SelectItem>
+                    </SelectContent>
+                </Select>
+              </div>
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -288,13 +354,13 @@ export default function PropertiesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {properties.map((property) => (
+              {filteredAndSortedProperties.map((property) => (
                 <TableRow 
                   key={property.id} 
                   onClick={() => handleRowClick(property)} 
                   className={cn(
                       "cursor-pointer hover:bg-secondary",
-                      property.status !== 'Disponível' && 'opacity-50 hover:opacity-75'
+                      property.status !== 'Disponível' && 'opacity-60 hover:opacity-75'
                   )}
                 >
                   <TableCell className="hidden sm:table-cell">
@@ -302,14 +368,22 @@ export default function PropertiesPage() {
                       <Image
                         alt="Imagem do imóvel"
                         className="aspect-square rounded-md object-cover"
-                        layout="fill"
+                        height={64}
                         src={property.imageUrl}
+                        width={64}
                         data-ai-hint={property.imageHint}
                       />
                       {property.status === 'Vendido' && (
                         <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-md">
                            <div className="absolute w-full bg-red-500 text-white text-xs font-bold uppercase text-center py-0.5 transform -rotate-45">
                                 Vendido
+                           </div>
+                        </div>
+                      )}
+                       {property.status === 'Alugado' && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-md">
+                           <div className="absolute w-full bg-blue-500 text-white text-xs font-bold uppercase text-center py-0.5 transform -rotate-45">
+                                Alugado
                            </div>
                         </div>
                       )}
@@ -353,10 +427,10 @@ export default function PropertiesPage() {
                   </TableCell>
                 </TableRow>
               ))}
-               {properties.length === 0 && (
+               {filteredAndSortedProperties.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={7} className="h-24 text-center">
-                    Nenhum imóvel encontrado. Comece adicionando um.
+                    Nenhum imóvel encontrado com os filtros atuais.
                   </TableCell>
                 </TableRow>
               )}
@@ -450,7 +524,12 @@ export default function PropertiesPage() {
                 </div>
                  <div className="space-y-2">
                   <Label htmlFor="edit-capturedBy">Captado por</Label>
-                  <Input id="edit-capturedBy" name="capturedBy" defaultValue={editingProperty.capturedBy} required />
+                   <Select name="capturedBy" defaultValue={editingProperty.capturedBy} required>
+                      <SelectTrigger><SelectValue/></SelectTrigger>
+                      <SelectContent>
+                          {realtors.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                      </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2"></div>
                 <div className="md:col-span-2 space-y-2">
@@ -493,6 +572,4 @@ export default function PropertiesPage() {
   );
 }
 
-    
-
-    
+      
