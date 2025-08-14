@@ -39,4 +39,12 @@ export const initialDeals: Deal[] = [
 
 export const initialClients: Client[] = [
     { id: "client1", name: "Empresa X", source: "Website", assignedTo: "Carlos Pereira" },
+    { id: "cli1", name: 'João Comprador', source: 'Indicação', assignedTo: 'Carlos Pereira' },
+    { id: "cli2", name: 'Maria Investidora', source: 'Website', assignedTo: 'Sofia Lima' },
+    { id: "cli3", name: 'Construtora Build S.A.', source: 'Feirão', assignedTo: 'Admin' },
+    { id: "cli4", name: 'Paulo Inquilino', source: 'Portal Imobiliário', assignedTo: 'Sofia Lima' },
+    { id: "cli5", name: 'Família Verde', source: 'Indicação', assignedTo: 'Joana Doe' },
+    { id: "cli6", name: 'Investidor Anônimo', source: 'Website', assignedTo: 'Joana Doe' },
 ];
+
+    

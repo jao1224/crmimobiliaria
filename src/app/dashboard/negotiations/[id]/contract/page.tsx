@@ -15,13 +15,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import type { UserProfile } from "@/app/dashboard/layout";
-
+import { initialNegotiations, initialCommissions, initialFinancingProcesses, realtors as mockRealtors } from "@/lib/data";
+import { initialClients } from "@/lib/crm-data";
+import { initialProperties } from "@/app/dashboard/properties/page";
 
 // Tipos para os dados simulados
 type ContractFile = { content: ArrayBuffer; type: string; name: string; };
-type Negotiation = { id: string; property: string; propertyId: string; client: string; clientId: string; value: number; realtor: string; commissionRate: number; contractFile?: ContractFile | null; };
-type Property = { id: string; name: string; address: string; price: number; };
-type Client = { id: string; name: string; doc: string; address: string; };
+type Negotiation = (typeof initialNegotiations)[0] & { contractFile?: ContractFile | null };
+type Property = (typeof initialProperties)[0];
+type Client = (typeof initialClients)[0];
+
 type ContractDetails = {
     sellerName: string;
     sellerDoc: string;
@@ -37,37 +40,6 @@ type ContractDetails = {
     date: string;
 };
 
-// Dados simulados
-const mockNegotiation: Negotiation = {
-    id: "deal123",
-    property: "Apartamento Vista Mar",
-    propertyId: "prop456",
-    client: "João Comprador",
-    clientId: "client789",
-    value: 850000,
-    realtor: "Carlos Pereira",
-    commissionRate: 2.5,
-};
-
-const mockProperty: Property = {
-    id: "prop456",
-    name: "Apartamento Vista Mar",
-    address: "Avenida Beira Mar, 123, Meireles, Fortaleza",
-    price: 900000
-};
-
-const mockClient: Client = {
-    id: "client789",
-    name: "João Comprador",
-    doc: "123.456.789-00",
-    address: "Rua das Flores, 45, Aldeota, Fortaleza"
-};
-
-const mockRealtors = {
-    "Carlos Pereira": { name: "Carlos Pereira", creci: "12345-F" },
-    "Sofia Lima": { name: "Sofia Lima", creci: "67890-J" },
-}
-
 const contractEditPermissions: UserProfile[] = ['Admin', 'Imobiliária'];
 
 
@@ -80,10 +52,10 @@ export default function ContractPage() {
     const { activeProfile } = useContext(ProfileContext);
     const canEdit = contractEditPermissions.includes(activeProfile);
 
-    const [negotiation, setNegotiation] = useState<Negotiation | null>(mockNegotiation);
-    const [property, setProperty] = useState<Property | null>(mockProperty);
-    const [client, setClient] = useState<Client | null>(mockClient);
-    const [isLoading, setIsLoading] = useState(false); // Simulando, sem carregamento real
+    const [negotiation, setNegotiation] = useState<Negotiation | null>(null);
+    const [property, setProperty] = useState<Property | null>(null);
+    const [client, setClient] = useState<Client | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -104,14 +76,29 @@ export default function ContractPage() {
         date: new Date().toISOString().split('T')[0],
     });
     
-    // Preenche cláusula de comissão com base nos dados simulados
+    // Carrega os dados da negociação, imóvel e cliente com base no ID da URL
     useEffect(() => {
-        if (negotiation?.value && negotiation.commissionRate) {
-            const commissionValue = negotiation.value * (negotiation.commissionRate / 100);
-            const defaultCommissionClause = `Os honorários devidos pela intermediação desta negociação, no montante de ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(commissionValue)}, correspondentes a ${negotiation.commissionRate}% do valor da venda, são de responsabilidade do VENDEDOR(ES), a serem pagos à INTERVENIENTE ANUENTE na data da compensação do sinal.`;
+        setIsLoading(true);
+        const foundNegotiation = initialNegotiations.find(neg => neg.id === negotiationId);
+
+        if (foundNegotiation) {
+            setNegotiation(foundNegotiation);
+            const foundProperty = initialProperties.find(prop => prop.id === foundNegotiation.propertyId);
+            const foundClient = initialClients.find(cli => cli.id === foundNegotiation.clientId);
+
+            setProperty(foundProperty || null);
+            setClient(foundClient || null);
+
+            // Preenche cláusula de comissão com base nos dados reais
+            const commissionRate = foundProperty?.commission || 2.5; // fallback
+            const commissionValue = foundNegotiation.value * (commissionRate / 100);
+            const defaultCommissionClause = `Os honorários devidos pela intermediação desta negociação, no montante de ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(commissionValue)}, correspondentes a ${commissionRate}% do valor da venda, são de responsabilidade do VENDEDOR(ES), a serem pagos à INTERVENIENTE ANUENTE na data da compensação do sinal.`;
             setContractData(prev => ({...prev, commissionClause: defaultCommissionClause}));
         }
-    }, [negotiation]);
+        
+        setIsLoading(false);
+    }, [negotiationId]);
+    
     
     useEffect(() => {
         if (negotiation?.contractFile?.content) {
@@ -130,7 +117,7 @@ export default function ContractPage() {
         setContractData(prev => ({ ...prev, [id]: value }));
     };
 
-    if (isLoading) { // Embora falso, mantemos a estrutura para futura re-integração
+    if (isLoading) {
         return (
             <div className="flex flex-col gap-6">
                 <div className="flex items-center justify-between">
@@ -161,16 +148,16 @@ export default function ContractPage() {
     }
     
     if (!negotiation || !property || !client) {
-        // next/navigation notFound() is recommended for pages, but this is a component
-        // Return a message or a skeleton loader
-        return <div>Negociação não encontrada.</div>;
+        return (
+             <div className="flex flex-col items-center justify-center h-full text-center">
+                <h2 className="text-xl font-semibold">Negociação não encontrada</h2>
+                <p className="text-muted-foreground">Não foi possível carregar os dados para o ID: {negotiationId}</p>
+                <Button onClick={() => router.back()} className="mt-4">Voltar</Button>
+            </div>
+        );
     }
     
-    const realtor = (mockRealtors as any)[negotiation.realtor];
-
-    if (!realtor) {
-        return <div>Corretor não encontrado.</div>;
-    }
+    const realtor = (mockRealtors as any)[negotiation.realtor] || { name: negotiation.realtor, creci: "N/A" };
     
     const handlePrint = () => {
         window.print();
@@ -329,7 +316,7 @@ export default function ContractPage() {
                                 <div>
                                     <h3 className="font-semibold mb-2">COMPRADOR(A):</h3>
                                     <p className="border p-4 rounded-md bg-muted/50">
-                                        <strong>Nome:</strong> {client.name}, <strong>CPF/CNPJ:</strong> {client.doc || 'N/A'}, residente e domiciliado em {client.address || 'N/A'}.
+                                        <strong>Nome:</strong> {client.name}, <strong>CPF/CNPJ:</strong> {client.id || 'N/A'}, residente e domiciliado em {client.id || 'N/A'}.
                                     </p>
                                 </div>
                                 <div>
@@ -417,3 +404,5 @@ export default function ContractPage() {
         </div>
     );
 }
+
+    

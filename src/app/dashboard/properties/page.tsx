@@ -56,11 +56,11 @@ export type Property = {
 };
 
 // Dados simulados para os imóveis
-const initialProperties: Property[] = [
-    { id: "prop1", name: "Apartamento Vista Mar", address: "Av. Beira Mar, 123", status: "Disponível", price: 950000, commission: 2.5, imageUrl: "https://placehold.co/600x400.png", imageHint: "apartamento luxo", capturedBy: "Carlos Pereira", description: "Lindo apartamento com 3 quartos, 2 suítes, varanda gourmet com vista para o mar, cozinha moderna e 2 vagas de garagem. Condomínio com lazer completo.", ownerInfo: "Ana Vendedora - (85) 98877-6655", type: 'Revenda' },
-    { id: "prop2", name: "Casa com Piscina", address: "Rua das Flores, 456", status: "Vendido", price: 1200000, commission: 3.0, imageUrl: "https://placehold.co/600x400.png", imageHint: "casa piscina", capturedBy: "Sofia Lima", description: "Espaçosa casa com 4 suítes, piscina, área gourmet com churrasqueira e um grande quintal gramado. Ideal para famílias que buscam conforto e lazer.", ownerInfo: "Bruno Costa - (85) 99988-7766", type: 'Revenda' },
-    { id: "prop3", name: "Terreno Comercial", address: "Av. das Américas, 789", status: "Disponível", price: 2500000, commission: 4.0, imageUrl: "https://placehold.co/600x400.png", imageHint: "terreno comercial", capturedBy: "Carlos Pereira", description: "Terreno plano de esquina em avenida movimentada, perfeito para construção de lojas, galpões ou centros comerciais. Excelente visibilidade e acesso.", ownerInfo: "Construtora Invest S.A. - (85) 3222-1100", type: 'Terreno' },
-    { id: "prop4", name: "Loft Moderno", address: "Centro, Rua Principal", status: "Alugado", price: 450000, commission: 1.5, imageUrl: "https://placehold.co/600x400.png", imageHint: "loft moderno", capturedBy: "Joana Doe", description: "Loft no coração da cidade, com design industrial, pé-direito duplo, 1 quarto, cozinha integrada e totalmente mobiliado. Perfeito para solteiros ou casais.", ownerInfo: "Maria Investidora - (85) 98765-4321", type: 'Lançamento' },
+export const initialProperties: Property[] = [
+    { id: "prop1", name: "Apartamento Vista Mar", address: "Av. Beira Mar, 123, Fortaleza", status: "Disponível", price: 950000, commission: 2.5, imageUrl: "https://placehold.co/600x400.png", imageHint: "apartamento luxo", capturedBy: "Carlos Pereira", description: "Lindo apartamento com 3 quartos, 2 suítes, varanda gourmet com vista para o mar, cozinha moderna e 2 vagas de garagem. Condomínio com lazer completo.", ownerInfo: "Ana Vendedora - (85) 98877-6655", type: 'Revenda' },
+    { id: "prop2", name: "Casa com Piscina", address: "Rua das Flores, 456, Eusébio", status: "Vendido", price: 1200000, commission: 3.0, imageUrl: "https://placehold.co/600x400.png", imageHint: "casa piscina", capturedBy: "Sofia Lima", description: "Espaçosa casa com 4 suítes, piscina, área gourmet com churrasqueira e um grande quintal gramado. Ideal para famílias que buscam conforto e lazer.", ownerInfo: "Bruno Costa - (85) 99988-7766", type: 'Revenda' },
+    { id: "prop3", name: "Terreno Comercial", address: "Av. das Américas, 789, Fortaleza", status: "Disponível", price: 2500000, commission: 4.0, imageUrl: "https://placehold.co/600x400.png", imageHint: "terreno comercial", capturedBy: "Carlos Pereira", description: "Terreno plano de esquina em avenida movimentada, perfeito para construção de lojas, galpões ou centros comerciais. Excelente visibilidade e acesso.", ownerInfo: "Construtora Invest S.A. - (85) 3222-1100", type: 'Terreno' },
+    { id: "prop4", name: "Loft Moderno", address: "Centro, Rua Principal, 100, Fortaleza", status: "Alugado", price: 450000, commission: 1.5, imageUrl: "https://placehold.co/600x400.png", imageHint: "loft moderno", capturedBy: "Joana Doe", description: "Loft no coração da cidade, com design industrial, pé-direito duplo, 1 quarto, cozinha integrada e totalmente mobiliado. Perfeito para solteiros ou casais.", ownerInfo: "Maria Investidora - (85) 98765-4321", type: 'Lançamento' },
 ];
 
 
@@ -471,3 +471,5 @@ export default function PropertiesPage() {
     </div>
   );
 }
+
+    
