@@ -61,6 +61,8 @@ export const initialProperties: Property[] = [
     { id: "prop2", name: "Casa com Piscina", address: "Rua das Flores, 456, Eusébio", status: "Vendido", price: 1200000, commission: 3.0, imageUrl: "https://placehold.co/600x400.png", imageHint: "casa piscina", capturedBy: "Sofia Lima", description: "Espaçosa casa com 4 suítes, piscina, área gourmet com churrasqueira e um grande quintal gramado. Ideal para famílias que buscam conforto e lazer.", ownerInfo: "Bruno Costa - (85) 99988-7766", type: 'Revenda' },
     { id: "prop3", name: "Terreno Comercial", address: "Av. das Américas, 789, Fortaleza", status: "Disponível", price: 2500000, commission: 4.0, imageUrl: "https://placehold.co/600x400.png", imageHint: "terreno comercial", capturedBy: "Carlos Pereira", description: "Terreno plano de esquina em avenida movimentada, perfeito para construção de lojas, galpões ou centros comerciais. Excelente visibilidade e acesso.", ownerInfo: "Construtora Invest S.A. - (85) 3222-1100", type: 'Terreno' },
     { id: "prop4", name: "Loft Moderno", address: "Centro, Rua Principal, 100, Fortaleza", status: "Alugado", price: 450000, commission: 1.5, imageUrl: "https://placehold.co/600x400.png", imageHint: "loft moderno", capturedBy: "Joana Doe", description: "Loft no coração da cidade, com design industrial, pé-direito duplo, 1 quarto, cozinha integrada e totalmente mobiliado. Perfeito para solteiros ou casais.", ownerInfo: "Maria Investidora - (85) 98765-4321", type: 'Lançamento' },
+    { id: "prop5", name: "Sítio Ecológico", address: "Guaramiranga, CE", status: "Vendido", price: 780000, commission: 3.5, imageUrl: "https://placehold.co/600x400.png", imageHint: "sitio ecologico", capturedBy: "Sofia Lima", description: "Belo sítio em meio à natureza, com casa principal, casa de hóspedes, pomar e acesso a uma cachoeira. Ideal para quem busca paz e tranquilidade.", ownerInfo: "Família Verde - (85) 91122-3344", type: 'Casa' },
+    { id: "prop6", name: "Apartamento Centro", address: "Rua do Centro, 50, Fortaleza", status: "Vendido", price: 450000, commission: 2.0, imageUrl: "https://placehold.co/600x400.png", imageHint: "apartamento centro", capturedBy: "Joana Doe", description: "Apartamento de 2 quartos no centro da cidade, próximo a tudo. Recém-reformado, com móveis planejados na cozinha.", ownerInfo: "Investidor Anônimo - (85) 95544-3322", type: 'Apartamento' },
 ];
 
 
@@ -275,6 +277,7 @@ export default function PropertiesPage() {
                 <TableHead className="hidden w-[100px] sm:table-cell">
                   <span className="sr-only">Imagem</span>
                 </TableHead>
+                <TableHead>ID</TableHead>
                 <TableHead>Nome &amp; Endereço</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="hidden md:table-cell">Preço</TableHead>
@@ -296,6 +299,9 @@ export default function PropertiesPage() {
                       width="64"
                       data-ai-hint={property.imageHint}
                     />
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">{property.id.toUpperCase()}</Badge>
                   </TableCell>
                   <TableCell className="font-medium">
                     <div>{property.name}</div>
@@ -334,7 +340,7 @@ export default function PropertiesPage() {
               ))}
                {properties.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center">
+                  <TableCell colSpan={7} className="h-24 text-center">
                     Nenhum imóvel encontrado. Comece adicionando um.
                   </TableCell>
                 </TableRow>
@@ -471,5 +477,3 @@ export default function PropertiesPage() {
     </div>
   );
 }
-
-    
