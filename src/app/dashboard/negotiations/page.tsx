@@ -210,7 +210,7 @@ export default function NegotiationsPage() {
     
     const getContractStatusVariant = (status: Negotiation['contractStatus']): VariantProps<typeof badgeVariants>['variant'] => {
         switch (status) {
-            case 'Não Gerado': return 'secondary';
+            case 'Não Gerado': return 'destructive';
             case 'Pendente Assinaturas': return 'status-orange';
             case 'Assinado': return 'success';
             case 'Cancelado': return 'destructive';
@@ -459,3 +459,4 @@ export default function NegotiationsPage() {
     
 
     
+
