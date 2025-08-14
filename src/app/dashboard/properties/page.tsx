@@ -359,8 +359,10 @@ export default function PropertiesPage() {
                   key={property.id} 
                   onClick={() => handleRowClick(property)} 
                   className={cn(
-                      "cursor-pointer hover:bg-secondary",
-                      property.status !== 'Disponível' && 'opacity-60 hover:opacity-75'
+                      "cursor-pointer",
+                      property.status === 'Disponível' 
+                          ? 'hover:bg-secondary' 
+                          : 'opacity-60'
                   )}
                 >
                   <TableCell className="hidden sm:table-cell">
@@ -573,3 +575,5 @@ export default function PropertiesPage() {
 }
 
       
+
+    
