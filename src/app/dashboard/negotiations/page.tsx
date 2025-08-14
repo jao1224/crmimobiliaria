@@ -201,7 +201,7 @@ export default function NegotiationsPage() {
         switch (stage) {
             case 'Proposta Enviada': return 'status-blue';
             case 'Em Negociação': return 'status-orange';
-            case 'Contrato Gerado': return 'secondary';
+            case 'Contrato Gerado': return 'success';
             case 'Venda Concluída': return 'success';
             case 'Aluguel Ativo': return 'success';
             default: return 'secondary';
@@ -400,7 +400,7 @@ export default function NegotiationsPage() {
                                     <TableCell>
                                         <Badge
                                             variant={getStageVariant(neg.stage)}
-                                            className={neg.stage === 'Contrato Gerado' ? 'whitespace-nowrap bg-green-100 text-green-800' : 'whitespace-nowrap'}
+                                            className={'whitespace-nowrap'}
                                         >
                                             {neg.stage}
                                         </Badge>
