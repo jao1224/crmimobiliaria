@@ -180,7 +180,7 @@ export default function ContractPage() {
         setIsSaving(true);
         // Simula salvamento
         setTimeout(() => {
-             toast({ title: "Sucesso!", description: "Contrato salvo (simulado)."});
+             toast({ title: "Contrato Salvo!", description: "As informações do editor foram salvas com sucesso (simulado)."});
              setIsSaving(false);
         }, 1000);
     }
