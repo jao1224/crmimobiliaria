@@ -127,7 +127,7 @@ export default function PropertiesPage() {
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
       };
-      reader.readDataURL(file);
+      reader.readAsDataURL(file);
     }
   };
 
@@ -575,5 +575,7 @@ export default function PropertiesPage() {
 }
 
       
+
+    
 
     
