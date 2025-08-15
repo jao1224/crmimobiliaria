@@ -19,6 +19,7 @@ import { ProfileContext } from "@/contexts/ProfileContext";
 import type { UserProfile } from "../layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { initialCommissions, type Commission } from "@/lib/data";
+import { cn } from "@/lib/utils";
 
 // Tipos
 type PaymentCLT = {
@@ -265,7 +266,7 @@ export default function FinancePage() {
                                     <TableBody>
                                         {visibleCommissions.length > 0 ? (
                                             visibleCommissions.map(commission => (
-                                                <TableRow key={commission.id} className="hover:bg-secondary">
+                                                <TableRow key={commission.id} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
                                                     <TableCell className="font-mono text-xs text-muted-foreground">{commission.dealId.toUpperCase()}</TableCell>
                                                     <TableCell className="font-medium">{commission.deal}</TableCell>
                                                     {hasPermission && <TableCell className="text-muted-foreground text-xs">{commission.involved}</TableCell>}
@@ -366,7 +367,7 @@ export default function FinancePage() {
                                 </TableHeader>
                                 <TableBody>
                                     {payments.map(p => (
-                                        <TableRow key={p.id} className="hover:bg-secondary">
+                                        <TableRow key={p.id} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
                                             <TableCell className="font-medium">{p.employee}</TableCell>
                                             <TableCell>{p.type}</TableCell><TableCell>{formatCurrency(p.amount)}</TableCell>
                                             <TableCell>{new Date(p.paymentDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</TableCell>
@@ -443,7 +444,7 @@ export default function FinancePage() {
                                 </TableHeader>
                                 <TableBody>
                                     {expenses.map(e => (
-                                        <TableRow key={e.id} className="hover:bg-secondary">
+                                        <TableRow key={e.id} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
                                             <TableCell className="font-medium">{e.description}</TableCell>
                                             <TableCell>{e.category}</TableCell>
                                             <TableCell>{formatCurrency(e.amount)}</TableCell>
@@ -468,3 +469,4 @@ export default function FinancePage() {
     
 
     
+

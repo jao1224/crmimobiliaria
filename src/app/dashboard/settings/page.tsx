@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import type { UserProfile } from "@/app/dashboard/layout";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ProfileContext } from "@/contexts/ProfileContext";
+import { cn } from "@/lib/utils";
 
 
 type TeamMember = {
@@ -181,7 +182,7 @@ export default function SettingsPage() {
                      {hasPermission && <TabsTrigger value="permissions">Permissões</TabsTrigger>}
                 </TabsList>
                 <TabsContent value="profile" className="space-y-6">
-                    <Card>
+                    <Card className="transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
                         <CardHeader>
                             <CardTitle>Meu Perfil</CardTitle>
                             <CardDescription>Atualize suas informações pessoais e senha.</CardDescription>
@@ -208,7 +209,7 @@ export default function SettingsPage() {
                             <Button onClick={() => toast({ title: 'Simulado', description: 'A funcionalidade de salvar perfil não está conectada.' })}>Salvar Alterações</Button>
                         </CardFooter>
                     </Card>
-                    <Card>
+                    <Card className="transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
                         <CardHeader>
                             <CardTitle>Meu Plano</CardTitle>
                             <CardDescription>Visualize e gerencie seu plano de assinatura.</CardDescription>
@@ -286,7 +287,7 @@ export default function SettingsPage() {
                                 <TableBody>
                                     {teamMembers.length > 0 ? (
                                         teamMembers.map((member) => (
-                                            <TableRow key={member.id} className="hover:bg-secondary">
+                                            <TableRow key={member.id} className="transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1">
                                                 <TableCell className="font-medium">{member.name}</TableCell>
                                                 <TableCell>{member.email}</TableCell>
                                                 <TableCell><Badge variant={member.role === 'Admin' || member.role === 'Imobiliária' ? 'default' : 'secondary'}>{member.role}</Badge></TableCell>
@@ -342,7 +343,7 @@ export default function SettingsPage() {
                                 <TableBody>
                                     {teams.length > 0 ? (
                                         teams.map((team) => (
-                                            <TableRow key={team.id} className="hover:bg-secondary">
+                                            <TableRow key={team.id} className="transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1">
                                                 <TableCell className="font-medium">{team.name}</TableCell>
                                                 <TableCell>{team.memberIds.length}</TableCell>
                                                 <TableCell>
@@ -447,7 +448,7 @@ export default function SettingsPage() {
                                         <TableBody>
                                             {selectedTeam && getMembersForTeam(selectedTeam).length > 0 ? (
                                                 getMembersForTeam(selectedTeam).map(member => (
-                                                    <TableRow key={member.id} className="hover:bg-secondary">
+                                                    <TableRow key={member.id} className="transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1">
                                                         <TableCell className="font-medium">{member.name}</TableCell>
                                                         <TableCell><Badge variant="secondary">{member.role}</Badge></TableCell>
                                                         <TableCell className="text-right">

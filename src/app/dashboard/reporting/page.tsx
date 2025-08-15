@@ -234,7 +234,7 @@ export default function ReportingPage() {
                             <CardDescription>Analise os imóveis captados por corretor e tipo.</CardDescription>
                         </CardHeader>
                         <CardContent className="grid gap-6 md:grid-cols-2">
-                             <Card>
+                             <Card className="transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2"><Users className="h-5 w-5" /> Captações por Corretor</CardTitle>
                                 </CardHeader>
@@ -255,7 +255,7 @@ export default function ReportingPage() {
                                     </Table>
                                 </CardContent>
                             </Card>
-                             <Card>
+                             <Card className="transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2"><Building className="h-5 w-5" /> Captações por Tipo de Imóvel</CardTitle>
                                 </CardHeader>
@@ -289,7 +289,7 @@ export default function ReportingPage() {
                 </TabsContent>
 
                  <TabsContent value="performance">
-                     <Card className="mt-4">
+                     <Card className="mt-4 transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
                         <CardHeader>
                             <CardTitle>Relatório de Desempenho de Equipes</CardTitle>
                             <CardDescription>Compare a performance das equipes de vendas.</CardDescription>

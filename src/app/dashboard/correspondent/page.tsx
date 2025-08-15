@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { initialFinancingProcesses, initialServiceRequests, realtors, addServiceRequest, type FinancingProcess, type ServiceRequest, type ServiceRequestType, type FinancingStatus, type EngineeringStatus, type GeneralProcessStatus } from "@/lib/data";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import type { UserProfile } from "../layout";
+import { cn } from "@/lib/utils";
 
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount);
@@ -107,7 +108,7 @@ export default function CorrespondentPage() {
                                 </TableHeader>
                                 <TableBody>
                                     {processes.map(proc => (
-                                        <TableRow key={proc.id} onClick={() => handleRowClick(proc)} className="cursor-pointer hover:bg-secondary">
+                                        <TableRow key={proc.id} onClick={() => handleRowClick(proc)} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
                                             <TableCell className="font-medium">{proc.clientName}</TableCell>
                                             <TableCell>{proc.propertyName}</TableCell>
                                             <TableCell>{proc.realtorName}</TableCell>
@@ -193,7 +194,7 @@ export default function CorrespondentPage() {
                                 </TableHeader>
                                 <TableBody>
                                     {requests.map(req => (
-                                        <TableRow key={req.id}>
+                                        <TableRow key={req.id} className="transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1">
                                             <TableCell>{new Date(req.date).toLocaleDateString()}</TableCell>
                                             <TableCell className="font-medium">{
                                                 {
@@ -267,7 +268,7 @@ function ProcessDetailForm({ process, onSave, onCancel }: { process: FinancingPr
             <div className="py-4 grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Coluna 1 */}
                 <div className="space-y-4">
-                     <Card>
+                     <Card className="transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
                         <CardHeader><CardTitle className="text-base">Status do Cliente</CardTitle></CardHeader>
                         <CardContent className="space-y-4">
                             <div className="space-y-2">
@@ -293,7 +294,7 @@ function ProcessDetailForm({ process, onSave, onCancel }: { process: FinancingPr
                             </div>
                         </CardContent>
                     </Card>
-                     <Card>
+                     <Card className="transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
                         <CardHeader><CardTitle className="text-base">Consulta Bacen</CardTitle></CardHeader>
                         <CardContent>
                              <Textarea id="bacenInfo" value={formData.bacenInfo} onChange={handleInputChange} placeholder="Informações do Bacen..." disabled={!canEdit}/>
@@ -302,7 +303,7 @@ function ProcessDetailForm({ process, onSave, onCancel }: { process: FinancingPr
                 </div>
                 {/* Coluna 2 */}
                 <div className="space-y-4">
-                    <Card>
+                    <Card className="transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
                         <CardHeader><CardTitle className="text-base">Engenharia</CardTitle></CardHeader>
                         <CardContent className="space-y-4">
                             <div className="space-y-2">
@@ -333,7 +334,7 @@ function ProcessDetailForm({ process, onSave, onCancel }: { process: FinancingPr
                             </div>
                         </CardContent>
                     </Card>
-                     <Card>
+                     <Card className="transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
                         <CardHeader><CardTitle className="text-base">Etapas do Processo</CardTitle></CardHeader>
                         <CardContent className="space-y-2">
                            <div className="flex items-center space-x-2"><Checkbox checked={formData.stages.formSignature} onCheckedChange={(c) => handleNestedInputChange('stages', 'formSignature', c as boolean)} id="formSignature" disabled={!canEdit}/><Label htmlFor="formSignature">Assinatura de Formulários</Label></div>
@@ -347,7 +348,7 @@ function ProcessDetailForm({ process, onSave, onCancel }: { process: FinancingPr
                 </div>
                  {/* Coluna 3 */}
                 <div className="space-y-4">
-                    <Card>
+                    <Card className="transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
                         <CardHeader><CardTitle className="text-base">Documentação</CardTitle></CardHeader>
                         <CardContent className="space-y-2">
                              <div className="flex items-center space-x-2"><Checkbox id="doc-mat" checked={formData.docs.propertyRegistration.updated} onCheckedChange={c => handleCheckboxChange('docs', 'propertyRegistration', c as boolean)} disabled={!canEdit}/><Label htmlFor="doc-mat">Matrícula Atualizada</Label></div>
@@ -357,7 +358,7 @@ function ProcessDetailForm({ process, onSave, onCancel }: { process: FinancingPr
                              <div className="flex items-center space-x-2"><Checkbox id="doc-laudo" checked={formData.docs.engineeringReport.updated} onCheckedChange={c => handleCheckboxChange('docs', 'engineeringReport', c as boolean)} disabled={!canEdit}/><Label htmlFor="doc-laudo">Laudo de Engenharia</Label></div>
                         </CardContent>
                     </Card>
-                    <Card>
+                    <Card className="transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
                         <CardHeader><CardTitle className="text-base">Status Geral do Processo</CardTitle></CardHeader>
                         <CardContent>
                             <Select value={formData.generalStatus} onValueChange={v => handleSelectChange('generalStatus', v)} disabled={!canEdit}>

@@ -224,7 +224,7 @@ export default function AgendaPage() {
                             <div className="space-y-4">
                                 {selectedDayEvents.length > 0 ? (
                                     selectedDayEvents.map(event => (
-                                        <div key={event.id} className="p-3 rounded-lg border bg-card shadow-sm">
+                                        <div key={event.id} className="p-3 rounded-lg border bg-card shadow-sm transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
                                             <div className="flex items-center justify-between mb-1">
                                                 <h3 className="font-semibold">{event.title}</h3>
                                                 <Badge style={{ backgroundColor: getEventTypeLabel(event.type).className }} className="text-white">{getEventTypeLabel(event.type).label}</Badge>

@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { initialLeads, initialDeals, initialClients, type Lead, type Deal, type Client } from "@/lib/crm-data";
+import { cn } from "@/lib/utils";
 
 export default function CrmPage() {
     const [leads, setLeads] = useState<Lead[]>(initialLeads);
@@ -173,7 +174,7 @@ export default function CrmPage() {
                                 <TableBody>
                                     {leads.length > 0 ? (
                                         leads.map(lead => (
-                                            <TableRow key={lead.id} className="hover:bg-secondary">
+                                            <TableRow key={lead.id} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
                                                 <TableCell className="font-medium">{lead.name}</TableCell>
                                                 <TableCell>{lead.source}</TableCell>
                                                 <TableCell><Badge variant="secondary">{lead.status}</Badge></TableCell>
@@ -222,7 +223,7 @@ export default function CrmPage() {
                                 <TableBody>
                                     {deals.length > 0 ? (
                                         deals.map(deal => (
-                                            <TableRow key={deal.id} className="hover:bg-secondary">
+                                            <TableRow key={deal.id} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
                                                 <TableCell className="font-medium">{deal.property}</TableCell>
                                                 <TableCell>{deal.client}</TableCell>
                                                 <TableCell><Badge variant="outline">{deal.stage}</Badge></TableCell>
@@ -259,7 +260,7 @@ export default function CrmPage() {
                                 <TableBody>
                                     {clients.length > 0 ? (
                                         clients.map(client => (
-                                            <TableRow key={client.id} className="hover:bg-secondary">
+                                            <TableRow key={client.id} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
                                                 <TableCell className="font-medium">{client.name}</TableCell>
                                                 <TableCell>{client.source}</TableCell>
                                                 <TableCell>{client.assignedTo}</TableCell>

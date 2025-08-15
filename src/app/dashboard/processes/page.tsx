@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 const getStatusVariant = (status: ProcessStatus) => {
     switch (status) {
@@ -117,7 +118,7 @@ export default function ProcessesPage() {
                         </TableHeader>
                         <TableBody>
                             {processes.map(process => (
-                                <TableRow key={process.id} className="hover:bg-secondary">
+                                <TableRow key={process.id} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
                                     <TableCell><Badge variant={getStatusVariant(process.status)}>{process.status}</Badge></TableCell>
                                     <TableCell className="font-mono text-xs">{process.id.toUpperCase()}</TableCell>
                                     <TableCell className="whitespace-nowrap">
