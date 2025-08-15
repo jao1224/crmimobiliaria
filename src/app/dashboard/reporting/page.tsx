@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 // Importar os dados e o tipo de Imóvel
 import { type Property } from "../properties/page";
+import { cn } from "@/lib/utils";
 
 // --- DADOS DINÂMICOS ---
 
@@ -234,7 +235,7 @@ export default function ReportingPage() {
                             <CardDescription>Analise os imóveis captados por corretor e tipo.</CardDescription>
                         </CardHeader>
                         <CardContent className="grid gap-6 md:grid-cols-2">
-                             <Card>
+                             <Card className="transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2"><Users className="h-5 w-5" /> Captações por Corretor</CardTitle>
                                 </CardHeader>
@@ -244,7 +245,7 @@ export default function ReportingPage() {
                                         <TableBody>
                                             {realtorCaptures.length > 0 ? (
                                                 realtorCaptures.map(item => (
-                                                    <TableRow key={item.name}><TableCell>{item.name}</TableCell><TableCell className="text-right font-bold">{item.captures}</TableCell></TableRow>
+                                                    <TableRow key={item.name} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}><TableCell>{item.name}</TableCell><TableCell className="text-right font-bold">{item.captures}</TableCell></TableRow>
                                                 ))
                                             ) : (
                                                  <TableRow>
@@ -255,7 +256,7 @@ export default function ReportingPage() {
                                     </Table>
                                 </CardContent>
                             </Card>
-                             <Card>
+                             <Card className="transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2"><Building className="h-5 w-5" /> Captações por Tipo de Imóvel</CardTitle>
                                 </CardHeader>
@@ -270,7 +271,7 @@ export default function ReportingPage() {
                                         <TableBody>
                                             {propertyTypeCaptures.length > 0 ? (
                                                 propertyTypeCaptures.map(item => (
-                                                    <TableRow key={item.type}>
+                                                    <TableRow key={item.type} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
                                                         <TableCell>{item.type}</TableCell>
                                                         <TableCell className="text-right font-bold">{item.captures}</TableCell>
                                                     </TableRow>
@@ -306,7 +307,7 @@ export default function ReportingPage() {
                                 </TableHeader>
                                 <TableBody>
                                     {teamPerformanceData.map(team => (
-                                        <TableRow key={team.name}>
+                                        <TableRow key={team.name} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
                                             <TableCell className="font-medium">{team.name}</TableCell>
                                             <TableCell>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(team.revenue)}</TableCell>
                                             <TableCell>{team.deals}</TableCell>
