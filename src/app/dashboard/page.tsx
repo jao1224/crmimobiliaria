@@ -98,31 +98,33 @@ export default function DashboardPage() {
         <h1 className="text-2xl font-bold">{`${greeting} ${title}`}</h1>
         <p className="text-muted-foreground">{subtitle}</p>
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {overviewCards.map((item, index) => (
-          <Card key={index} className="transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium leading-tight">{item.title}</CardTitle>
-              <item.icon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              {item.loading ? (
-                <>
-                  <Skeleton className="h-8 w-3/4 mb-2" />
-                  <Skeleton className="h-3 w-1/2" />
-                </>
-              ) : (
-                <>
-                  <div className="text-2xl font-bold">{item.value}</div>
-                  <p className="text-xs text-muted-foreground">{item.change}</p>
-                </>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
-         <Card className="col-span-1 lg:col-span-7">
+        <div className="lg:col-span-3">
+            <div className="grid gap-4 md:grid-cols-2">
+                {overviewCards.map((item, index) => (
+                <Card key={index} className="transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium leading-tight">{item.title}</CardTitle>
+                    <item.icon className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                    {item.loading ? (
+                        <>
+                        <Skeleton className="h-8 w-3/4 mb-2" />
+                        <Skeleton className="h-3 w-1/2" />
+                        </>
+                    ) : (
+                        <>
+                        <div className="text-2xl font-bold">{item.value}</div>
+                        <p className="text-xs text-muted-foreground">{item.change}</p>
+                        </>
+                    )}
+                    </CardContent>
+                </Card>
+                ))}
+            </div>
+        </div>
+        <Card className="lg:col-span-4">
           <CardHeader>
             <CardTitle>Visão Geral de Vendas</CardTitle>
             <CardDescription>Desempenho de vendas mensais com base nos contratos gerados.</CardDescription>
