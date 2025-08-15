@@ -168,7 +168,7 @@ export default function ReportingPage() {
                                     <CardTitle>Desempenho de Vendas</CardTitle>
                                     <CardDescription>Visualize dados de vendas com filtros personalizados.</CardDescription>
                                 </div>
-                                <div className="flex flex-wrap items-end gap-2">
+                                <div className="flex flex-nowrap items-end gap-2 overflow-x-auto pb-2">
                                      <Select value={realtorFilter} onValueChange={setRealtorFilter}>
                                         <SelectTrigger className="w-full sm:w-auto min-w-[180px]">
                                             <SelectValue placeholder="Filtrar por Corretor" />
@@ -206,11 +206,11 @@ export default function ReportingPage() {
                                             <SelectItem value="venda">Venda</SelectItem>
                                         </SelectContent>
                                     </Select>
-                                    <div className="grid w-full sm:w-auto gap-1.5">
+                                    <div className="grid w-full sm:w-auto gap-1.5 min-w-[150px]">
                                         <Label htmlFor="start-date">Data de Início</Label>
                                         <Input type="date" id="start-date" value={startDate} onChange={e => setStartDate(e.target.value)} />
                                     </div>
-                                    <div className="grid w-full sm:w-auto gap-1.5">
+                                    <div className="grid w-full sm:w-auto gap-1.5 min-w-[150px]">
                                         <Label htmlFor="end-date">Data de Fim</Label>
                                         <Input type="date" id="end-date" value={endDate} onChange={e => setEndDate(e.target.value)} />
                                     </div>
