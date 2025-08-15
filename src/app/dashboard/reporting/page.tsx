@@ -2,18 +2,17 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { SalesReport } from "@/components/dashboard/sales-report";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Download, Building, Target, Users, Calendar, Handshake, ArrowDown } from "lucide-react";
+import { Download, Building, Users } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { initialNegotiations, realtors, teams, propertyTypes, type Negotiation } from "@/lib/data";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 // Importar os dados e o tipo de Imóvel
 import { initialProperties, type Property } from "../properties/page";
 import { cn } from "@/lib/utils";
@@ -88,6 +87,7 @@ const processTeamPerformanceData = (negotiations: Negotiation[], teamsData: type
 
 
 export default function ReportingPage() {
+    const router = useRouter();
     const [negotiations] = useState<Negotiation[]>(initialNegotiations);
     const [properties] = useState<Property[]>(initialProperties);
 
@@ -99,20 +99,9 @@ export default function ReportingPage() {
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     
-    // Estados para o modal de detalhes do corretor
-    const [isRealtorDetailModalOpen, setRealtorDetailModalOpen] = useState(false);
-    const [selectedRealtorData, setSelectedRealtorData] = useState<{ name: string; properties: Property[]; negotiations: Negotiation[] } | null>(null);
-
     const handleRealtorClick = (realtorName: string) => {
-        const capturedProperties = properties.filter(p => p.capturedBy === realtorName);
-        const relatedNegotiations = negotiations.filter(n => (n.realtor === realtorName || n.salesperson === realtorName) && n.stage === 'Venda Concluída');
-        
-        setSelectedRealtorData({
-            name: realtorName,
-            properties: capturedProperties,
-            negotiations: relatedNegotiations
-        });
-        setRealtorDetailModalOpen(true);
+        const urlFriendlyName = realtorName.toLowerCase().replace(/\s+/g, '-');
+        router.push(`/dashboard/reporting/${urlFriendlyName}`);
     };
 
     const filteredNegotiations = useMemo(() => {
@@ -259,7 +248,7 @@ export default function ReportingPage() {
                                                     <TableRow 
                                                         key={item.name} 
                                                         onClick={() => handleRealtorClick(item.name)}
-                                                        className="transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1">
+                                                        className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
                                                             <TableCell className="font-medium">{item.name}</TableCell>
                                                             <TableCell className="text-right font-bold">{item.captures}</TableCell>
                                                     </TableRow>
@@ -288,7 +277,7 @@ export default function ReportingPage() {
                                         <TableBody>
                                             {propertyTypeCaptures.length > 0 ? (
                                                 propertyTypeCaptures.map(item => (
-                                                    <TableRow key={item.type} className="transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1">
+                                                    <TableRow key={item.type} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
                                                         <TableCell>{item.type}</TableCell>
                                                         <TableCell className="text-right font-bold">{item.captures}</TableCell>
                                                     </TableRow>
@@ -328,7 +317,7 @@ export default function ReportingPage() {
                                             <TableCell className="font-medium">{team.name}</TableCell>
                                             <TableCell>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(team.revenue)}</TableCell>
                                             <TableCell>{team.deals}</TableCell>
-                                            <TableCell><Badge variant="success">{team.conversionRate}</Badge></TableCell>
+                                            <TableCell>{team.conversionRate}</TableCell>
                                         </TableRow>
                                     ))}
                                     {teamPerformanceData.length === 0 && (
@@ -342,82 +331,6 @@ export default function ReportingPage() {
                     </Card>
                 </TabsContent>
             </Tabs>
-            
-            <Dialog open={isRealtorDetailModalOpen} onOpenChange={setRealtorDetailModalOpen}>
-                <DialogContent className="sm:max-w-xl">
-                    <DialogHeader>
-                        <DialogTitle>Fluxograma de Atividades: {selectedRealtorData?.name}</DialogTitle>
-                        <DialogDescription>
-                            Linha do tempo das principais atividades do corretor.
-                        </DialogDescription>
-                    </DialogHeader>
-                    {selectedRealtorData && (
-                        <div className="py-4 max-h-[60vh] overflow-y-auto pr-4">
-                           <div className="relative pl-6 space-y-4">
-                                {/* Linha do tempo vertical */}
-                                <div className="absolute left-9 top-2 h-full w-0.5 bg-border -translate-x-1/2"></div>
-                                
-                                {selectedRealtorData.properties.length === 0 && selectedRealtorData.negotiations.length === 0 && (
-                                    <div className="text-center text-muted-foreground py-10">Nenhuma atividade registrada para este corretor.</div>
-                                )}
-                               
-                                {selectedRealtorData.properties.map((prop, index) => (
-                                    <div key={`prop-${prop.id}`} className="relative pl-6">
-                                        <div className="absolute -left-3 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                                            <Target className="h-4 w-4" />
-                                        </div>
-                                        <Card>
-                                            <CardHeader className="p-4">
-                                                <CardTitle className="text-base">Captação</CardTitle>
-                                                <CardDescription>
-                                                    Imóvel: <strong>{prop.name}</strong>
-                                                </CardDescription>
-                                            </CardHeader>
-                                            <CardContent className="p-4 pt-0 text-sm text-muted-foreground">
-                                                <p>Valor: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(prop.price)}</p>
-                                                <p>Status: <Badge variant={prop.status === 'Disponível' ? 'success' : 'secondary'}>{prop.status}</Badge></p>
-                                            </CardContent>
-                                        </Card>
-                                         {(index < selectedRealtorData.properties.length - 1 || selectedRealtorData.negotiations.length > 0) && (
-                                            <div className="my-4 flex justify-center">
-                                                <ArrowDown className="h-5 w-5 text-muted-foreground" />
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
-
-                                {selectedRealtorData.negotiations.map((neg, index) => (
-                                     <div key={`neg-${neg.id}`} className="relative pl-6">
-                                        <div className="absolute -left-3 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-success text-success-foreground">
-                                            <Handshake className="h-4 w-4" />
-                                        </div>
-                                        <Card>
-                                            <CardHeader className="p-4">
-                                                <CardTitle className="text-base">Venda Concluída</CardTitle>
-                                                <CardDescription>
-                                                   Imóvel: <strong>{neg.property}</strong> para <strong>{neg.client}</strong>
-                                                </CardDescription>
-                                            </CardHeader>
-                                            <CardContent className="p-4 pt-0 text-sm text-muted-foreground">
-                                                <p>Valor: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(neg.value)}</p>
-                                                <p>Data: {neg.completionDate ? new Date(neg.completionDate).toLocaleDateString('pt-BR') : 'N/A'}</p>
-                                            </CardContent>
-                                        </Card>
-                                        {index < selectedRealtorData.negotiations.length - 1 && (
-                                            <div className="my-4 flex justify-center">
-                                                <ArrowDown className="h-5 w-5 text-muted-foreground" />
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
-                           </div>
-                        </div>
-                    )}
-                </DialogContent>
-            </Dialog>
-
         </div>
     )
 }
-
-    
