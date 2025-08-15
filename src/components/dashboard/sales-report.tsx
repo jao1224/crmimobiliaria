@@ -28,7 +28,7 @@ const formatCurrency = (value: number) => {
 export function SalesReport({ data }: { data: SalesData[] }) {
     return (
         <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
-            <ResponsiveContainer width="100%" height={350}>
+            <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={data} margin={{ top: 20, right: 20, left: 20, bottom: 5 }}>
                     <CartesianGrid vertical={false} />
                     <XAxis
