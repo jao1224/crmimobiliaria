@@ -206,13 +206,15 @@ export default function ReportingPage() {
                                             <SelectItem value="venda">Venda</SelectItem>
                                         </SelectContent>
                                     </Select>
-                                    <div className="grid w-full sm:w-auto gap-1.5">
-                                        <Label htmlFor="start-date">Data de Início</Label>
-                                        <Input type="date" id="start-date" value={startDate} onChange={e => setStartDate(e.target.value)} />
-                                    </div>
-                                     <div className="grid w-full sm:w-auto gap-1.5">
-                                        <Label htmlFor="end-date">Data de Fim</Label>
-                                        <Input type="date" id="end-date" value={endDate} onChange={e => setEndDate(e.target.value)} />
+                                    <div className="flex flex-wrap items-end gap-2">
+                                        <div className="grid w-full sm:w-auto gap-1.5">
+                                            <Label htmlFor="start-date">Data de Início</Label>
+                                            <Input type="date" id="start-date" value={startDate} onChange={e => setStartDate(e.target.value)} />
+                                        </div>
+                                        <div className="grid w-full sm:w-auto gap-1.5">
+                                            <Label htmlFor="end-date">Data de Fim</Label>
+                                            <Input type="date" id="end-date" value={endDate} onChange={e => setEndDate(e.target.value)} />
+                                        </div>
                                     </div>
                                 </div>
                             </div>
