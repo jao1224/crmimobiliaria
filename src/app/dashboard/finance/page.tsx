@@ -232,15 +232,15 @@ export default function FinancePage() {
                         </div>
 
                         <div className="grid gap-4 md:grid-cols-3">
-                            <Card>
+                            <Card className="transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
                                 <CardHeader><CardTitle>Comissão Total</CardTitle></CardHeader>
                                 <CardContent><p className="text-2xl font-bold">{formatCurrency(totalCommission)}</p></CardContent>
                             </Card>
-                            <Card>
+                            <Card className="transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
                                 <CardHeader><CardTitle>Total Pago</CardTitle></CardHeader>
                                 <CardContent><p className="text-2xl font-bold">{formatCurrency(paidCommission)}</p></CardContent>
                             </Card>
-                            <Card>
+                            <Card className="transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
                                 <CardHeader><CardTitle>Pendente & Vencido</CardTitle></CardHeader>
                                 <CardContent><p className="text-2xl font-bold">{formatCurrency(pendingCommission)}</p></CardContent>
                             </Card>
