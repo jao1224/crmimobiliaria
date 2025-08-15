@@ -13,8 +13,9 @@ import { initialNegotiations, realtors, teams, propertyTypes, type Negotiation }
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 // Importar os dados e o tipo de Imóvel
-import { type Property } from "../properties/page";
+import { initialProperties, type Property } from "../properties/page";
 import { cn } from "@/lib/utils";
 
 // --- DADOS DINÂMICOS ---
@@ -88,13 +89,7 @@ const processTeamPerformanceData = (negotiations: Negotiation[], teamsData: type
 
 export default function ReportingPage() {
     const [negotiations] = useState<Negotiation[]>(initialNegotiations);
-    
-    const [properties, setProperties] = useState<Property[]>([
-        { id: "prop1", name: "Apartamento Vista Mar", address: "Av. Beira Mar, 123", status: "Disponível", price: 950000, commission: 2.5, imageUrl: "https://placehold.co/600x400.png", imageHint: "apartamento luxo", capturedBy: "Carlos Pereira", type: 'Revenda' },
-        { id: "prop2", name: "Casa com Piscina", address: "Rua das Flores, 456", status: "Vendido", price: 1200000, commission: 3.0, imageUrl: "https://placehold.co/600x400.png", imageHint: "casa piscina", capturedBy: "Sofia Lima", type: 'Revenda' },
-        { id: "prop3", name: "Terreno Comercial", address: "Av. das Américas, 789", status: "Disponível", price: 2500000, commission: 4.0, imageUrl: "https://placehold.co/600x400.png", imageHint: "terreno comercial", capturedBy: "Carlos Pereira", type: 'Terreno' },
-        { id: "prop4", name: "Loft Moderno", address: "Centro, Rua Principal", status: "Alugado", price: 450000, commission: 1.5, imageUrl: "https://placehold.co/600x400.png", imageHint: "loft moderno", capturedBy: "Joana Doe", type: 'Lançamento' },
-    ]);
+    const [properties] = useState<Property[]>(initialProperties);
 
     // Estados dos filtros
     const [realtorFilter, setRealtorFilter] = useState('all');
@@ -103,6 +98,22 @@ export default function ReportingPage() {
     const [operationTypeFilter, setOperationTypeFilter] = useState('all');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
+    
+    // Estados para o modal de detalhes do corretor
+    const [isRealtorDetailModalOpen, setRealtorDetailModalOpen] = useState(false);
+    const [selectedRealtorData, setSelectedRealtorData] = useState<{ name: string; properties: Property[]; negotiations: Negotiation[] } | null>(null);
+
+    const handleRealtorClick = (realtorName: string) => {
+        const capturedProperties = properties.filter(p => p.capturedBy === realtorName);
+        const relatedNegotiations = negotiations.filter(n => n.realtor === realtorName || n.salesperson === realtorName);
+        
+        setSelectedRealtorData({
+            name: realtorName,
+            properties: capturedProperties,
+            negotiations: relatedNegotiations
+        });
+        setRealtorDetailModalOpen(true);
+    };
 
     const filteredNegotiations = useMemo(() => {
         return negotiations.filter(neg => {
@@ -245,7 +256,13 @@ export default function ReportingPage() {
                                         <TableBody>
                                             {realtorCaptures.length > 0 ? (
                                                 realtorCaptures.map(item => (
-                                                    <TableRow key={item.name} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}><TableCell>{item.name}</TableCell><TableCell className="text-right font-bold">{item.captures}</TableCell></TableRow>
+                                                    <TableRow 
+                                                        key={item.name} 
+                                                        onClick={() => handleRealtorClick(item.name)}
+                                                        className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
+                                                            <TableCell>{item.name}</TableCell>
+                                                            <TableCell className="text-right font-bold">{item.captures}</TableCell>
+                                                    </TableRow>
                                                 ))
                                             ) : (
                                                  <TableRow>
@@ -325,6 +342,71 @@ export default function ReportingPage() {
                     </Card>
                 </TabsContent>
             </Tabs>
+            
+            <Dialog open={isRealtorDetailModalOpen} onOpenChange={setRealtorDetailModalOpen}>
+                <DialogContent className="sm:max-w-3xl">
+                    <DialogHeader>
+                        <DialogTitle>Detalhes de {selectedRealtorData?.name}</DialogTitle>
+                        <DialogDescription>
+                            Resumo de imóveis captados e negociações relacionadas a este corretor.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {selectedRealtorData && (
+                        <div className="grid md:grid-cols-2 gap-6 py-4 max-h-[60vh] overflow-y-auto">
+                            <div className="space-y-4">
+                                <h3 className="font-semibold text-lg">Imóveis Captados</h3>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Imóvel</TableHead>
+                                            <TableHead className="text-right">Preço</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {selectedRealtorData.properties.length > 0 ? (
+                                            selectedRealtorData.properties.map(prop => (
+                                                <TableRow key={prop.id}>
+                                                    <TableCell>{prop.name}</TableCell>
+                                                    <TableCell className="text-right">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(prop.price)}</TableCell>
+                                                </TableRow>
+                                            ))
+                                        ) : (
+                                            <TableRow>
+                                                <TableCell colSpan={2} className="h-24 text-center">Nenhum imóvel captado.</TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                            <div className="space-y-4">
+                                <h3 className="font-semibold text-lg">Negócios Envolvidos</h3>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Cliente</TableHead>
+                                            <TableHead>Imóvel</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {selectedRealtorData.negotiations.length > 0 ? (
+                                            selectedRealtorData.negotiations.map(neg => (
+                                                <TableRow key={neg.id}>
+                                                    <TableCell>{neg.client}</TableCell>
+                                                    <TableCell>{neg.property}</TableCell>
+                                                </TableRow>
+                                            ))
+                                        ) : (
+                                             <TableRow>
+                                                <TableCell colSpan={2} className="h-24 text-center">Nenhuma negociação encontrada.</TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
 
         </div>
     )
