@@ -20,6 +20,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { initialNegotiations, realtors, type Negotiation, addFinancingProcess, completeSaleAndGenerateCommission } from "@/lib/data";
 import { initialProperties, type Property } from "@/app/dashboard/properties/page";
 import { initialClients, type Client } from "@/lib/crm-data";
+import { cn } from "@/lib/utils";
 
 export default function NegotiationsPage() {
     const router = useRouter();
@@ -384,14 +385,14 @@ export default function NegotiationsPage() {
                             {filteredNegotiations.length > 0 ? (
                                 filteredNegotiations.map((neg) => (
                                 <TableRow
-                                    key={neg.id} 
-                                    className="hover:bg-secondary"
+                                    key={neg.id}
+                                    onClick={() => router.push(`/dashboard/negotiations/${neg.id}/contract`)}
+                                    className={cn(
+                                        "transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1"
+                                    )}
                                 >
                                     <TableCell className="font-mono text-xs text-muted-foreground">{neg.id.toUpperCase()}</TableCell>
-                                    <TableCell 
-                                        className="font-medium cursor-pointer"
-                                        onClick={() => router.push(`/dashboard/negotiations/${neg.id}/contract`)}
-                                    >
+                                    <TableCell className="font-medium">
                                         {neg.property}
                                     </TableCell>
                                     <TableCell>{neg.client}</TableCell>
@@ -413,7 +414,12 @@ export default function NegotiationsPage() {
                                     <TableCell>
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
-                                                <Button aria-haspopup="true" size="icon" variant="ghost">
+                                                <Button
+                                                    aria-haspopup="true"
+                                                    size="icon"
+                                                    variant="ghost"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
                                                     <MoreHorizontal className="h-4 w-4" />
                                                     <span className="sr-only">Alternar menu</span>
                                                 </Button>
@@ -455,8 +461,3 @@ export default function NegotiationsPage() {
         </div>
     );
 }
-
-    
-
-    
-
