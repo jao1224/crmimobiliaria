@@ -127,7 +127,7 @@ export default function PropertiesPage() {
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
       };
-      reader.readAsDataURL(file);
+      reader.readDataURL(file);
     }
   };
 
@@ -359,9 +359,9 @@ export default function PropertiesPage() {
                   key={property.id} 
                   onClick={() => handleRowClick(property)} 
                   className={cn(
-                      "cursor-pointer",
+                      "transition-all duration-200",
                       property.status === 'Disponível' 
-                          ? 'hover:bg-secondary' 
+                          ? 'cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1' 
                           : 'opacity-60'
                   )}
                 >
