@@ -206,15 +206,13 @@ export default function ReportingPage() {
                                             <SelectItem value="venda">Venda</SelectItem>
                                         </SelectContent>
                                     </Select>
-                                    <div className="flex flex-wrap items-end gap-2">
-                                        <div className="grid w-full sm:w-auto gap-1.5">
-                                            <Label htmlFor="start-date">Data de Início</Label>
-                                            <Input type="date" id="start-date" value={startDate} onChange={e => setStartDate(e.target.value)} />
-                                        </div>
-                                        <div className="grid w-full sm:w-auto gap-1.5">
-                                            <Label htmlFor="end-date">Data de Fim</Label>
-                                            <Input type="date" id="end-date" value={endDate} onChange={e => setEndDate(e.target.value)} />
-                                        </div>
+                                    <div className="grid w-full sm:w-auto gap-1.5">
+                                        <Label htmlFor="start-date">Data de Início</Label>
+                                        <Input type="date" id="start-date" value={startDate} onChange={e => setStartDate(e.target.value)} />
+                                    </div>
+                                    <div className="grid w-full sm:w-auto gap-1.5">
+                                        <Label htmlFor="end-date">Data de Fim</Label>
+                                        <Input type="date" id="end-date" value={endDate} onChange={e => setEndDate(e.target.value)} />
                                     </div>
                                 </div>
                             </div>
@@ -236,7 +234,7 @@ export default function ReportingPage() {
                             <CardDescription>Analise os imóveis captados por corretor e tipo.</CardDescription>
                         </CardHeader>
                         <CardContent className="grid gap-6 md:grid-cols-2">
-                             <Card className="transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
+                             <Card>
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2"><Users className="h-5 w-5" /> Captações por Corretor</CardTitle>
                                 </CardHeader>
@@ -257,7 +255,7 @@ export default function ReportingPage() {
                                     </Table>
                                 </CardContent>
                             </Card>
-                             <Card className="transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
+                             <Card>
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2"><Building className="h-5 w-5" /> Captações por Tipo de Imóvel</CardTitle>
                                 </CardHeader>
@@ -291,7 +289,7 @@ export default function ReportingPage() {
                 </TabsContent>
 
                  <TabsContent value="performance">
-                     <Card className="mt-4 transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
+                     <Card className="mt-4">
                         <CardHeader>
                             <CardTitle>Relatório de Desempenho de Equipes</CardTitle>
                             <CardDescription>Compare a performance das equipes de vendas.</CardDescription>
