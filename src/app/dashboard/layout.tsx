@@ -100,7 +100,7 @@ export default function DashboardLayout({
         <Sidebar variant="inset" collapsible="icon">
           <SidebarHeader>
             <div className="flex items-center gap-2">
-               <Image src="/logo.png" alt="Ideal Imóveis Logo" width={36} height={36} className="shrink-0 rounded-full" />
+               <Image src="/logo.png" alt="Ideal Imóveis Logo" width={36} height={36} className="shrink-0" />
               <span className="text-lg font-semibold">Ideal Imóveis</span>
             </div>
           </SidebarHeader>
