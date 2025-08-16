@@ -1,8 +1,8 @@
-# Documentação Completa do Projeto: LeadFlow
+# Documentação Completa do Projeto: Ideal Imóveis
 
 ## 1. Introdução
 
-Este documento fornece uma visão técnica detalhada do projeto **LeadFlow**, uma plataforma de gestão imobiliária desenvolvida no Firebase Studio. O sistema foi projetado para ser uma ferramenta completa, abrangendo desde o cadastro de imóveis e clientes até a gestão financeira e de processos complexos.
+Este documento fornece uma visão técnica detalhada do projeto **Ideal Imóveis**, uma plataforma de gestão imobiliária desenvolvida no Firebase Studio. O sistema foi projetado para ser uma ferramenta completa, abrangendo desde o cadastro de imóveis e clientes até a gestão financeira e de processos complexos.
 
 A versão atual opera em um **modo simulado**, onde todas as funcionalidades são interativas, mas os dados são pré-carregados e não persistem em um banco de dados real. Isso permite a validação completa dos fluxos de interface e da lógica de negócio antes da integração com o back-end (Firebase).
 

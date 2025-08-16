@@ -3,7 +3,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 
 export const metadata: Metadata = {
-  title: 'LeadFlow',
+  title: 'Ideal Imóveis',
   description: 'A ferramenta definitiva para gestão imobiliária.',
 };
 

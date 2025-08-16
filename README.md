@@ -1,6 +1,6 @@
-# LeadFlow - Painel Imobiliário
+# Ideal Imóveis - Painel Imobiliário
 
-Este é o repositório do seu projeto LeadFlow, desenvolvido no Firebase Studio.
+Este é o repositório do seu projeto Ideal Imóveis, desenvolvido no Firebase Studio.
 
 ---
 

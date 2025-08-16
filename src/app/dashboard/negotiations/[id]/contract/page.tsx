@@ -322,7 +322,7 @@ export default function ContractPage() {
                                 <div>
                                     <h3 className="font-semibold mb-2">INTERVENIENTE ANUENTE (IMOBILIÁRIA):</h3>
                                     <p className="border p-4 rounded-md bg-muted/50">
-                                        <strong>Razão Social:</strong> LeadFlow Imobiliária Ltda., <strong>CNPJ:</strong> 00.123.456/0001-00, com sede em [Endereço da Imobiliária], representada por seu corretor responsável.<br/>
+                                        <strong>Razão Social:</strong> Ideal Imóveis Ltda., <strong>CNPJ:</strong> 00.123.456/0001-00, com sede em [Endereço da Imobiliária], representada por seu corretor responsável.<br/>
                                         <strong>Corretor Responsável:</strong> {realtor.name}, <strong>CRECI:</strong> {realtor.creci}.
                                     </p>
                                 </div>

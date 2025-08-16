@@ -101,7 +101,7 @@ export default function DashboardLayout({
           <SidebarHeader>
             <div className="flex items-center gap-2">
               <Logo className="size-7 shrink-0 text-primary" />
-              <span className="text-lg font-semibold">LeadFlow</span>
+              <span className="text-lg font-semibold">Ideal Imóveis</span>
             </div>
           </SidebarHeader>
           <SidebarContent>
