@@ -1,11 +1,11 @@
 import { LoginForm } from "@/components/auth/login-form";
-import { Logo } from "@/components/icons/logo";
+import Image from "next/image";
 
 export default function LoginPage() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-background p-8">
       <div className="flex w-full max-w-md flex-col items-center space-y-6">
-        <Logo className="h-12 w-12 text-primary" />
+        <Image src="/logo.png" alt="Ideal Imóveis Logo" width={80} height={80} className="rounded-full" />
         <div className="text-center">
           <h1 className="text-2xl font-bold tracking-tight text-foreground">
             Bem-vindo de volta ao Ideal Imóveis

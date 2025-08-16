@@ -4,6 +4,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import Image from "next/image";
 import {
   BarChart3,
   Building2,
@@ -44,7 +45,6 @@ import {
   SidebarProvider,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Logo } from "@/components/icons/logo";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/dashboard/header";
 import { useToast } from "@/hooks/use-toast";
@@ -100,7 +100,7 @@ export default function DashboardLayout({
         <Sidebar variant="inset" collapsible="icon">
           <SidebarHeader>
             <div className="flex items-center gap-2">
-              <Logo className="size-7 shrink-0 text-primary" />
+               <Image src="/logo.png" alt="Ideal Imóveis Logo" width={36} height={36} className="shrink-0 rounded-full" />
               <span className="text-lg font-semibold">Ideal Imóveis</span>
             </div>
           </SidebarHeader>
