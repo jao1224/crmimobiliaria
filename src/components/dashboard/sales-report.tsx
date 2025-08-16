@@ -14,7 +14,7 @@ type SalesData = {
 const chartConfig = {
   sales: {
     label: "Vendas (R$)",
-    color: "hsl(var(--primary))",
+    color: "#1f33bc",
   },
 };
 
