@@ -14,7 +14,7 @@ type SalesData = {
 const chartConfig = {
   sales: {
     label: "Vendas (R$)",
-    color: "#1f33bc",
+    color: "hsl(var(--chart-1))",
   },
 };
 
@@ -57,7 +57,7 @@ export function SalesReport({ data }: { data: SalesData[] }) {
                             </div>
                         ) : null}
                     />
-                    <Bar dataKey="sales" fill="hsl(var(--primary))" radius={[8, 8, 0, 0]} />
+                    <Bar dataKey="sales" fill="var(--color-sales)" radius={[8, 8, 0, 0]} />
                 </BarChart>
             </ResponsiveContainer>
         </ChartContainer>
