@@ -1,5 +1,4 @@
 
-
 export type NegotiationStage = 'Proposta Enviada' | 'Em Negociação' | 'Contrato Gerado' | 'Venda Concluída' | 'Aluguel Ativo';
 export type NegotiationType = 'Venda' | 'Aluguel' | 'Leilão';
 export type ContractStatus = 'Não Gerado' | 'Pendente Assinaturas' | 'Assinado' | 'Cancelado';
@@ -118,6 +117,36 @@ export type ServiceRequest = {
     date: string;
 };
 
+export type EventType = 'personal' | 'company' | 'team_visit';
+
+export type Event = {
+    id: string;
+    date: Date;
+    title: string;
+    type: EventType;
+    time: string;
+    description: string;
+};
+
+export type PaymentCLT = {
+    id: string;
+    employee: string;
+    type: 'Salário' | '13º Salário' | 'Férias' | 'Impostos';
+    amount: number;
+    paymentDate: string;
+    status: 'Agendado' | 'Pago';
+};
+
+export type Expense = {
+    id: string;
+    description: string;
+    category: 'Fixa' | 'Variável';
+    amount: number;
+    dueDate: string;
+    status: 'Pendente' | 'Pago';
+};
+
+
 
 export const realtors = ['Carlos Pereira', 'Sofia Lima', 'Joana Doe', 'Admin'];
 export const propertyTypes: PropertyType[] = ['Lançamento', 'Revenda', 'Terreno', 'Casa', 'Apartamento'];
@@ -158,7 +187,7 @@ export let initialAdminProcesses: AdminProcess[] = initialNegotiations.map(neg =
 }));
 
 
-export let initialCommissions: Commission[] = [
+let commissionsData: Commission[] = [
     { id: 'comm1', dealId: 'neg1', deal: 'Venda Apartamento Central', amount: 15000, status: 'Pendente', paymentDate: '2024-08-15', involved: 'Carlos Pereira (50%), Sofia Lima (50%)', realtorId: 'Carlos Pereira' },
     { id: 'comm2', dealId: 'neg5', deal: 'Venda Casa de Campo', amount: 22000, status: 'Pago', paymentDate: '2024-07-20', involved: 'Carlos Pereira (100%)', realtorId: 'Carlos Pereira' },
     { id: 'comm3', dealId: 'neg4', deal: 'Aluguel Sala Comercial', amount: 1200, status: 'Vencido', paymentDate: '2024-06-10', involved: 'Imobiliária (100%)', realtorId: 'user2' },
@@ -194,31 +223,73 @@ export let initialFinancingProcesses: FinancingProcess[] = [
     }
 ];
 
-export let initialServiceRequests: ServiceRequest[] = [
+let serviceRequestsData: ServiceRequest[] = [
     { id: 'req1', type: 'credit_approval', realtorName: 'Sofia Lima', clientInfo: 'Maria Investidora - CPF 123.456.789-10', propertyInfo: '', status: 'Concluído', date: '2024-08-01' },
     { id: 'req2', type: 'engineering_report', realtorName: 'Joana Doe', clientInfo: '', propertyInfo: 'Loft Moderno - Rua Principal, Centro', status: 'Pendente', date: '2024-08-10' },
 ];
 
+let eventsData: Event[] = [
+    { id: 'evt1', date: new Date(), title: 'Reunião com João Comprador', type: 'personal', time: '10:00', description: 'Discutir proposta do Apto Vista Mar.' },
+    { id: 'evt2', date: new Date(), title: 'Visita ao Terreno Comercial', type: 'team_visit', time: '14:30', description: 'Visita com a equipe de vendas e a Construtora Build S.A.' },
+    { id: 'evt3', date: new Date(new Date().setDate(new Date().getDate() + 2)), title: 'Feriado Municipal', type: 'company', time: 'Dia todo', description: 'A imobiliária estará fechada.' },
+    { id: 'evt4', date: new Date(new Date().setDate(new Date().getDate() + 5)), title: 'Entrega das Chaves - Apto 701', type: 'team_visit', time: '09:00', description: 'Cliente Maria feliz.' },
+];
+
+let paymentsData: PaymentCLT[] = [
+    { id: 'pay1', employee: 'Secretária Admin', type: 'Salário', amount: 2500, paymentDate: '2024-08-05', status: 'Pago' },
+    { id: 'pay2', employee: 'Gerente de Vendas', type: 'Salário', amount: 6000, paymentDate: '2024-08-05', status: 'Pago' },
+];
+
+let expensesData: Expense[] = [
+    { id: 'exp1', description: 'Aluguel do Escritório', category: 'Fixa', amount: 3500, dueDate: '2024-08-10', status: 'Pendente' },
+    { id: 'exp2', description: 'Marketing Digital (Google Ads)', category: 'Variável', amount: 1200, dueDate: '2024-08-15', status: 'Pago' },
+    { id: 'exp3', description: 'Conta de Energia', category: 'Fixa', amount: 450, dueDate: new Date(new Date().setDate(new Date().getDate() - 5)).toISOString().split('T')[0], status: 'Pendente' }, // Vencida
+];
+
 // --- FUNÇÕES DE MANIPULAÇÃO DE DADOS ---
 
-// Função para adicionar uma nova comissão (simulando a atualização do "banco de dados")
-export function addCommission(newCommission: Commission) {
-    if (!initialCommissions.some(c => c.id === newCommission.id)) {
-        initialCommissions.unshift(newCommission);
+export const getCommissions = () => [...commissionsData];
+export const addCommission = (newCommission: Commission) => {
+    if (!commissionsData.some(c => c.id === newCommission.id)) {
+        commissionsData.unshift(newCommission);
     }
-}
+};
+export const initialCommissions = getCommissions();
+
+export const getPayments = () => [...paymentsData];
+export const addPayment = (newPayment: PaymentCLT) => {
+    if (!paymentsData.some(p => p.id === newPayment.id)) {
+        paymentsData.unshift(newPayment);
+    }
+};
+
+export const getExpenses = () => [...expensesData];
+export const addExpense = (newExpense: Expense) => {
+    if (!expensesData.some(e => e.id === newExpense.id)) {
+        expensesData.unshift(newExpense);
+    }
+};
+
+export const getServiceRequests = () => [...serviceRequestsData];
+export const addServiceRequest = (newRequest: ServiceRequest) => {
+    if (!serviceRequestsData.some(r => r.id === newRequest.id)) {
+        serviceRequestsData.unshift(newRequest);
+    }
+};
+export const initialServiceRequests = getServiceRequests();
+
+
+export const getEvents = () => [...eventsData];
+export const addEvent = (newEvent: Event) => {
+    if (!eventsData.some(e => e.id === newEvent.id)) {
+        eventsData.unshift(newEvent);
+    }
+};
 
 // Função para adicionar um novo processo de financiamento
 export function addFinancingProcess(newProcess: FinancingProcess) {
     if (!initialFinancingProcesses.some(p => p.id === newProcess.id)) {
         initialFinancingProcesses.unshift(newProcess);
-    }
-}
-
-// Função para adicionar uma nova solicitação de serviço
-export function addServiceRequest(newRequest: ServiceRequest) {
-    if (!initialServiceRequests.some(r => r.id === newRequest.id)) {
-        initialServiceRequests.unshift(newRequest);
     }
 }
 

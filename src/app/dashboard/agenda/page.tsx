@@ -15,26 +15,10 @@ import { PlusCircle } from "lucide-react";
 import { ptBR } from "date-fns/locale";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import type { UserProfile } from "../layout";
+import { addEvent, getEvents, type Event } from "@/lib/data";
 
 
 type EventType = 'personal' | 'company' | 'team_visit';
-
-type Event = {
-    id: string;
-    date: Date;
-    title: string;
-    type: EventType;
-    time: string;
-    description: string;
-};
-
-// Dados simulados
-const initialEvents: Event[] = [
-    { id: 'evt1', date: new Date(), title: 'Reunião com João Comprador', type: 'personal', time: '10:00', description: 'Discutir proposta do Apto Vista Mar.' },
-    { id: 'evt2', date: new Date(), title: 'Visita ao Terreno Comercial', type: 'team_visit', time: '14:30', description: 'Visita com a equipe de vendas e a Construtora Build S.A.' },
-    { id: 'evt3', date: new Date(new Date().setDate(new Date().getDate() + 2)), title: 'Feriado Municipal', type: 'company', time: 'Dia todo', description: 'A imobiliária estará fechada.' },
-    { id: 'evt4', date: new Date(new Date().setDate(new Date().getDate() + 5)), title: 'Entrega das Chaves - Apto 701', type: 'team_visit', time: '09:00', description: 'Cliente Maria feliz.' },
-];
 
 const agendaTabs: { id: EventType, label: string }[] = [
     { id: 'personal', label: 'Minha Agenda' },
@@ -67,7 +51,7 @@ export default function AgendaPage() {
         });
     }, [activeProfile]);
     
-    const [events, setEvents] = useState<Event[]>(initialEvents);
+    const [events, setEvents] = useState<Event[]>(getEvents());
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
     const [activeTab, setActiveTab] = useState<EventType>(visibleTabs.length > 0 ? visibleTabs[0].id : 'personal');
     const [isEventDialogOpen, setEventDialogOpen] = useState(false);
@@ -122,7 +106,8 @@ export default function AgendaPage() {
             description: formData.get("description") as string,
             type: activeTab, // Adiciona o evento na agenda ativa
         };
-        setEvents(prev => [...prev, newEvent]);
+        addEvent(newEvent);
+        setEvents(getEvents()); // Recarrega os eventos para incluir o novo
         toast({ title: "Sucesso!", description: "Evento adicionado com sucesso." });
         setEventDialogOpen(false);
     };

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,14 +13,13 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Skeleton } from "@/components/ui/skeleton";
-import { initialLeads, initialDeals, initialClients, type Lead, type Deal, type Client } from "@/lib/crm-data";
+import { addClient, addDeal, addLead, getClients, getDeals, getLeads, type Client, type Deal, type Lead } from "@/lib/crm-data";
 import { cn } from "@/lib/utils";
 
 export default function CrmPage() {
-    const [leads, setLeads] = useState<Lead[]>(initialLeads);
-    const [deals, setDeals] = useState<Deal[]>(initialDeals);
-    const [clients, setClients] = useState<Client[]>(initialClients);
+    const [leads, setLeads] = useState<Lead[]>(getLeads());
+    const [deals, setDeals] = useState<Deal[]>(getDeals());
+    const [clients, setClients] = useState<Client[]>(getClients());
     const [isLeadDialogOpen, setLeadDialogOpen] = useState(false);
     const [isDealDialogOpen, setDealDialogOpen] = useState(false);
     const { toast } = useToast();
@@ -36,8 +35,9 @@ export default function CrmPage() {
             status: "Novo",
             assignedTo: formData.get("assignedTo") as string,
         };
-        setLeads(prev => [...prev, newLead]);
-        toast({ title: "Sucesso!", description: "Lead adicionado com sucesso (simulado)." });
+        addLead(newLead);
+        setLeads(getLeads()); // Recarrega os leads para incluir o novo
+        toast({ title: "Sucesso!", description: "Lead adicionado com sucesso." });
         setLeadDialogOpen(false);
     };
     
@@ -53,8 +53,9 @@ export default function CrmPage() {
             value: Number(formData.get("value")),
             closeDate: formData.get("closeDate") as string,
         };
-        setDeals(prev => [...prev, newDeal]);
-        toast({ title: "Sucesso!", description: "Negócio adicionado com sucesso (simulado)." });
+        addDeal(newDeal);
+        setDeals(getDeals()); // Recarrega os negócios para incluir o novo
+        toast({ title: "Sucesso!", description: "Negócio adicionado com sucesso." });
         setDealDialogOpen(false);
     };
 
@@ -66,11 +67,13 @@ export default function CrmPage() {
             source: lead.source,
             assignedTo: lead.assignedTo,
         };
-        setClients(prev => [...prev, newClient]);
+        addClient(newClient);
+        setClients(getClients());
+        // Remove o lead da lista original
         setLeads(prev => prev.filter(l => l.id !== lead.id));
         toast({
             title: "Conversão Realizada!",
-            description: `"${lead.name}" agora é um cliente (simulado).`
+            description: `"${lead.name}" agora é um cliente.`
         });
     };
 

@@ -15,7 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, PlusCircle, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { initialFinancingProcesses, initialServiceRequests, realtors, addServiceRequest, type FinancingProcess, type ServiceRequest, type ServiceRequestType, type FinancingStatus, type EngineeringStatus, type GeneralProcessStatus } from "@/lib/data";
+import { initialFinancingProcesses, getServiceRequests, realtors, addServiceRequest, type FinancingProcess, type ServiceRequest, type ServiceRequestType, type FinancingStatus, type EngineeringStatus, type GeneralProcessStatus } from "@/lib/data";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import type { UserProfile } from "../layout";
 import { cn } from "@/lib/utils";
@@ -27,7 +27,7 @@ const correspondentPermissions: UserProfile[] = ['Admin', 'Imobiliária'];
 
 export default function CorrespondentPage() {
     const [processes, setProcesses] = useState<FinancingProcess[]>(initialFinancingProcesses);
-    const [requests, setRequests] = useState<ServiceRequest[]>(initialServiceRequests);
+    const [requests, setRequests] = useState<ServiceRequest[]>(getServiceRequests());
     const [selectedProcess, setSelectedProcess] = useState<FinancingProcess | null>(null);
     const [isDetailModalOpen, setDetailModalOpen] = useState(false);
     const [isRequestModalOpen, setRequestModalOpen] = useState(false);
@@ -68,7 +68,7 @@ export default function CorrespondentPage() {
         };
         
         addServiceRequest(newRequest);
-        setRequests(prev => [newRequest, ...prev]);
+        setRequests(getServiceRequests());
         
         toast({ title: "Sucesso", description: "Nova solicitação enviada ao correspondente." });
         setRequestModalOpen(false);

@@ -18,39 +18,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import type { UserProfile } from "../layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { initialCommissions, type Commission } from "@/lib/data";
+import { getCommissions, type Commission, addCommission, getPayments, addPayment, type PaymentCLT, getExpenses, addExpense, type Expense } from "@/lib/data";
 import { cn } from "@/lib/utils";
 
-// Tipos
-type PaymentCLT = {
-    id: string;
-    employee: string;
-    type: 'Salário' | '13º Salário' | 'Férias' | 'Impostos';
-    amount: number;
-    paymentDate: string;
-    status: 'Agendado' | 'Pago';
-};
-
-type Expense = {
-    id: string;
-    description: string;
-    category: 'Fixa' | 'Variável';
-    amount: number;
-    dueDate: string;
-    status: 'Pendente' | 'Pago';
-};
-
-// Dados Simulados
-const initialPayments: PaymentCLT[] = [
-    { id: 'pay1', employee: 'Secretária Admin', type: 'Salário', amount: 2500, paymentDate: '2024-08-05', status: 'Pago' },
-    { id: 'pay2', employee: 'Gerente de Vendas', type: 'Salário', amount: 6000, paymentDate: '2024-08-05', status: 'Pago' },
-];
-
-const initialExpenses: Expense[] = [
-    { id: 'exp1', description: 'Aluguel do Escritório', category: 'Fixa', amount: 3500, dueDate: '2024-08-10', status: 'Pendente' },
-    { id: 'exp2', description: 'Marketing Digital (Google Ads)', category: 'Variável', amount: 1200, dueDate: '2024-08-15', status: 'Pago' },
-    { id: 'exp3', description: 'Conta de Energia', category: 'Fixa', amount: 450, dueDate: new Date(new Date().setDate(new Date().getDate() - 5)).toISOString().split('T')[0], status: 'Pendente' }, // Vencida
-];
 
 const employees = ['Secretária Admin', 'Gerente de Vendas', 'Corretor A'];
 
@@ -69,15 +39,15 @@ export default function FinancePage() {
     const hasPermission = financePermissions.includes(activeProfile);
 
     // Estados para Comissões
-    const [commissions, setCommissions] = useState<Commission[]>(initialCommissions);
+    const [commissions, setCommissions] = useState<Commission[]>(getCommissions());
     const [isCommissionDialogOpen, setCommissionDialogOpen] = useState(false);
 
     // Estados para Pagamentos CLT
-    const [payments, setPayments] = useState<PaymentCLT[]>(initialPayments);
+    const [payments, setPayments] = useState<PaymentCLT[]>(getPayments());
     const [isPaymentDialogOpen, setPaymentDialogOpen] = useState(false);
 
     // Estados para Despesas
-    const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
+    const [expenses, setExpenses] = useState<Expense[]>(getExpenses());
     const [isExpenseDialogOpen, setExpenseDialogOpen] = useState(false);
 
     const { toast } = useToast();
@@ -109,7 +79,8 @@ export default function FinancePage() {
             involved: formData.get('involved') as string, advance: formData.has('advance') ? parseFloat(formData.get('advance') as string) : undefined,
             invoiceFile: formData.get('invoiceFile') as File || null, realtorId: 'user1' // Simulado
         };
-        setCommissions(prev => [newCommission, ...prev]);
+        addCommission(newCommission);
+        setCommissions(getCommissions());
         toast({ title: "Sucesso!", description: "Comissão lançada com sucesso." });
         setCommissionDialogOpen(false);
     };
@@ -125,7 +96,8 @@ export default function FinancePage() {
             paymentDate: formData.get('paymentDate') as string,
             status: formData.get('status') as PaymentCLT['status'],
         };
-        setPayments(prev => [newPayment, ...prev]);
+        addPayment(newPayment);
+        setPayments(getPayments());
         toast({ title: "Sucesso!", description: "Pagamento lançado com sucesso." });
         setPaymentDialogOpen(false);
     };
@@ -141,7 +113,8 @@ export default function FinancePage() {
             dueDate: formData.get('dueDate') as string,
             status: formData.get('status') as Expense['status'],
         };
-        setExpenses(prev => [newExpense, ...prev]);
+        addExpense(newExpense);
+        setExpenses(getExpenses());
         toast({ title: "Sucesso!", description: "Despesa lançada com sucesso." });
         setExpenseDialogOpen(false);
     };
@@ -469,4 +442,5 @@ export default function FinancePage() {
     
 
     
+
 
