@@ -6,6 +6,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
+import { Notifications } from "./notifications"
 
 const pathTranslations: { [key: string]: string } = {
     dashboard: 'Painel',
@@ -58,8 +59,8 @@ export function Header() {
                     </BreadcrumbList>
                 </Breadcrumb>
             </div>
-            <div className="flex-1">
-                {/* Future search bar or actions can go here */}
+            <div className="flex flex-1 items-center justify-end">
+                <Notifications />
             </div>
         </header>
     )
