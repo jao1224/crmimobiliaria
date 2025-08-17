@@ -20,14 +20,6 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { PropertyMatcher } from "@/components/dashboard/property-matcher";
 import { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
@@ -348,7 +340,7 @@ export default function PropertiesPage() {
                   "overflow-hidden transition-all duration-200 flex flex-col",
                   property.status === 'Disponível'
                       ? 'cursor-pointer hover:shadow-xl hover:-translate-y-1'
-                      : 'opacity-70'
+                      : '' // Remove a opacidade para que a faixa se destaque
                 )}
               >
                 <div className="relative">
@@ -360,6 +352,13 @@ export default function PropertiesPage() {
                     width={400}
                     data-ai-hint={property.imageHint}
                   />
+                   {property.status === "Vendido" && (
+                    <div className="absolute top-4 left-0 w-full">
+                       <div className="bg-destructive text-destructive-foreground font-bold text-center py-1 px-4 shadow-lg">
+                            VENDIDO
+                        </div>
+                    </div>
+                  )}
                   <div className="absolute top-2 right-2">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -384,13 +383,6 @@ export default function PropertiesPage() {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-                  {property.status !== 'Disponível' && (
-                     <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-                        <Badge variant={getStatusVariant(property.status)} className="text-lg">
-                            {property.status}
-                        </Badge>
-                    </div>
-                  )}
                 </div>
                 <CardHeader>
                     <CardTitle className="truncate text-lg">{property.name}</CardTitle>
@@ -403,7 +395,7 @@ export default function PropertiesPage() {
                 </CardContent>
                 <CardFooter className="flex justify-between items-center text-xs text-muted-foreground">
                     <span>Captador: {property.capturedBy}</span>
-                     <Badge variant={getStatusVariant(property.status)} className={cn("hidden", getStatusClass(property.status))}>
+                     <Badge variant={getStatusVariant(property.status)} className={cn(property.status === 'Vendido' && 'hidden', getStatusClass(property.status))}>
                       {property.status}
                     </Badge>
                 </CardFooter>
