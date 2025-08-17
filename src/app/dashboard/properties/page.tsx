@@ -2,7 +2,7 @@
 "use client";
 
 import Image from "next/image";
-import { MoreHorizontal, Upload, Trash2, ArrowUpDown } from "lucide-react";
+import { MoreHorizontal, Upload, Trash2 } from "lucide-react";
 import { Badge, badgeVariants } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,7 +31,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 import type { Property, PropertyType } from "@/lib/data";
-import { getProperties, addProperty, realtors } from "@/lib/data";
+import { getProperties, addProperty, realtors, updateProperty } from "@/lib/data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 
@@ -53,39 +53,23 @@ export default function PropertiesPage() {
   const [sortOrder, setSortOrder] = useState('default'); // 'price-asc', 'price-desc'
 
   useEffect(() => {
-    async function loadProperties() {
-      setIsLoading(true);
-      try {
-        const fetchedProperties = getProperties(); // In a real app, this would be async
-        setProperties(fetchedProperties);
-      } catch (error) {
-        console.error("Failed to fetch properties:", error);
-        toast({
-          variant: "destructive",
-          title: "Erro ao Carregar Imóveis",
-          description: "Não foi possível buscar os imóveis.",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    loadProperties();
-  }, [toast]);
+    refreshProperties();
+  }, []);
 
-  const refreshProperties = () => {
+  const refreshProperties = async () => {
     setIsLoading(true);
     try {
-        const fetchedProperties = getProperties();
-        setProperties(fetchedProperties);
+      const fetchedProperties = await getProperties();
+      setProperties(fetchedProperties);
     } catch (error) {
-        console.error("Failed to fetch properties:", error);
-        toast({
-            variant: "destructive",
-            title: "Erro ao Atualizar",
-            description: "Não foi possível recarregar a lista de imóveis.",
-        });
+      console.error("Failed to fetch properties:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao Carregar Imóveis",
+        description: "Não foi possível buscar os imóveis.",
+      });
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -144,8 +128,7 @@ export default function PropertiesPage() {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     
-    const newProperty: Property = {
-      id: `prop${Date.now()}`,
+    const newPropertyData: Omit<Property, 'id'> = {
       name: formData.get("name") as string,
       address: formData.get("address") as string,
       status: "Disponível",
@@ -159,21 +142,20 @@ export default function PropertiesPage() {
       type: "Revenda", // Simulado
     };
 
-    addProperty(newProperty);
-    refreshProperties();
+    await addProperty(newPropertyData);
+    await refreshProperties();
     toast({ title: "Sucesso!", description: "Imóvel adicionado com sucesso." });
     setPropertyDialogOpen(false);
     event.currentTarget.reset();
   };
   
-  const handleUpdateProperty = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleUpdateProperty = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!editingProperty) return;
 
     const formData = new FormData(event.currentTarget);
     
-    const updatedProperty: Property = {
-      ...editingProperty,
+    const updatedPropertyData: Partial<Property> = {
       name: formData.get("name") as string,
       address: formData.get("address") as string,
       price: Number(formData.get("price")),
@@ -185,10 +167,8 @@ export default function PropertiesPage() {
       type: formData.get("type") as PropertyType,
     };
     
-    // Na versão simulada, apenas atualizamos o estado local
-    // Em uma app real, você chamaria uma função para atualizar no DB
-    setProperties(prev => prev.map(p => p.id === updatedProperty.id ? updatedProperty : p));
-
+    await updateProperty(editingProperty.id, updatedPropertyData);
+    await refreshProperties();
     toast({ title: "Sucesso!", description: "Imóvel atualizado com sucesso." });
     setEditDialogOpen(false);
     setEditingProperty(null);

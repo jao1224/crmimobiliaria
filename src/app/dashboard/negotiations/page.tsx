@@ -17,7 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { getNegotiations, addNegotiation, realtors, type Negotiation, addFinancingProcess, completeSaleAndGenerateCommission, getProperties, type Property } from "@/lib/data";
+import { getNegotiations, addNegotiation, realtors, type Negotiation, addFinancingProcess, completeSaleAndGenerateCommission, getProperties, type Property, updateNegotiation } from "@/lib/data";
 import { getClients, type Client } from "@/lib/crm-data";
 import { cn } from "@/lib/utils";
 
@@ -192,7 +192,7 @@ export default function NegotiationsPage() {
     
     const handleGenerateContract = async (negotiation: Negotiation) => {
         try {
-            await updateDoc(doc(db, "negotiations", negotiation.id), { 
+            await updateNegotiation(negotiation.id, { 
                 stage: "Contrato Gerado", 
                 contractStatus: "Pendente Assinaturas" 
             });

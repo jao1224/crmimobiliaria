@@ -8,14 +8,12 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, AlertCircle, CheckCircle, Hourglass } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { getNegotiations, type Negotiation, type ProcessStatus, type ProcessStage, completeSaleAndGenerateCommission } from "@/lib/data";
+import { getNegotiations, type Negotiation, type ProcessStatus, type ProcessStage, completeSaleAndGenerateCommission, updateNegotiation } from "@/lib/data";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { updateDoc, doc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import { Skeleton } from "@/components/ui/skeleton";
 
 
@@ -79,7 +77,7 @@ export default function ProcessesPage() {
     const handleSavePendency = async () => {
         if (!selectedProcess) return;
         try {
-            await updateDoc(doc(db, 'negotiations', selectedProcess.id), {
+            await updateNegotiation(selectedProcess.id, {
                 processStage: 'Pendência',
                 observations: pendencyNote
             });

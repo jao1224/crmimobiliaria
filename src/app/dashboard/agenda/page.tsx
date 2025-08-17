@@ -145,10 +145,6 @@ export default function AgendaPage() {
         }
     };
 
-    const eventDates = useMemo(() => {
-        return events.map(e => new Date(e.date as any));
-    }, [events]);
-
     return (
         <div className="flex flex-col gap-6">
             <div className="flex items-center justify-between">
