@@ -51,7 +51,7 @@ export default function AgendaPage() {
         });
     }, [activeProfile]);
     
-    const [events, setEvents] = useState<Event[]>(getEvents());
+    const [events, setEvents] = useState<Event[]>(() => getEvents());
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
     const [activeTab, setActiveTab] = useState<EventType>(visibleTabs.length > 0 ? visibleTabs[0].id : 'personal');
     const [isEventDialogOpen, setEventDialogOpen] = useState(false);
@@ -110,6 +110,7 @@ export default function AgendaPage() {
         setEvents(getEvents()); // Recarrega os eventos para incluir o novo
         toast({ title: "Sucesso!", description: "Evento adicionado com sucesso." });
         setEventDialogOpen(false);
+        event.currentTarget.reset();
     };
 
     const getEventTypeLabel = (type: Event['type']) => {
@@ -179,7 +180,7 @@ export default function AgendaPage() {
                                 </TabsList>
                                 
                                 {visibleTabs.map(tab => (
-                                     <TabsContent key={tab.id} value={tab.id}>
+                                     <TabsContent key={tab.id} value={tab.id} forceMount>
                                          <Calendar
                                             mode="single"
                                             selected={selectedDate}

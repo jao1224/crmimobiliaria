@@ -27,7 +27,7 @@ const correspondentPermissions: UserProfile[] = ['Admin', 'Imobiliária'];
 
 export default function CorrespondentPage() {
     const [processes, setProcesses] = useState<FinancingProcess[]>(initialFinancingProcesses);
-    const [requests, setRequests] = useState<ServiceRequest[]>(getServiceRequests());
+    const [requests, setRequests] = useState<ServiceRequest[]>(() => getServiceRequests());
     const [selectedProcess, setSelectedProcess] = useState<FinancingProcess | null>(null);
     const [isDetailModalOpen, setDetailModalOpen] = useState(false);
     const [isRequestModalOpen, setRequestModalOpen] = useState(false);
@@ -72,6 +72,7 @@ export default function CorrespondentPage() {
         
         toast({ title: "Sucesso", description: "Nova solicitação enviada ao correspondente." });
         setRequestModalOpen(false);
+        event.currentTarget.reset();
     };
 
 

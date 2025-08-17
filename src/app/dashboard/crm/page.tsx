@@ -17,9 +17,9 @@ import { addClient, addDeal, addLead, getClients, getDeals, getLeads, type Clien
 import { cn } from "@/lib/utils";
 
 export default function CrmPage() {
-    const [leads, setLeads] = useState<Lead[]>(getLeads());
-    const [deals, setDeals] = useState<Deal[]>(getDeals());
-    const [clients, setClients] = useState<Client[]>(getClients());
+    const [leads, setLeads] = useState<Lead[]>(() => getLeads());
+    const [deals, setDeals] = useState<Deal[]>(() => getDeals());
+    const [clients, setClients] = useState<Client[]>(() => getClients());
     const [isLeadDialogOpen, setLeadDialogOpen] = useState(false);
     const [isDealDialogOpen, setDealDialogOpen] = useState(false);
     const { toast } = useToast();
@@ -39,6 +39,7 @@ export default function CrmPage() {
         setLeads(getLeads()); // Recarrega os leads para incluir o novo
         toast({ title: "Sucesso!", description: "Lead adicionado com sucesso." });
         setLeadDialogOpen(false);
+        event.currentTarget.reset();
     };
     
     // Simula a adição de um novo negócio
@@ -57,6 +58,7 @@ export default function CrmPage() {
         setDeals(getDeals()); // Recarrega os negócios para incluir o novo
         toast({ title: "Sucesso!", description: "Negócio adicionado com sucesso." });
         setDealDialogOpen(false);
+        event.currentTarget.reset();
     };
 
     // Simula a conversão de lead em cliente

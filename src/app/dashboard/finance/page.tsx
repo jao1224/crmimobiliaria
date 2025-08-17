@@ -39,15 +39,15 @@ export default function FinancePage() {
     const hasPermission = financePermissions.includes(activeProfile);
 
     // Estados para Comissões
-    const [commissions, setCommissions] = useState<Commission[]>(getCommissions());
+    const [commissions, setCommissions] = useState<Commission[]>(() => getCommissions());
     const [isCommissionDialogOpen, setCommissionDialogOpen] = useState(false);
 
     // Estados para Pagamentos CLT
-    const [payments, setPayments] = useState<PaymentCLT[]>(getPayments());
+    const [payments, setPayments] = useState<PaymentCLT[]>(() => getPayments());
     const [isPaymentDialogOpen, setPaymentDialogOpen] = useState(false);
 
     // Estados para Despesas
-    const [expenses, setExpenses] = useState<Expense[]>(getExpenses());
+    const [expenses, setExpenses] = useState<Expense[]>(() => getExpenses());
     const [isExpenseDialogOpen, setExpenseDialogOpen] = useState(false);
 
     const { toast } = useToast();
@@ -83,6 +83,7 @@ export default function FinancePage() {
         setCommissions(getCommissions());
         toast({ title: "Sucesso!", description: "Comissão lançada com sucesso." });
         setCommissionDialogOpen(false);
+        event.currentTarget.reset();
     };
 
     const handleAddPayment = (event: React.FormEvent<HTMLFormElement>) => {
@@ -100,6 +101,7 @@ export default function FinancePage() {
         setPayments(getPayments());
         toast({ title: "Sucesso!", description: "Pagamento lançado com sucesso." });
         setPaymentDialogOpen(false);
+        event.currentTarget.reset();
     };
 
     const handleAddExpense = (event: React.FormEvent<HTMLFormElement>) => {
@@ -117,6 +119,7 @@ export default function FinancePage() {
         setExpenses(getExpenses());
         toast({ title: "Sucesso!", description: "Despesa lançada com sucesso." });
         setExpenseDialogOpen(false);
+        event.currentTarget.reset();
     };
 
     return (
@@ -442,5 +445,6 @@ export default function FinancePage() {
     
 
     
+
 
 
