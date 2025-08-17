@@ -56,7 +56,7 @@ export default function PropertiesPage() {
     async function loadProperties() {
       setIsLoading(true);
       try {
-        const fetchedProperties = getProperties();
+        const fetchedProperties = await getProperties();
         setProperties(fetchedProperties);
       } catch (error) {
         console.error("Failed to fetch properties:", error);
@@ -75,7 +75,7 @@ export default function PropertiesPage() {
   const refreshProperties = async () => {
     setIsLoading(true);
     try {
-        const fetchedProperties = getProperties();
+        const fetchedProperties = await getProperties();
         setProperties(fetchedProperties);
     } catch (error) {
         console.error("Failed to fetch properties:", error);
@@ -91,11 +91,13 @@ export default function PropertiesPage() {
 
 
   const captadores = useMemo(() => {
+    if (!properties) return ['all'];
     const captadorSet = new Set(properties.map(p => p.capturedBy));
     return ['all', ...Array.from(captadorSet)];
   }, [properties]);
 
   const filteredAndSortedProperties = useMemo(() => {
+    if (!properties) return [];
     let filtered = [...properties];
 
     if (statusFilter !== 'all') {
