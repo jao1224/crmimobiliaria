@@ -95,7 +95,7 @@ export function RegisterForm() {
             uid: user.uid,
             name: values.name,
             email: values.email,
-            profileType: role,
+            role: role,
             document: values.document,
             whatsapp: values.whatsapp,
             creci: values.creci || null,
