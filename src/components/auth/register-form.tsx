@@ -29,9 +29,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { userProfiles } from "@/lib/permissions";
 import { auth, db } from "@/lib/firebase";
+import { ScrollArea } from "../ui/scroll-area";
 
 const formSchema = z.object({
   profileType: z.string({ required_error: "Por favor, selecione um tipo de perfil." }),
@@ -68,21 +68,17 @@ export function RegisterForm() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-        // Check if this is the first user
         const usersCollection = collection(db, "users");
         const usersSnapshot = await getDocs(usersCollection);
         const isFirstUser = usersSnapshot.empty;
         
         const role = isFirstUser ? 'Admin' : values.profileType;
 
-        // Create user in Firebase Auth
         const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
         const user = userCredential.user;
         
-        // Update Firebase Auth profile
         await updateProfile(user, { displayName: values.name });
 
-        // Create user document in Firestore
         await setDoc(doc(db, "users", user.uid), {
             uid: user.uid,
             name: values.name,
@@ -103,10 +99,14 @@ export function RegisterForm() {
 
     } catch (error: any) {
         console.error("Registration Error: ", error);
+        let description = "Não foi possível criar sua conta. Tente novamente.";
+        if (error.code === 'auth/email-already-in-use') {
+            description = "Este endereço de e-mail já está em uso.";
+        }
         toast({
             variant: "destructive",
             title: "Erro no Cadastro",
-            description: error.message || "Não foi possível criar sua conta. Tente novamente.",
+            description,
         });
     } finally {
         setIsLoading(false);
@@ -114,10 +114,9 @@ export function RegisterForm() {
   }
 
   return (
-    <Card className="w-full">
+    <ScrollArea className="h-[60vh] pr-6">
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
-          <CardContent className="space-y-4 pt-6">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
             <FormField
               control={form.control}
               name="profileType"
@@ -140,7 +139,7 @@ export function RegisterForm() {
                 </FormItem>
               )}
             />
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="name"
@@ -148,7 +147,7 @@ export function RegisterForm() {
                   <FormItem>
                     <FormLabel>Nome Completo / Razão Social</FormLabel>
                     <FormControl>
-                      <Input placeholder="João da Silva" {...field} suppressHydrationWarning />
+                      <Input placeholder="João da Silva" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -161,7 +160,7 @@ export function RegisterForm() {
                   <FormItem>
                     <FormLabel>CPF / CNPJ</FormLabel>
                     <FormControl>
-                      <Input placeholder="00.000.000/0000-00" {...field} suppressHydrationWarning />
+                      <Input placeholder="00.000.000/0000-00" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -175,13 +174,13 @@ export function RegisterForm() {
                 <FormItem>
                   <FormLabel>E-mail</FormLabel>
                   <FormControl>
-                    <Input placeholder="nome@exemplo.com" {...field} suppressHydrationWarning />
+                    <Input placeholder="nome@exemplo.com" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="whatsapp"
@@ -189,7 +188,7 @@ export function RegisterForm() {
                   <FormItem>
                     <FormLabel>WhatsApp</FormLabel>
                     <FormControl>
-                      <Input placeholder="(00) 90000-0000" {...field} suppressHydrationWarning />
+                      <Input placeholder="(00) 90000-0000" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -202,7 +201,7 @@ export function RegisterForm() {
                   <FormItem>
                     <FormLabel>CRECI (Opcional)</FormLabel>
                     <FormControl>
-                      <Input placeholder="12345-F" {...field} suppressHydrationWarning />
+                      <Input placeholder="12345-F" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -216,7 +215,7 @@ export function RegisterForm() {
                 <FormItem>
                   <FormLabel>Endereço</FormLabel>
                   <FormControl>
-                    <Input placeholder="Rua Principal, 123, Cidade" {...field} suppressHydrationWarning />
+                    <Input placeholder="Rua Principal, 123, Cidade" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -229,26 +228,17 @@ export function RegisterForm() {
                 <FormItem>
                   <FormLabel>Senha</FormLabel>
                   <FormControl>
-                    <Input type="password" placeholder="••••••••" {...field} suppressHydrationWarning />
+                    <Input type="password" placeholder="••••••••" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-          </CardContent>
-          <CardFooter className="flex flex-col items-stretch">
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? "Criando Conta..." : "Criar Conta"}
             </Button>
-            <p className="mt-4 text-center text-sm text-muted-foreground">
-              Já tem uma conta?{" "}
-              <Link href="/" className="font-semibold text-primary hover:underline">
-                Entrar
-              </Link>
-            </p>
-          </CardFooter>
         </form>
       </Form>
-    </Card>
+    </ScrollArea>
   );
 }

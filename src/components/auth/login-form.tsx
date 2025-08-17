@@ -62,9 +62,9 @@ export function LoginForm() {
   }
 
   return (
-    <div className="w-full">
+    <div className="grid gap-4">
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
           <FormField
             control={form.control}
             name="email"
@@ -72,7 +72,7 @@ export function LoginForm() {
               <FormItem>
                 <FormLabel>E-mail</FormLabel>
                 <FormControl>
-                  <Input placeholder="nome@example.com" {...field} suppressHydrationWarning />
+                  <Input placeholder="nome@example.com" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -83,14 +83,14 @@ export function LoginForm() {
             name="password"
             render={({ field }) => (
               <FormItem>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center">
                   <FormLabel>Senha</FormLabel>
-                  <Link href="#" className="text-sm font-medium text-primary hover:underline">
+                  <Link href="#" className="ml-auto inline-block text-sm underline">
                     Esqueceu a senha?
                   </Link>
                 </div>
                 <FormControl>
-                  <Input type="password" placeholder="••••••••" {...field} suppressHydrationWarning />
+                  <Input type="password" placeholder="••••••••" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -101,12 +101,6 @@ export function LoginForm() {
           </Button>
         </form>
       </Form>
-      <p className="mt-6 text-center text-sm text-muted-foreground">
-        Não tem uma conta?{" "}
-        <Link href="/register" className="font-semibold text-primary hover:underline">
-          Cadastre-se
-        </Link>
-      </p>
     </div>
   );
 }
