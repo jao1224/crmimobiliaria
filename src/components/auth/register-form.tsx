@@ -2,7 +2,6 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -86,11 +85,20 @@ export function RegisterForm() {
         
         const role = isFirstUser ? 'Admin' : values.profileType;
 
+        // 1. Cria o usuário
         const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
         const user = userCredential.user;
         
-        await updateProfile(user, { displayName: values.name });
+        // 2. Mostra sucesso e redireciona IMEDIATAMENTE
+        toast({
+            title: "Conta Criada com Sucesso!",
+            description: "Você será redirecionado para a página de login.",
+        });
+        router.push("/");
 
+        // 3. Atualiza perfil e salva dados no Firestore em segundo plano
+        // O usuário não precisa esperar por isso.
+        await updateProfile(user, { displayName: values.name });
         await setDoc(doc(db, "users", user.uid), {
             uid: user.uid,
             name: values.name,
@@ -103,17 +111,13 @@ export function RegisterForm() {
             createdAt: new Date().toISOString(),
         });
 
-        toast({
-            title: "Conta Criada!",
-            description: `Sua conta de ${role} foi criada com sucesso. Por favor, faça o login.`,
-        });
-        router.push("/");
-
     } catch (error: any) {
         console.error("Registration Error: ", error);
         let description = "Não foi possível criar sua conta. Tente novamente.";
         if (error.code === 'auth/email-already-in-use') {
             description = "Este endereço de e-mail já está em uso.";
+        } else if (error.code === 'auth/invalid-api-key' || error.code === 'auth/configuration-not-found') {
+            description = "A configuração do Firebase está incorreta. Verifique a chave de API e se o Authentication está ativado.";
         }
         toast({
             variant: "destructive",
