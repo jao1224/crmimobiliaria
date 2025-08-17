@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { SalesReport } from "@/components/dashboard/sales-report";
 import { Button } from "@/components/ui/button";
@@ -86,8 +86,8 @@ const processTeamPerformanceData = (negotiations: Negotiation[], teamsData: type
 
 export default function ReportingPage() {
     const router = useRouter();
-    const [negotiations, setNegotiations] = useState<Negotiation[]>(getNegotiations());
-    const [properties] = useState<Property[]>(getProperties());
+    const [negotiations, setNegotiations] = useState<Negotiation[]>([]);
+    const [properties, setProperties] = useState<Property[]>([]);
 
     // Estados dos filtros
     const [realtorFilter, setRealtorFilter] = useState('all');
@@ -96,6 +96,15 @@ export default function ReportingPage() {
     const [operationTypeFilter, setOperationTypeFilter] = useState('all');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
+    
+    useEffect(() => {
+        const loadData = async () => {
+            const [negs, props] = await Promise.all([getNegotiations(), getProperties()]);
+            setNegotiations(negs);
+            setProperties(props);
+        };
+        loadData();
+    }, []);
     
     const handleRealtorClick = (realtorName: string) => {
         const urlFriendlyName = realtorName.toLowerCase().replace(/\s+/g, '-');

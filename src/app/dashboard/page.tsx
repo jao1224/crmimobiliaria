@@ -38,6 +38,7 @@ export default function DashboardPage() {
   const { title, subtitle } = welcomeMessages[activeProfile] || welcomeMessages['Admin'];
   
   const [negotiations, setNegotiations] = useState<Negotiation[]>([]);
+  const [leads, setLeads] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -49,8 +50,21 @@ export default function DashboardPage() {
     } else {
       setGreeting("Boa noite,");
     }
-    setNegotiations(getNegotiations());
-    setIsLoading(false);
+    
+    const fetchData = async () => {
+        setIsLoading(true);
+        try {
+            const [negs, lds] = await Promise.all([getNegotiations(), getLeads()]);
+            setNegotiations(negs);
+            setLeads(lds);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setIsLoading(false);
+        }
+    }
+
+    fetchData();
   }, []);
 
   // Calculando estatísticas dinamicamente
@@ -60,7 +74,7 @@ export default function DashboardPage() {
       .reduce((sum, n) => sum + n.value, 0),
     activeDeals: negotiations.filter(n => n.stage !== 'Venda Concluída' && n.stage !== 'Aluguel Ativo').length,
     soldProperties: negotiations.filter(n => n.stage === 'Venda Concluída').length,
-    newLeads: getLeads().length, // Sincronizado com os dados reais de leads
+    newLeads: leads.length, // Sincronizado com os dados reais de leads
   };
 
   const overviewCards = [
@@ -126,7 +140,7 @@ export default function DashboardPage() {
                 ))}
             </div>
         </div>
-        <Card className="lg:col-span-4">
+        <Card className="lg:col-span-4 transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
           <CardHeader>
             <CardTitle>Visão Geral de Vendas</CardTitle>
             <CardDescription>Desempenho de vendas mensais com base nos contratos gerados.</CardDescription>
@@ -139,5 +153,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    

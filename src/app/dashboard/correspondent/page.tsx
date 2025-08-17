@@ -36,8 +36,11 @@ export default function CorrespondentPage() {
     const { toast } = useToast();
     
     useEffect(() => {
-        setProcesses(getFinancingProcesses());
-        setRequests(getServiceRequests());
+        const fetchData = async () => {
+            setProcesses(await getFinancingProcesses());
+            setRequests(await getServiceRequests());
+        }
+        fetchData();
     }, []);
 
     const handleRowClick = (process: FinancingProcess) => {
@@ -58,12 +61,11 @@ export default function CorrespondentPage() {
         setDetailModalOpen(false);
     };
 
-    const handleNewRequest = (event: React.FormEvent<HTMLFormElement>) => {
+    const handleNewRequest = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         const formData = new FormData(event.currentTarget);
         
-        const newRequest: ServiceRequest = {
-            id: `req${Date.now()}`,
+        const newRequest: Omit<ServiceRequest, 'id'> = {
             type: requestType,
             realtorName: formData.get('realtorName') as string,
             clientInfo: formData.get('clientInfo') as string,
@@ -72,8 +74,8 @@ export default function CorrespondentPage() {
             date: new Date().toISOString()
         };
         
-        addServiceRequest(newRequest);
-        setRequests(getServiceRequests()); // Recarrega os dados
+        await addServiceRequest(newRequest);
+        setRequests(await getServiceRequests()); // Recarrega os dados
         
         toast({ title: "Sucesso", description: "Nova solicitação enviada ao correspondente." });
         setRequestModalOpen(false);
