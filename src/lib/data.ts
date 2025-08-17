@@ -1,7 +1,22 @@
 
 
-import { db } from '@/lib/firebase';
-import { collection, getDocs, query } from 'firebase/firestore';
+// Tipos para os dados de CRM
+export type Lead = {
+    id: string;
+    name: string;
+    source: string;
+    status: string;
+    assignedTo: string;
+};
+
+export type Deal = {
+    id: string;
+    property: string;
+    client: string;
+    stage: string;
+    value: number;
+    closeDate: string;
+};
 
 export type NegotiationStage = 'Proposta Enviada' | 'Em Negociação' | 'Contrato Gerado' | 'Venda Concluída' | 'Aluguel Ativo';
 export type NegotiationType = 'Venda' | 'Aluguel' | 'Leilão';
@@ -279,26 +294,10 @@ let expensesData: Expense[] = [
 
 // --- FUNÇÕES DE MANIPULAÇÃO DE DADOS ---
 
-export const getProperties = async (): Promise<Property[]> => {
-    try {
-        const propertiesCollection = collection(db, "properties");
-        const q = query(propertiesCollection);
-        const querySnapshot = await getDocs(q);
-        
-        if (querySnapshot.empty) {
-            console.warn("Nenhum imóvel encontrado no Firestore. Retornando dados simulados.");
-            return propertiesData;
-        }
-
-        const properties: Property[] = [];
-        querySnapshot.forEach((doc) => {
-            properties.push({ id: doc.id, ...doc.data() } as Property);
-        });
-        return properties;
-    } catch (error) {
-        console.error("Erro ao buscar imóveis do Firestore, usando dados simulados como fallback: ", error);
-        return propertiesData; // Retorna os dados simulados em caso de erro
-    }
+// No modo simulado, a função `getProperties` simplesmente retorna os dados locais.
+// Quando conectado ao Firestore, esta função se tornará assíncrona.
+export const getProperties = () => {
+    return propertiesData;
 };
 
 export const addProperty = (newProperty: Property) => {

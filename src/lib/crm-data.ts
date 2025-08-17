@@ -1,4 +1,7 @@
 
+import { db } from './firebase';
+import { collection, getDocs, addDoc, doc, setDoc } from 'firebase/firestore';
+
 
 // Tipos para os dados de CRM
 export type Lead = {
@@ -70,5 +73,3 @@ export const addClient = (newClient: Client) => {
         clientsData.unshift(newClient);
     }
 };
-
-    

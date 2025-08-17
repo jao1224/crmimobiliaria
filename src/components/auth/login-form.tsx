@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -6,6 +7,8 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -32,32 +35,30 @@ export function LoginForm() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      email: "admin@example.com",
-      password: "admin",
+      email: "",
+      password: "",
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-
-    if (values.email === 'admin@example.com' && values.password === 'admin') {
+    try {
+      await signInWithEmailAndPassword(auth, values.email, values.password);
       toast({
         title: "Login bem-sucedido",
         description: "Redirecionando para o seu painel...",
       });
       router.push("/dashboard");
-      return;
+    } catch (error: any) {
+      console.error("Login Error:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro no Login",
+        description: "Credenciais inválidas. Verifique seu e-mail e senha.",
+      });
+    } finally {
+      setIsLoading(false);
     }
-
-    // Simulate API call
-    setTimeout(() => {
-      // In a real app, you'd handle success/error from your auth provider
-      toast({
-        title: "Login bem-sucedido",
-        description: "Redirecionando para o seu painel...",
-      });
-      router.push("/dashboard");
-    }, 1000);
   }
 
   return (
@@ -71,7 +72,7 @@ export function LoginForm() {
               <FormItem>
                 <FormLabel>E-mail</FormLabel>
                 <FormControl>
-                  <Input placeholder="nome@example.com" {...field} />
+                  <Input placeholder="nome@example.com" {...field} suppressHydrationWarning />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -89,7 +90,7 @@ export function LoginForm() {
                   </Link>
                 </div>
                 <FormControl>
-                  <Input type="password" placeholder="••••••••" {...field} />
+                  <Input type="password" placeholder="••••••••" {...field} suppressHydrationWarning />
                 </FormControl>
                 <FormMessage />
               </FormItem>

@@ -7,6 +7,9 @@ import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { doc, setDoc, getDocs, collection } from "firebase/firestore";
+
 
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +31,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { userProfiles } from "@/lib/permissions";
+import { auth, db } from "@/lib/firebase";
 
 const formSchema = z.object({
   profileType: z.string({ required_error: "Por favor, selecione um tipo de perfil." }),
@@ -61,17 +65,52 @@ export function RegisterForm() {
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    // Simulate API call for registration
-    setTimeout(() => {
-      setIsLoading(false);
-      toast({
-        title: "Conta Criada!",
-        description: "Sua conta foi criada com sucesso. Por favor, faça o login.",
-      });
-      router.push("/");
-    }, 1500);
+    try {
+        // Check if this is the first user
+        const usersCollection = collection(db, "users");
+        const usersSnapshot = await getDocs(usersCollection);
+        const isFirstUser = usersSnapshot.empty;
+        
+        const role = isFirstUser ? 'Admin' : values.profileType;
+
+        // Create user in Firebase Auth
+        const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
+        const user = userCredential.user;
+        
+        // Update Firebase Auth profile
+        await updateProfile(user, { displayName: values.name });
+
+        // Create user document in Firestore
+        await setDoc(doc(db, "users", user.uid), {
+            uid: user.uid,
+            name: values.name,
+            email: values.email,
+            profileType: role,
+            document: values.document,
+            whatsapp: values.whatsapp,
+            creci: values.creci || null,
+            address: values.address,
+            createdAt: new Date().toISOString(),
+        });
+
+        toast({
+            title: "Conta Criada!",
+            description: `Sua conta de ${role} foi criada com sucesso. Por favor, faça o login.`,
+        });
+        router.push("/");
+
+    } catch (error: any) {
+        console.error("Registration Error: ", error);
+        toast({
+            variant: "destructive",
+            title: "Erro no Cadastro",
+            description: error.message || "Não foi possível criar sua conta. Tente novamente.",
+        });
+    } finally {
+        setIsLoading(false);
+    }
   }
 
   return (
@@ -109,7 +148,7 @@ export function RegisterForm() {
                   <FormItem>
                     <FormLabel>Nome Completo / Razão Social</FormLabel>
                     <FormControl>
-                      <Input placeholder="João da Silva" {...field} />
+                      <Input placeholder="João da Silva" {...field} suppressHydrationWarning />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -122,7 +161,7 @@ export function RegisterForm() {
                   <FormItem>
                     <FormLabel>CPF / CNPJ</FormLabel>
                     <FormControl>
-                      <Input placeholder="00.000.000/0000-00" {...field} />
+                      <Input placeholder="00.000.000/0000-00" {...field} suppressHydrationWarning />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -136,7 +175,7 @@ export function RegisterForm() {
                 <FormItem>
                   <FormLabel>E-mail</FormLabel>
                   <FormControl>
-                    <Input placeholder="nome@exemplo.com" {...field} />
+                    <Input placeholder="nome@exemplo.com" {...field} suppressHydrationWarning />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -150,7 +189,7 @@ export function RegisterForm() {
                   <FormItem>
                     <FormLabel>WhatsApp</FormLabel>
                     <FormControl>
-                      <Input placeholder="(00) 90000-0000" {...field} />
+                      <Input placeholder="(00) 90000-0000" {...field} suppressHydrationWarning />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -163,7 +202,7 @@ export function RegisterForm() {
                   <FormItem>
                     <FormLabel>CRECI (Opcional)</FormLabel>
                     <FormControl>
-                      <Input placeholder="12345-F" {...field} />
+                      <Input placeholder="12345-F" {...field} suppressHydrationWarning />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -177,7 +216,7 @@ export function RegisterForm() {
                 <FormItem>
                   <FormLabel>Endereço</FormLabel>
                   <FormControl>
-                    <Input placeholder="Rua Principal, 123, Cidade" {...field} />
+                    <Input placeholder="Rua Principal, 123, Cidade" {...field} suppressHydrationWarning />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -190,7 +229,7 @@ export function RegisterForm() {
                 <FormItem>
                   <FormLabel>Senha</FormLabel>
                   <FormControl>
-                    <Input type="password" placeholder="••••••••" {...field} />
+                    <Input type="password" placeholder="••••••••" {...field} suppressHydrationWarning />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

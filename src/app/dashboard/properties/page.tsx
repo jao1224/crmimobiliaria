@@ -56,14 +56,14 @@ export default function PropertiesPage() {
     async function loadProperties() {
       setIsLoading(true);
       try {
-        const fetchedProperties = await getProperties();
+        const fetchedProperties = getProperties(); // In a real app, this would be async
         setProperties(fetchedProperties);
       } catch (error) {
         console.error("Failed to fetch properties:", error);
         toast({
           variant: "destructive",
           title: "Erro ao Carregar Imóveis",
-          description: "Não foi possível buscar os imóveis do banco de dados.",
+          description: "Não foi possível buscar os imóveis.",
         });
       } finally {
         setIsLoading(false);
@@ -72,10 +72,10 @@ export default function PropertiesPage() {
     loadProperties();
   }, [toast]);
 
-  const refreshProperties = async () => {
+  const refreshProperties = () => {
     setIsLoading(true);
     try {
-        const fetchedProperties = await getProperties();
+        const fetchedProperties = getProperties();
         setProperties(fetchedProperties);
     } catch (error) {
         console.error("Failed to fetch properties:", error);
