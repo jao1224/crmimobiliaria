@@ -119,23 +119,28 @@ export default function DashboardLayout({
             </div>
           </SidebarHeader>
           <SidebarContent>
-            <SidebarMenu>
-              {visibleMenuItems.map(item => (
-                   <SidebarMenuItem key={item.href}>
-                      <SidebarMenuButton
-                          href={item.href}
-                          isActive={pathname === item.href}
-                          tooltip={item.tooltip}
-                          asChild
-                      >
-                          <Link href={item.href}>
-                              <item.icon />
-                              <span>{item.label}</span>
-                          </Link>
-                      </SidebarMenuButton>
+            <div
+              className="flex-grow rounded-lg shadow-inner"
+              style={{ backgroundColor: '#001848' }}
+            >
+              <SidebarMenu className="p-2">
+                {visibleMenuItems.map((item) => (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                      href={item.href}
+                      isActive={pathname === item.href}
+                      tooltip={item.tooltip}
+                      asChild
+                    >
+                      <Link href={item.href}>
+                        <item.icon />
+                        <span>{item.label}</span>
+                      </Link>
+                    </SidebarMenuButton>
                   </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
+                ))}
+              </SidebarMenu>
+            </div>
           </SidebarContent>
           <SidebarFooter>
             <SidebarMenu>
