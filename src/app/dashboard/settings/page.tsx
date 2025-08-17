@@ -14,10 +14,10 @@ import { useToast } from "@/hooks/use-toast";
 import { MoreHorizontal, UserPlus, Trash2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import type { UserProfile } from "@/app/dashboard/layout";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import { cn } from "@/lib/utils";
+import { type UserProfile, userProfiles, menuConfig, allModules } from "@/lib/permissions";
 
 
 type TeamMember = {
@@ -36,26 +36,6 @@ type Team = {
 const roles: UserProfile[] = [
     'Admin', 'Imobiliária', 'Financeiro', 'Corretor Autônomo', 'Investidor', 'Construtora'
 ];
-
-const allModules = [
-    { id: "/dashboard", label: "Painel" },
-    { id: "/dashboard/properties", label: "Imóveis" },
-    { id: "/dashboard/crm", label: "CRM" },
-    { id: "/dashboard/negotiations", label: "Negociações" },
-    { id: "/dashboard/finance", label: "Financeiro" },
-    { id: "/dashboard/agenda", label: "Agenda" },
-    { id: "/dashboard/reporting", label: "Relatórios" },
-    { id: "/dashboard/settings", label: "Configurações" },
-];
-
-const menuConfig: Record<UserProfile, string[]> = {
-    'Admin': ['/dashboard', '/dashboard/properties', '/dashboard/crm', '/dashboard/negotiations', '/dashboard/finance', '/dashboard/agenda', '/dashboard/reporting', '/dashboard/settings'],
-    'Imobiliária': ['/dashboard', '/dashboard/properties', '/dashboard/crm', '/dashboard/negotiations', '/dashboard/finance', '/dashboard/agenda', '/dashboard/reporting', '/dashboard/settings'],
-    'Corretor Autônomo': ['/dashboard', '/dashboard/properties', '/dashboard/crm', '/dashboard/negotiations', '/dashboard/agenda', '/dashboard/reporting', '/dashboard/finance'],
-    'Investidor': ['/dashboard', '/dashboard/properties', '/dashboard/finance', '/dashboard/negotiations', '/dashboard/agenda'],
-    'Construtora': ['/dashboard', '/dashboard/properties', '/dashboard/negotiations', '/dashboard/finance', '/dashboard/agenda'],
-    'Financeiro': ['/dashboard', '/dashboard/finance', '/dashboard/reporting', '/dashboard/settings'],
-};
 
 // Dados simulados
 const initialTeamMembers: TeamMember[] = [

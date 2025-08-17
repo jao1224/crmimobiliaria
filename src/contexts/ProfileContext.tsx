@@ -2,7 +2,7 @@
 "use client";
 
 import { createContext, useState, useContext, Dispatch, SetStateAction } from "react";
-import type { UserProfile } from "@/app/dashboard/layout";
+import type { UserProfile } from "@/lib/permissions";
 
 interface ProfileContextType {
     activeProfile: UserProfile;
@@ -23,5 +23,3 @@ export const ProfileProvider = ({ children, value }: { children: React.ReactNode
         </ProfileContext.Provider>
     );
 };
-
-    
