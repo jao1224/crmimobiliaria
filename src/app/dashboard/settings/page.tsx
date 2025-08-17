@@ -18,6 +18,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import { cn } from "@/lib/utils";
 import { type UserProfile, userProfiles, menuConfig, allModules } from "@/lib/permissions";
+import { auth, db } from "@/lib/firebase";
+import { collection, getDocs, doc, setDoc } from "firebase/firestore";
+import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, updateProfile } from "firebase/auth";
 
 
 type TeamMember = {
@@ -35,109 +38,115 @@ type Team = {
 
 const roles = userProfiles.filter(p => ['Admin', 'Imobiliária', 'Financeiro', 'Corretor Autônomo', 'Investidor', 'Construtora'].includes(p));
 
-// Dados simulados
-const initialTeamMembers: TeamMember[] = [
-    { id: 'user1', name: 'Carlos Pereira', email: 'carlos@leadflow.com', role: 'Corretor Autônomo' },
-    { id: 'user2', name: 'Sofia Lima', email: 'sofia@leadflow.com', role: 'Admin' },
-    { id: 'user3', name: 'Admin User', email: 'admin@leadflow.com', role: 'Admin' },
-];
-
-const initialTeams: Team[] = [
-    { id: 'team1', name: 'Equipe de Vendas - Lançamentos', memberIds: ['user1'] },
-    { id: 'team2', name: 'Equipe de Vendas - Revenda', memberIds: ['user2'] },
-];
-
 
 export default function SettingsPage() {
     const { activeProfile } = useContext(ProfileContext);
     const hasPermission = activeProfile === 'Admin' || activeProfile === 'Imobiliária';
 
-    const [teamMembers, setTeamMembers] = useState<TeamMember[]>(initialTeamMembers);
-    const [teams, setTeams] = useState<Team[]>(initialTeams);
+    // Estados da UI
+    const [isSaving, setIsSaving] = useState(false);
+    const { toast } = useToast();
+
+    // Estados do Perfil
+    const [name, setName] = useState('');
+    const [email, setEmail] = useState('');
+    const [currentPassword, setCurrentPassword] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+
+    // Estados das Equipes
+    const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+    const [teams, setTeams] = useState<Team[]>([]);
     const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
     const [isTeamMemberDialogOpen, setTeamMemberDialogOpen] = useState(false);
     const [isTeamDialogOpen, setTeamDialogOpen] = useState(false);
     const [isManageMembersDialogOpen, setManageMembersDialogOpen] = useState(false);
-    const { toast } = useToast();
-    
-    const [isSaving, setIsSaving] = useState(false);
 
+    useEffect(() => {
+        const currentUser = auth.currentUser;
+        if (currentUser) {
+            setName(currentUser.displayName || '');
+            setEmail(currentUser.email || '');
+        }
+        
+        // Carregar membros da equipe e equipes do Firestore (se necessário)
+        const fetchTeamData = async () => {
+            if (hasPermission) {
+                const usersSnapshot = await getDocs(collection(db, "users"));
+                setTeamMembers(usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeamMember)));
+
+                // Simulação para equipes
+                // setTeams(initialTeams);
+            }
+        };
+
+        fetchTeamData();
+    }, [hasPermission]);
+
+    const handleProfileUpdate = async () => {
+        setIsSaving(true);
+        const currentUser = auth.currentUser;
+
+        if (!currentUser || !currentUser.email) {
+            toast({ variant: 'destructive', title: 'Erro', description: 'Usuário não encontrado.' });
+            setIsSaving(false);
+            return;
+        }
+
+        try {
+            // 1. Atualizar nome (se mudou)
+            if (currentUser.displayName !== name) {
+                await updateProfile(currentUser, { displayName: name });
+                await setDoc(doc(db, "users", currentUser.uid), { name }, { merge: true });
+                toast({ title: 'Sucesso', description: 'Seu nome foi atualizado.' });
+            }
+
+            // 2. Atualizar senha (se preenchido)
+            if (currentPassword && newPassword) {
+                const credential = EmailAuthProvider.credential(currentUser.email, currentPassword);
+                await reauthenticateWithCredential(currentUser, credential);
+                await updatePassword(currentUser, newPassword);
+                toast({ title: 'Sucesso', description: 'Sua senha foi alterada.' });
+                setCurrentPassword('');
+                setNewPassword('');
+            } else if (currentPassword || newPassword) {
+                toast({ variant: 'destructive', title: 'Atenção', description: 'Para alterar a senha, preencha a senha atual e a nova senha.' });
+            }
+
+        } catch (error: any) {
+            console.error("Profile Update Error: ", error);
+            let description = 'Ocorreu um erro ao atualizar seu perfil.';
+            if (error.code === 'auth/wrong-password') {
+                description = 'A senha atual está incorreta.';
+            } else if (error.code === 'auth/weak-password') {
+                description = 'A nova senha é muito fraca. Use pelo menos 6 caracteres.';
+            }
+            toast({ variant: 'destructive', title: 'Erro na Atualização', description });
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
     const handleAddTeamMember = async (event: React.FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        setIsSaving(true);
-        const formData = new FormData(event.currentTarget);
-        const newMemberData: TeamMember = {
-            id: `user${Date.now()}`,
-            name: formData.get("name") as string,
-            email: formData.get("email") as string,
-            role: formData.get("role") as string,
-        };
-        
-        // Simula salvamento
-        setTimeout(() => {
-            setTeamMembers(prev => [...prev, newMemberData]);
-            setTeamMemberDialogOpen(false);
-            toast({ title: "Sucesso!", description: "Membro da equipe adicionado (simulado)." });
-            setIsSaving(false);
-        }, 500);
+        // Implementar lógica de criação de usuário no Firestore se necessário
+        toast({ title: "Simulado", description: "Funcionalidade de adicionar membro não implementada."});
     };
 
     const handleAddTeam = async (event: React.FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        setIsSaving(true);
-        const formData = new FormData(event.currentTarget);
-        const newTeamData: Team = {
-            id: `team${Date.now()}`,
-            name: formData.get("team-name") as string,
-            memberIds: [],
-        };
-        
-        // Simula salvamento
-        setTimeout(() => {
-            setTeams(prev => [...prev, newTeamData]);
-            setTeamDialogOpen(false);
-            toast({ title: "Sucesso!", description: "Equipe criada com sucesso (simulado)." });
-            setIsSaving(false);
-        }, 500);
+       toast({ title: "Simulado", description: "Funcionalidade de criar equipe não implementada."});
     };
-
+    
+    // Funções de Gerenciamento de Equipe (mantidas como simuladas por enquanto)
     const handleManageMembers = (team: Team) => {
         setSelectedTeam(team);
         setManageMembersDialogOpen(true);
     };
 
     const handleAddMemberToTeam = async (event: React.FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        if (!selectedTeam) return;
-
-        setIsSaving(true);
-        const formData = new FormData(event.currentTarget);
-        const memberId = formData.get("memberId") as string;
-        
-        if (selectedTeam.memberIds.includes(memberId)) {
-            toast({ variant: "destructive", title: "Atenção", description: "Este membro já faz parte da equipe." });
-            setIsSaving(false);
-            return;
-        }
-
-        const updatedTeam = { ...selectedTeam, memberIds: [...selectedTeam.memberIds, memberId] };
-        
-        setTeams(prevTeams => prevTeams.map(t => t.id === updatedTeam.id ? updatedTeam : t));
-        setSelectedTeam(updatedTeam);
-        
-        toast({ title: "Sucesso!", description: "Membro adicionado à equipe (simulado)." });
-        setIsSaving(false);
+        toast({ title: "Simulado", description: "Funcionalidade não implementada."});
     };
-
+    
     const handleRemoveMemberFromTeam = async (memberId: string) => {
-        if (!selectedTeam) return;
-
-        const updatedTeam = { ...selectedTeam, memberIds: selectedTeam.memberIds.filter(id => id !== memberId) };
-        setTeams(prevTeams => prevTeams.map(t => t.id === updatedTeam.id ? updatedTeam : t));
-        setSelectedTeam(updatedTeam);
-
-        toast({ title: "Sucesso!", description: "Membro removido da equipe (simulado)." });
+        toast({ title: "Simulado", description: "Funcionalidade não implementada."});
     };
     
     const getMembersForTeam = (team: Team) => {
@@ -168,23 +177,25 @@ export default function SettingsPage() {
                         <CardContent className="space-y-4">
                             <div className="space-y-2">
                                 <Label htmlFor="name">Nome</Label>
-                                <Input id="name" defaultValue="Jane Doe" />
+                                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="email">E-mail</Label>
-                                <Input id="email" type="email" defaultValue="jane.doe@example.com" />
+                                <Input id="email" type="email" value={email} disabled />
                             </div>
                              <div className="space-y-2">
                                 <Label htmlFor="current-password">Senha Atual</Label>
-                                <Input id="current-password" type="password" />
+                                <Input id="current-password" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="Deixe em branco para não alterar"/>
                             </div>
                              <div className="space-y-2">
                                 <Label htmlFor="new-password">Nova Senha</Label>
-                                <Input id="new-password" type="password" />
+                                <Input id="new-password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Deixe em branco para não alterar"/>
                             </div>
                         </CardContent>
                         <CardFooter>
-                            <Button onClick={() => toast({ title: 'Simulado', description: 'A funcionalidade de salvar perfil não está conectada.' })}>Salvar Alterações</Button>
+                            <Button onClick={handleProfileUpdate} disabled={isSaving}>
+                                {isSaving ? "Salvando..." : "Salvar Alterações"}
+                            </Button>
                         </CardFooter>
                     </Card>
                     <Card className="transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
@@ -217,7 +228,7 @@ export default function SettingsPage() {
                             </div>
                              <Dialog open={isTeamMemberDialogOpen} onOpenChange={setTeamMemberDialogOpen}>
                                 <DialogTrigger asChild>
-                                    <Button>Adicionar Membro</Button>
+                                    <Button disabled>Adicionar Membro</Button>
                                 </DialogTrigger>
                                 <DialogContent>
                                     <DialogHeader>
@@ -227,12 +238,12 @@ export default function SettingsPage() {
                                     <form onSubmit={handleAddTeamMember}>
                                         <div className="grid gap-4 py-4">
                                             <div className="space-y-2">
-                                                <Label htmlFor="name">Nome</Label>
-                                                <Input id="name" name="name" placeholder="Nome completo" required />
+                                                <Label htmlFor="name-member">Nome</Label>
+                                                <Input id="name-member" name="name" placeholder="Nome completo" required />
                                             </div>
                                             <div className="space-y-2">
-                                                <Label htmlFor="email">E-mail</Label>
-                                                <Input id="email" name="email" type="email" placeholder="email@example.com" required />
+                                                <Label htmlFor="email-member">E-mail</Label>
+                                                <Input id="email-member" name="email" type="email" placeholder="email@example.com" required />
                                             </div>
                                             <div className="space-y-2">
                                                 <Label htmlFor="role">Função</Label>
@@ -288,7 +299,7 @@ export default function SettingsPage() {
                             </div>
                             <Dialog open={isTeamDialogOpen} onOpenChange={setTeamDialogOpen}>
                                 <DialogTrigger asChild>
-                                    <Button>Criar Nova Equipe</Button>
+                                    <Button disabled>Criar Nova Equipe</Button>
                                 </DialogTrigger>
                                 <DialogContent>
                                     <DialogHeader>
@@ -454,3 +465,5 @@ export default function SettingsPage() {
         </div>
     );
 }
+
+    
