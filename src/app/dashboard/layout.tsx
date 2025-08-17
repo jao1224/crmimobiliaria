@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
@@ -50,6 +50,10 @@ import { Header } from "@/components/dashboard/header";
 import { useToast } from "@/hooks/use-toast";
 import { ProfileProvider } from "@/contexts/ProfileContext";
 import { type UserProfile, menuConfig, userProfiles } from "@/lib/permissions";
+import { auth } from "@/lib/firebase";
+import { onAuthStateChanged, type User } from "firebase/auth";
+import { Skeleton } from "@/components/ui/skeleton";
+
 
 export default function DashboardLayout({
   children,
@@ -59,6 +63,26 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const { toast } = useToast();
   const [activeProfile, setActiveProfile] = useState<UserProfile>('Admin');
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoadingUser, setIsLoadingUser] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setIsLoadingUser(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const getInitials = (name: string | null | undefined) => {
+    if (!name) return 'U';
+    const names = name.split(' ');
+    if (names.length > 1) {
+      return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
+
 
   const handleProfileSwitch = (profile: UserProfile) => {
     setActiveProfile(profile);
@@ -133,16 +157,26 @@ export default function DashboardLayout({
               <SidebarMenuItem>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-12 w-full justify-start gap-2 px-2">
-                         <Avatar className="h-8 w-8">
-                          <AvatarImage src="https://placehold.co/100x100.png" alt="Usuário" />
-                          <AvatarFallback>JD</AvatarFallback>
-                        </Avatar>
-                        <div className="flex flex-col items-start truncate">
-                          <span className="truncate font-medium">Jane Doe</span>
-                          <span className="text-xs text-muted-foreground">{activeProfile}</span>
+                      {isLoadingUser ? (
+                        <div className="flex items-center gap-2 px-2 h-12 w-full">
+                           <Skeleton className="h-8 w-8 rounded-full" />
+                           <div className="flex flex-col gap-1 w-full">
+                               <Skeleton className="h-4 w-20" />
+                               <Skeleton className="h-3 w-12" />
+                           </div>
                         </div>
-                      </Button>
+                      ) : (
+                        <Button variant="ghost" className="h-12 w-full justify-start gap-2 px-2">
+                            <Avatar className="h-8 w-8">
+                                <AvatarImage src={user?.photoURL || "https://placehold.co/100x100.png"} alt="Usuário" />
+                                <AvatarFallback>{getInitials(user?.displayName)}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex flex-col items-start truncate">
+                                <span className="truncate font-medium">{user?.displayName || "Usuário"}</span>
+                                <span className="text-xs text-muted-foreground">{activeProfile}</span>
+                            </div>
+                        </Button>
+                      )}
                     </DropdownMenuTrigger>
                     <DropdownMenuContent side="right" align="start" className="w-56">
                       <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
