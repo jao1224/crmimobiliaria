@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, Search } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -23,8 +23,9 @@ import { cn } from "@/lib/utils";
 
 export default function NegotiationsPage() {
     const router = useRouter();
-    const [negotiations, setNegotiations] = useState<Negotiation[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [allNegotiations, setAllNegotiations] = useState<Negotiation[]>([]);
+    const [filteredNegotiations, setFilteredNegotiations] = useState<Negotiation[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
     const [isNewNegotiationOpen, setNewNegotiationOpen] = useState(false);
     const { toast } = useToast();
     
@@ -47,7 +48,7 @@ export default function NegotiationsPage() {
     const [availableClients, setAvailableClients] = useState<Client[]>([]);
 
     useEffect(() => {
-        refreshData();
+        // Apenas carrega os dados para os dropdowns, não a tabela principal
         const fetchDropdownData = async () => {
              const [props, clients] = await Promise.all([
                 getProperties(),
@@ -63,13 +64,42 @@ export default function NegotiationsPage() {
         setIsLoading(true);
         try {
             const data = await getNegotiations();
-            setNegotiations(data);
+            setAllNegotiations(data);
+            // Inicialmente, a lista filtrada é a mesma da completa
+            setFilteredNegotiations(data);
         } catch (error) {
             toast({ variant: 'destructive', title: "Erro ao buscar negociações" });
         } finally {
             setIsLoading(false);
         }
     };
+    
+    // Função para aplicar os filtros manualmente
+    const applyFilters = () => {
+        setIsLoading(true);
+        // Simula uma busca assíncrona
+        setTimeout(() => {
+            let negotiations = [...allNegotiations];
+            
+            if (typeFilter !== 'all') {
+                negotiations = negotiations.filter(neg => neg.type.toLowerCase() === typeFilter);
+            }
+            if (statusFilter !== 'all') {
+                 negotiations = negotiations.filter(neg => neg.contractStatus.replace(/\s/g, '-').toLowerCase() === statusFilter);
+            }
+            if (realtorFilter !== 'all') {
+                 negotiations = negotiations.filter(neg => neg.realtor === realtorFilter);
+            }
+            setFilteredNegotiations(negotiations);
+            setIsLoading(false);
+        }, 500);
+    };
+
+    // Carrega os dados na primeira vez
+    useEffect(() => {
+        refreshData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
 
     const handleSearch = async () => {
         setIsSearching(true);
@@ -221,15 +251,6 @@ export default function NegotiationsPage() {
         }
     };
 
-    const filteredNegotiations = useMemo(() => {
-        return negotiations.filter(neg => {
-            const typeMatch = typeFilter === 'all' || neg.type.toLowerCase() === typeFilter;
-            const statusMatch = statusFilter === 'all' || neg.contractStatus.replace(/\s/g, '-').toLowerCase() === statusFilter;
-            const realtorMatch = realtorFilter === 'all' || neg.realtor === realtorFilter;
-            return typeMatch && statusMatch && realtorMatch;
-        });
-    }, [negotiations, typeFilter, statusFilter, realtorFilter]);
-
     const getStageVariant = (stage: Negotiation['stage']): VariantProps<typeof badgeVariants>['variant'] => {
         switch (stage) {
             case 'Proposta Enviada': return 'status-blue';
@@ -354,15 +375,11 @@ export default function NegotiationsPage() {
                     <CardTitle>Negociações em Andamento</CardTitle>
                     <div className="flex flex-wrap items-center justify-between gap-4">
                         <CardDescription>
-                            {
-                                filteredNegotiations.length > 0 
-                                ? `Exibindo ${filteredNegotiations.length} de ${negotiations.length} negociação(ões).`
-                                : "Nenhuma negociação encontrada com os filtros atuais."
-                            }
+                           Selecione os filtros e clique em "Aplicar Filtros" para buscar as negociações.
                         </CardDescription>
                         <div className="flex flex-wrap items-center gap-2">
                              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                                <SelectTrigger className="w-full sm:w-[180px]">
+                                <SelectTrigger className="w-full sm:w-[150px]">
                                     <SelectValue placeholder="Filtrar por Tipo" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -373,7 +390,7 @@ export default function NegotiationsPage() {
                                 </SelectContent>
                             </Select>
                              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                                <SelectTrigger className="w-full sm:w-[180px]">
+                                <SelectTrigger className="w-full sm:w-[150px]">
                                     <SelectValue placeholder="Filtrar por Status" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -384,7 +401,7 @@ export default function NegotiationsPage() {
                                 </SelectContent>
                             </Select>
                             <Select value={realtorFilter} onValueChange={setRealtorFilter}>
-                                <SelectTrigger className="w-full sm:w-[180px]">
+                                <SelectTrigger className="w-full sm:w-[160px]">
                                     <SelectValue placeholder="Filtrar por Responsável" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -392,6 +409,10 @@ export default function NegotiationsPage() {
                                     {realtors.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                                 </SelectContent>
                             </Select>
+                             <Button onClick={applyFilters} disabled={isLoading}>
+                                <Search className="mr-2 h-4 w-4" />
+                                {isLoading ? "Buscando..." : "Aplicar Filtros"}
+                            </Button>
                         </div>
                     </div>
                 </CardHeader>
