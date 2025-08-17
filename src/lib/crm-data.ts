@@ -1,7 +1,6 @@
 
 import { db } from './firebase';
-import { collection, getDocs, addDoc, doc, setDoc } from 'firebase/firestore';
-
+import { collection, getDocs, addDoc, doc, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 
 // Tipos para os dados de CRM
 export type Lead = {
@@ -28,48 +27,59 @@ export type Client = {
     assignedTo: string;
 };
 
-let leadsData: Lead[] = [
-    { id: "lead1", name: "Ana Silva", source: "Website", status: "Novo", assignedTo: "Carlos Pereira" },
-    { id: "lead2", name: "Bruno Costa", source: "Indicação", status: "Contatado", assignedTo: "Sofia Lima" },
-    { id: "lead3", name: "Carla Mendes", source: "Feirão", status: "Novo", assignedTo: "Joana Doe" },
-    { id: "lead4", name: "Daniel Alves", source: "Portal Imobiliário", status: "Contatado", assignedTo: "Carlos Pereira" },
-    { id: "lead5", name: "Eduarda Lima", source: "Website", status: "Qualificado", assignedTo: "Sofia Lima" },
-];
+// --- FUNÇÕES DE ACESSO E MANIPULAÇÃO (FIRESTORE) ---
 
-let dealsData: Deal[] = [
-    { id: "deal1", property: "Apartamento Central", client: "Empresa X", stage: "Proposta Enviada", value: 750000, closeDate: "2024-08-15" },
-];
-
-let clientsData: Client[] = [
-    { id: "client1", name: "Empresa X", source: "Website", assignedTo: "Carlos Pereira" },
-    { id: "cli1", name: 'João Comprador', source: 'Indicação', assignedTo: 'Carlos Pereira' },
-    { id: "cli2", name: 'Maria Investidora', source: 'Website', assignedTo: 'Sofia Lima' },
-    { id: "cli3", name: 'Construtora Build S.A.', source: 'Feirão', assignedTo: 'Admin' },
-    { id: "cli4", name: 'Paulo Inquilino', source: 'Portal Imobiliário', assignedTo: 'Sofia Lima' },
-    { id: "cli5", name: 'Família Verde', source: 'Indicação', assignedTo: 'Joana Doe' },
-    { id: "cli6", name: 'Investidor Anônimo', source: 'Website', assignedTo: 'Joana Doe' },
-];
-
-// --- FUNÇÕES DE ACESSO E MANIPULAÇÃO ---
-
-export const getLeads = () => [...leadsData];
-export const getDeals = () => [...dealsData];
-export const getClients = () => [...clientsData];
-
-export const addLead = (newLead: Lead) => {
-    if (!leadsData.some(lead => lead.id === newLead.id)) {
-        leadsData.unshift(newLead);
-    }
+export const getLeads = async (): Promise<Lead[]> => {
+    const leadsCollection = collection(db, 'leads');
+    const snapshot = await getDocs(leadsCollection);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Lead));
 };
 
-export const addDeal = (newDeal: Deal) => {
-    if (!dealsData.some(deal => deal.id === newDeal.id)) {
-        dealsData.unshift(newDeal);
-    }
+export const getDeals = async (): Promise<Deal[]> => {
+    const dealsCollection = collection(db, 'deals');
+    const snapshot = await getDocs(dealsCollection);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Deal));
 };
 
-export const addClient = (newClient: Client) => {
-    if (!clientsData.some(client => client.id === newClient.id)) {
-        clientsData.unshift(newClient);
-    }
+export const getClients = async (): Promise<Client[]> => {
+    const clientsCollection = collection(db, 'clients');
+    const snapshot = await getDocs(clientsCollection);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Client));
 };
+
+export const addLead = async (newLead: Omit<Lead, 'id'>): Promise<string> => {
+    const docRef = await addDoc(collection(db, 'leads'), newLead);
+    return docRef.id;
+};
+
+export const addDeal = async (newDeal: Omit<Deal, 'id'>): Promise<string> => {
+    const docRef = await addDoc(collection(db, 'deals'), newDeal);
+    return docRef.id;
+};
+
+export const addClient = async (newClient: Omit<Client, 'id'>): Promise<string> => {
+    const docRef = await addDoc(collection(db, 'clients'), newClient);
+    return docRef.id;
+};
+
+export const convertLeadToClient = async (lead: Lead): Promise<void> => {
+    const batch = writeBatch(db);
+
+    // Cria um novo cliente com os dados do lead
+    const newClientData: Omit<Client, 'id'> = {
+        name: lead.name,
+        source: lead.source,
+        assignedTo: lead.assignedTo,
+    };
+    const newClientRef = doc(collection(db, 'clients'));
+    batch.set(newClientRef, newClientData);
+
+    // Remove o lead original
+    const leadRef = doc(db, 'leads', lead.id);
+    batch.delete(leadRef);
+
+    // Executa as operações em lote
+    await batch.commit();
+};
+
+    

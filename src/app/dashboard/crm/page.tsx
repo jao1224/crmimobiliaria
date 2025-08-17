@@ -13,13 +13,15 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { addClient, addDeal, addLead, getClients, getDeals, getLeads, type Client, type Deal, type Lead } from "@/lib/crm-data";
+import { addClient, addDeal, addLead, getClients, getDeals, getLeads, convertLeadToClient, type Client, type Deal, type Lead } from "@/lib/crm-data";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function CrmPage() {
     const [leads, setLeads] = useState<Lead[]>([]);
     const [deals, setDeals] = useState<Deal[]>([]);
     const [clients, setClients] = useState<Client[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [isLeadDialogOpen, setLeadDialogOpen] = useState(false);
     const [isDealDialogOpen, setDealDialogOpen] = useState(false);
     const { toast } = useToast();
@@ -29,65 +31,90 @@ export default function CrmPage() {
         refreshData();
     }, []);
 
-    const refreshData = () => {
-        setLeads(getLeads());
-        setDeals(getDeals());
-        setClients(getClients());
+    const refreshData = async () => {
+        setIsLoading(true);
+        try {
+            const [leadsData, dealsData, clientsData] = await Promise.all([
+                getLeads(),
+                getDeals(),
+                getClients(),
+            ]);
+            setLeads(leadsData);
+            setDeals(dealsData);
+            setClients(clientsData);
+        } catch (error) {
+            console.error("Failed to fetch CRM data:", error);
+            toast({
+                variant: "destructive",
+                title: "Erro ao carregar dados",
+                description: "Não foi possível buscar os dados do CRM.",
+            });
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     // Simula a adição de um novo lead
-    const handleAddLead = (event: React.FormEvent<HTMLFormElement>) => {
+    const handleAddLead = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         const formData = new FormData(event.currentTarget);
-        const newLead: Lead = {
-            id: `lead${Date.now()}`,
+        const newLeadData = {
             name: formData.get("name") as string,
             source: formData.get("source") as string,
             status: "Novo",
             assignedTo: formData.get("assignedTo") as string,
         };
-        addLead(newLead);
-        refreshData(); // Recarrega os dados para incluir o novo
-        toast({ title: "Sucesso!", description: "Lead adicionado com sucesso." });
-        setLeadDialogOpen(false);
-        event.currentTarget.reset();
+        
+        try {
+            await addLead(newLeadData);
+            await refreshData();
+            toast({ title: "Sucesso!", description: "Lead adicionado com sucesso." });
+            setLeadDialogOpen(false);
+            (event.target as HTMLFormElement).reset();
+        } catch (error) {
+            toast({ variant: "destructive", title: "Erro", description: "Não foi possível adicionar o lead." });
+        }
     };
     
     // Simula a adição de um novo negócio
-    const handleAddDeal = (event: React.FormEvent<HTMLFormElement>) => {
+    const handleAddDeal = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         const formData = new FormData(event.currentTarget);
-        const newDeal: Deal = {
-            id: `deal${Date.now()}`,
+        const newDealData = {
             property: formData.get("property") as string,
             client: formData.get("client") as string,
             stage: "Proposta Enviada",
             value: Number(formData.get("value")),
             closeDate: formData.get("closeDate") as string,
         };
-        addDeal(newDeal);
-        refreshData(); // Recarrega os negócios para incluir o novo
-        toast({ title: "Sucesso!", description: "Negócio adicionado com sucesso." });
-        setDealDialogOpen(false);
-        event.currentTarget.reset();
+        
+        try {
+            await addDeal(newDealData);
+            await refreshData();
+            toast({ title: "Sucesso!", description: "Negócio adicionado com sucesso." });
+            setDealDialogOpen(false);
+            (event.target as HTMLFormElement).reset();
+        } catch (error) {
+            toast({ variant: "destructive", title: "Erro", description: "Não foi possível adicionar o negócio." });
+        }
     };
 
     // Simula a conversão de lead em cliente
-    const handleConvertLeadToClient = (lead: Lead) => {
-        const newClient: Client = {
-            id: `client${Date.now()}`,
-            name: lead.name,
-            source: lead.source,
-            assignedTo: lead.assignedTo,
-        };
-        addClient(newClient);
-        // Remove o lead da lista original
-        setLeads(prev => prev.filter(l => l.id !== lead.id));
-        refreshData(); // Recarrega todos os dados
-        toast({
-            title: "Conversão Realizada!",
-            description: `"${lead.name}" agora é um cliente.`
-        });
+    const handleConvertLeadToClient = async (lead: Lead) => {
+        try {
+            await convertLeadToClient(lead);
+            await refreshData();
+            toast({
+                title: "Conversão Realizada!",
+                description: `"${lead.name}" agora é um cliente.`
+            });
+        } catch (error) {
+             toast({
+                variant: "destructive",
+                title: "Erro na Conversão",
+                description: "Não foi possível converter o lead em cliente.",
+            });
+        }
     };
 
     return (
@@ -188,7 +215,13 @@ export default function CrmPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {leads.length > 0 ? (
+                                    {isLoading ? (
+                                        Array.from({ length: 3 }).map((_, i) => (
+                                            <TableRow key={i}>
+                                                <TableCell colSpan={5}><Skeleton className="h-8 w-full" /></TableCell>
+                                            </TableRow>
+                                        ))
+                                    ) : leads.length > 0 ? (
                                         leads.map(lead => (
                                             <TableRow key={lead.id} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
                                                 <TableCell className="font-medium">{lead.name}</TableCell>
@@ -237,7 +270,13 @@ export default function CrmPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {deals.length > 0 ? (
+                                     {isLoading ? (
+                                        Array.from({ length: 1 }).map((_, i) => (
+                                            <TableRow key={i}>
+                                                <TableCell colSpan={5}><Skeleton className="h-8 w-full" /></TableCell>
+                                            </TableRow>
+                                        ))
+                                    ) : deals.length > 0 ? (
                                         deals.map(deal => (
                                             <TableRow key={deal.id} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
                                                 <TableCell className="font-medium">{deal.property}</TableCell>
@@ -274,7 +313,13 @@ export default function CrmPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {clients.length > 0 ? (
+                                     {isLoading ? (
+                                        Array.from({ length: 5 }).map((_, i) => (
+                                            <TableRow key={i}>
+                                                <TableCell colSpan={4}><Skeleton className="h-8 w-full" /></TableCell>
+                                            </TableRow>
+                                        ))
+                                    ) : clients.length > 0 ? (
                                         clients.map(client => (
                                             <TableRow key={client.id} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
                                                 <TableCell className="font-medium">{client.name}</TableCell>
