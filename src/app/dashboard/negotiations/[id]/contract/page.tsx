@@ -342,7 +342,7 @@ export default function ContractPage() {
                                 <div>
                                     <h3 className="font-semibold mb-2">COMPRADOR(A):</h3>
                                     <p className="border p-4 rounded-md bg-muted/50">
-                                        <strong>Nome:</strong> {client.name}, <strong>CPF/CNPJ:</strong> {client.id || 'N/A'}, residente e domiciliado em {client.id || 'N/A'}.
+                                        <strong>Nome:</strong> {client.name}, <strong>CPF/CNPJ:</strong> {client.document || 'N/A'}, residente e domiciliado em {client.address || 'N/A'}.
                                     </p>
                                 </div>
                                 <div>

@@ -26,6 +26,8 @@ export type Client = {
     name: string;
     source: string;
     assignedTo: string;
+    document?: string;
+    address?: string;
 };
 
 // --- FUNÇÕES DE ACESSO E MANIPULAÇÃO (FIRESTORE) ---
@@ -95,5 +97,3 @@ export const convertLeadToClient = async (lead: Lead): Promise<void> => {
         description: `O lead ${lead.name} foi convertido em cliente.`,
     });
 };
-
-    

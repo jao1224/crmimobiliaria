@@ -15,7 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, PlusCircle, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { getFinancingProcesses, getServiceRequests, realtors, addServiceRequest, type FinancingProcess, type ServiceRequest, type ServiceRequestType, type FinancingStatus, type EngineeringStatus, type GeneralProcessStatus } from "@/lib/data";
+import { getFinancingProcesses, getServiceRequests, realtors, addServiceRequest, type FinancingProcess, type ServiceRequest, type ServiceRequestType, type FinancingStatus, type EngineeringStatus, type GeneralProcessStatus, updateFinancingProcess } from "@/lib/data";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import type { UserProfile } from "../layout";
 import { cn } from "@/lib/utils";
@@ -36,27 +36,29 @@ export default function CorrespondentPage() {
     const { toast } = useToast();
     
     useEffect(() => {
-        const fetchData = async () => {
-            setProcesses(await getFinancingProcesses());
-            setRequests(await getServiceRequests());
-        }
         fetchData();
     }, []);
+
+    const fetchData = async () => {
+        setProcesses(await getFinancingProcesses());
+        setRequests(await getServiceRequests());
+    }
 
     const handleRowClick = (process: FinancingProcess) => {
         setSelectedProcess(process);
         setDetailModalOpen(true);
     };
 
-    const handleSaveChanges = (updatedProcess: FinancingProcess) => {
-        // Simula a verificação de pendências
-        const hasClientPendency = updatedProcess.clientStatus !== 'Aprovado' || updatedProcess.bacenInfo.includes('restrição');
+    const handleSaveChanges = async (updatedProcess: FinancingProcess) => {
+        const hasClientPendency = updatedProcess.clientStatus !== 'Aprovado' || (updatedProcess.bacenInfo && updatedProcess.bacenInfo.toLowerCase().includes('restrição'));
         const hasEngineeringPendency = updatedProcess.engineeringStatus !== 'Aprovado';
         const hasDocsPendency = Object.values(updatedProcess.docs).some(doc => !doc.updated);
         
         updatedProcess.hasPendency = hasClientPendency || hasEngineeringPendency || hasDocsPendency;
 
-        setProcesses(prev => prev.map(p => p.id === updatedProcess.id ? updatedProcess : p));
+        await updateFinancingProcess(updatedProcess.id, updatedProcess);
+        await fetchData();
+
         toast({ title: "Sucesso", description: "Processo de financiamento atualizado." });
         setDetailModalOpen(false);
     };
@@ -75,11 +77,11 @@ export default function CorrespondentPage() {
         };
         
         await addServiceRequest(newRequest);
-        setRequests(await getServiceRequests()); // Recarrega os dados
+        await fetchData();
         
         toast({ title: "Sucesso", description: "Nova solicitação enviada ao correspondente." });
         setRequestModalOpen(false);
-        event.currentTarget.reset();
+        (event.currentTarget as HTMLFormElement).reset();
     };
 
 

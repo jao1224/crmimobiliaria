@@ -1,3 +1,4 @@
+
 import { db } from './firebase';
 import { collection, getDocs, addDoc, doc, updateDoc, writeBatch, serverTimestamp, query, orderBy, limit, where, getDoc, setDoc } from 'firebase/firestore';
 
@@ -301,6 +302,10 @@ export const addFinancingProcess = async (newProcess: Omit<FinancingProcess, 'id
     return docRef.id;
 };
 
+export const updateFinancingProcess = async (id: string, data: Partial<FinancingProcess>): Promise<void> => {
+    const processRef = doc(db, 'financingProcesses', id);
+    await updateDoc(processRef, data);
+};
 
 export const getEvents = async (): Promise<Event[]> => {
     const eventsCollection = collection(db, 'events');
