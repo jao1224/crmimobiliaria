@@ -91,7 +91,7 @@ export default function PropertiesPage() {
 
 
   const captadores = useMemo(() => {
-    if (!properties || properties.length === 0) return ['all'];
+    if (!properties || properties.length === 0) return [];
     const captadorSet = new Set(properties.map(p => p.capturedBy));
     return ['all', ...Array.from(captadorSet)];
   }, [properties]);
@@ -256,7 +256,7 @@ export default function PropertiesPage() {
             <DialogTrigger asChild>
               <Button>Adicionar Imóvel</Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-2xl">
+            <DialogContent className="sm:max-w-xl">
               <DialogHeader>
                 <DialogTitle>Adicionar Novo Imóvel</DialogTitle>
                 <DialogDescription>Preencha os detalhes abaixo para cadastrar um novo imóvel.</DialogDescription>
@@ -528,8 +528,9 @@ export default function PropertiesPage() {
           {editingProperty && (
             <form onSubmit={handleUpdateProperty}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 py-4">
-                {/* Coluna da Imagem */}
-                <div className="space-y-2 flex flex-col items-center">
+                {/* Coluna da Imagem e Descrição */}
+                <div className="space-y-4">
+                  <div className="space-y-2 flex flex-col items-center">
                     <Label>Imagem do Imóvel</Label>
                     {imagePreview ? (
                         <Image src={imagePreview} alt="Preview do imóvel" width={400} height={225} className="rounded-md object-cover aspect-video w-full"/>
@@ -544,6 +545,11 @@ export default function PropertiesPage() {
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
+                  </div>
+                   <div className="space-y-2">
+                    <Label htmlFor="edit-description">Descrição</Label>
+                    <Textarea id="edit-description" name="description" defaultValue={editingProperty.description} rows={3} />
+                  </div>
                 </div>
 
                 {/* Coluna dos Campos */}
@@ -591,10 +597,6 @@ export default function PropertiesPage() {
                             </SelectContent>
                         </Select>
                     </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-description">Descrição</Label>
-                    <Textarea id="edit-description" name="description" defaultValue={editingProperty.description} rows={3} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="edit-owner">Informações do Proprietário</Label>
