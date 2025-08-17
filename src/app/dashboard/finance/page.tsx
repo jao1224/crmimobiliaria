@@ -39,18 +39,31 @@ export default function FinancePage() {
     const hasPermission = financePermissions.includes(activeProfile);
 
     // Estados para Comissões
-    const [commissions, setCommissions] = useState<Commission[]>(() => getCommissions());
+    const [commissions, setCommissions] = useState<Commission[]>([]);
     const [isCommissionDialogOpen, setCommissionDialogOpen] = useState(false);
 
     // Estados para Pagamentos CLT
-    const [payments, setPayments] = useState<PaymentCLT[]>(() => getPayments());
+    const [payments, setPayments] = useState<PaymentCLT[]>([]);
     const [isPaymentDialogOpen, setPaymentDialogOpen] = useState(false);
 
     // Estados para Despesas
-    const [expenses, setExpenses] = useState<Expense[]>(() => getExpenses());
+    const [expenses, setExpenses] = useState<Expense[]>([]);
     const [isExpenseDialogOpen, setExpenseDialogOpen] = useState(false);
 
     const { toast } = useToast();
+
+    // Carrega dados iniciais
+    useEffect(() => {
+        setCommissions(getCommissions());
+        setPayments(getPayments());
+        setExpenses(getExpenses());
+    }, []);
+
+    const refreshFinanceData = () => {
+        setCommissions(getCommissions());
+        setPayments(getPayments());
+        setExpenses(getExpenses());
+    };
 
     // Lógica de Comissões
     const visibleCommissions = commissions.filter(c => {
@@ -80,7 +93,7 @@ export default function FinancePage() {
             invoiceFile: formData.get('invoiceFile') as File || null, realtorId: 'user1' // Simulado
         };
         addCommission(newCommission);
-        setCommissions(getCommissions());
+        refreshFinanceData();
         toast({ title: "Sucesso!", description: "Comissão lançada com sucesso." });
         setCommissionDialogOpen(false);
         event.currentTarget.reset();
@@ -98,7 +111,7 @@ export default function FinancePage() {
             status: formData.get('status') as PaymentCLT['status'],
         };
         addPayment(newPayment);
-        setPayments(getPayments());
+        refreshFinanceData();
         toast({ title: "Sucesso!", description: "Pagamento lançado com sucesso." });
         setPaymentDialogOpen(false);
         event.currentTarget.reset();
@@ -116,7 +129,7 @@ export default function FinancePage() {
             status: formData.get('status') as Expense['status'],
         };
         addExpense(newExpense);
-        setExpenses(getExpenses());
+        refreshFinanceData();
         toast({ title: "Sucesso!", description: "Despesa lançada com sucesso." });
         setExpenseDialogOpen(false);
         event.currentTarget.reset();
@@ -441,10 +454,3 @@ export default function FinancePage() {
         </div>
     );
 }
-
-    
-
-    
-
-
-

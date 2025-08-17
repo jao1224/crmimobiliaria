@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useContext } from "react";
+import { useState, useContext, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -15,7 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, PlusCircle, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { initialFinancingProcesses, getServiceRequests, realtors, addServiceRequest, type FinancingProcess, type ServiceRequest, type ServiceRequestType, type FinancingStatus, type EngineeringStatus, type GeneralProcessStatus } from "@/lib/data";
+import { getFinancingProcesses, getServiceRequests, realtors, addServiceRequest, type FinancingProcess, type ServiceRequest, type ServiceRequestType, type FinancingStatus, type EngineeringStatus, type GeneralProcessStatus } from "@/lib/data";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import type { UserProfile } from "../layout";
 import { cn } from "@/lib/utils";
@@ -26,8 +26,8 @@ const formatCurrency = (amount: number) => new Intl.NumberFormat('pt-BR', { styl
 const correspondentPermissions: UserProfile[] = ['Admin', 'Imobiliária'];
 
 export default function CorrespondentPage() {
-    const [processes, setProcesses] = useState<FinancingProcess[]>(initialFinancingProcesses);
-    const [requests, setRequests] = useState<ServiceRequest[]>(() => getServiceRequests());
+    const [processes, setProcesses] = useState<FinancingProcess[]>([]);
+    const [requests, setRequests] = useState<ServiceRequest[]>([]);
     const [selectedProcess, setSelectedProcess] = useState<FinancingProcess | null>(null);
     const [isDetailModalOpen, setDetailModalOpen] = useState(false);
     const [isRequestModalOpen, setRequestModalOpen] = useState(false);
@@ -35,6 +35,11 @@ export default function CorrespondentPage() {
 
     const { toast } = useToast();
     
+    useEffect(() => {
+        setProcesses(getFinancingProcesses());
+        setRequests(getServiceRequests());
+    }, []);
+
     const handleRowClick = (process: FinancingProcess) => {
         setSelectedProcess(process);
         setDetailModalOpen(true);
@@ -68,7 +73,7 @@ export default function CorrespondentPage() {
         };
         
         addServiceRequest(newRequest);
-        setRequests(getServiceRequests());
+        setRequests(getServiceRequests()); // Recarrega os dados
         
         toast({ title: "Sucesso", description: "Nova solicitação enviada ao correspondente." });
         setRequestModalOpen(false);

@@ -51,11 +51,16 @@ export default function AgendaPage() {
         });
     }, [activeProfile]);
     
-    const [events, setEvents] = useState<Event[]>(() => getEvents());
+    const [events, setEvents] = useState<Event[]>([]);
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
     const [activeTab, setActiveTab] = useState<EventType>(visibleTabs.length > 0 ? visibleTabs[0].id : 'personal');
     const [isEventDialogOpen, setEventDialogOpen] = useState(false);
     const { toast } = useToast();
+
+    // Carrega os eventos iniciais e atualiza quando a aba muda
+    useEffect(() => {
+        setEvents(getEvents());
+    }, []);
 
     // Sincroniza a aba ativa se o perfil mudar e a aba atual não for mais visível
     useEffect(() => {

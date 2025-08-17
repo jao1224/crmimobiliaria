@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,12 +17,25 @@ import { addClient, addDeal, addLead, getClients, getDeals, getLeads, type Clien
 import { cn } from "@/lib/utils";
 
 export default function CrmPage() {
-    const [leads, setLeads] = useState<Lead[]>(() => getLeads());
-    const [deals, setDeals] = useState<Deal[]>(() => getDeals());
-    const [clients, setClients] = useState<Client[]>(() => getClients());
+    const [leads, setLeads] = useState<Lead[]>([]);
+    const [deals, setDeals] = useState<Deal[]>([]);
+    const [clients, setClients] = useState<Client[]>([]);
     const [isLeadDialogOpen, setLeadDialogOpen] = useState(false);
     const [isDealDialogOpen, setDealDialogOpen] = useState(false);
     const { toast } = useToast();
+
+    // Carrega os dados iniciais
+    useEffect(() => {
+        setLeads(getLeads());
+        setDeals(getDeals());
+        setClients(getClients());
+    }, []);
+
+    const refreshData = () => {
+        setLeads(getLeads());
+        setDeals(getDeals());
+        setClients(getClients());
+    };
 
     // Simula a adição de um novo lead
     const handleAddLead = (event: React.FormEvent<HTMLFormElement>) => {
@@ -36,7 +49,7 @@ export default function CrmPage() {
             assignedTo: formData.get("assignedTo") as string,
         };
         addLead(newLead);
-        setLeads(getLeads()); // Recarrega os leads para incluir o novo
+        refreshData(); // Recarrega os dados para incluir o novo
         toast({ title: "Sucesso!", description: "Lead adicionado com sucesso." });
         setLeadDialogOpen(false);
         event.currentTarget.reset();
@@ -55,7 +68,7 @@ export default function CrmPage() {
             closeDate: formData.get("closeDate") as string,
         };
         addDeal(newDeal);
-        setDeals(getDeals()); // Recarrega os negócios para incluir o novo
+        refreshData(); // Recarrega os negócios para incluir o novo
         toast({ title: "Sucesso!", description: "Negócio adicionado com sucesso." });
         setDealDialogOpen(false);
         event.currentTarget.reset();
@@ -70,9 +83,9 @@ export default function CrmPage() {
             assignedTo: lead.assignedTo,
         };
         addClient(newClient);
-        setClients(getClients());
         // Remove o lead da lista original
         setLeads(prev => prev.filter(l => l.id !== lead.id));
+        refreshData(); // Recarrega todos os dados
         toast({
             title: "Conversão Realizada!",
             description: `"${lead.name}" agora é um cliente.`

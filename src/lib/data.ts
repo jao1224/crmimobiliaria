@@ -194,7 +194,7 @@ let commissionsData: Commission[] = [
 ];
 
 // --- DADOS PARA CORRESPONDENTE ---
-export let initialFinancingProcesses: FinancingProcess[] = [
+let financingProcessesData: FinancingProcess[] = [
     { 
         id: 'finproc1', negotiationId: 'neg1', clientName: 'João Comprador', propertyName: 'Apartamento Vista Mar', realtorName: 'Carlos Pereira',
         clientStatus: 'Aprovado', clientStatusReason: '', approvedValue: 700000,
@@ -254,7 +254,6 @@ export const addCommission = (newCommission: Commission) => {
         commissionsData.unshift(newCommission);
     }
 };
-export const initialCommissions = getCommissions();
 
 export const getPayments = () => [...paymentsData];
 export const addPayment = (newPayment: PaymentCLT) => {
@@ -276,8 +275,8 @@ export const addServiceRequest = (newRequest: ServiceRequest) => {
         serviceRequestsData.unshift(newRequest);
     }
 };
-export const initialServiceRequests = getServiceRequests();
 
+export const getFinancingProcesses = () => [...financingProcessesData];
 
 export const getEvents = () => [...eventsData];
 export const addEvent = (newEvent: Event) => {
@@ -288,8 +287,8 @@ export const addEvent = (newEvent: Event) => {
 
 // Função para adicionar um novo processo de financiamento
 export function addFinancingProcess(newProcess: FinancingProcess) {
-    if (!initialFinancingProcesses.some(p => p.id === newProcess.id)) {
-        initialFinancingProcesses.unshift(newProcess);
+    if (!financingProcessesData.some(p => p.id === newProcess.id)) {
+        financingProcessesData.unshift(newProcess);
     }
 }
 
