@@ -451,7 +451,6 @@ export default function SettingsPage() {
                             <CardTitle>Gerenciador de Permissões por Perfil</CardTitle>
                             <CardDescription>
                                 Controle o acesso de cada perfil aos módulos do sistema.
-                                <span className="block text-xs mt-1"> (Observação: Esta interface é apenas para visualização. As permissões reais ainda são definidas no código.)</span>
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6">
@@ -557,3 +556,5 @@ export default function SettingsPage() {
         </div>
     );
 }
+
+    
