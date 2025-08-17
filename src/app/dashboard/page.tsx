@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BarChart3, Building2, CircleDollarSign, Users } from "lucide-react";
 import { SalesReport } from "@/components/dashboard/sales-report";
@@ -20,17 +20,28 @@ const welcomeMessages: Record<UserProfile, { title: string; subtitle: string }> 
   'Financeiro': { title: "Financeiro!", subtitle: "Acompanhe o fluxo de caixa e as métricas financeiras." },
 };
 
-// Dados simulados para vendas - estático para fins visuais
-const salesData = [
-  { month: "Jan", sales: 95000 },
-  { month: "Fev", sales: 150000 },
-  { month: "Mar", sales: 80000 },
-  { month: "Abr", sales: 40000 },
-  { month: "Mai", sales: 110000 },
-  { month: "Jun", sales: 100000 },
-  { month: "Jul", sales: 220000 },
-  { month: "Ago", sales: 180000 },
-];
+// Função para processar os dados de vendas e agrupar por mês
+const processSalesData = (negotiations: Negotiation[]) => {
+    const monthlySales: { [key: string]: number } = {};
+    const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+
+    negotiations.forEach(neg => {
+        if (neg.stage === 'Venda Concluída' && neg.completionDate) {
+            const date = new Date(neg.completionDate);
+            const monthIndex = date.getUTCMonth(); // Usar getUTCMonth para consistência
+            const month = months[monthIndex];
+            if (month) {
+                monthlySales[month] = (monthlySales[month] || 0) + neg.value;
+            }
+        }
+    });
+
+    return months.map(month => ({
+        month,
+        sales: monthlySales[month] || 0
+    }));
+};
+
 
 export default function DashboardPage() {
   const { activeProfile } = useContext(ProfileContext);
@@ -68,14 +79,18 @@ export default function DashboardPage() {
   }, []);
 
   // Calculando estatísticas dinamicamente
-  const stats = {
+  const stats = useMemo(() => ({
     totalRevenue: negotiations
       .filter(n => n.stage === 'Venda Concluída')
       .reduce((sum, n) => sum + n.value, 0),
     activeDeals: negotiations.filter(n => n.stage !== 'Venda Concluída' && n.stage !== 'Aluguel Ativo').length,
     soldProperties: negotiations.filter(n => n.stage === 'Venda Concluída').length,
-    newLeads: leads.length, // Sincronizado com os dados reais de leads
-  };
+    newLeads: leads.length,
+  }), [negotiations, leads]);
+  
+  // Gerando os dados para o gráfico dinamicamente
+  const salesData = useMemo(() => processSalesData(negotiations), [negotiations]);
+
 
   const overviewCards = [
     {
@@ -146,7 +161,7 @@ export default function DashboardPage() {
             <CardDescription>Desempenho de vendas mensais com base nos contratos gerados.</CardDescription>
           </CardHeader>
           <CardContent className="pl-2">
-            <SalesReport data={salesData} />
+             {isLoading ? <Skeleton className="w-full h-[300px]" /> : <SalesReport data={salesData} />}
           </CardContent>
         </Card>
       </div>
