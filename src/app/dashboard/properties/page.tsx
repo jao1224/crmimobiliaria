@@ -37,6 +37,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 export default function PropertiesPage() {
   const [properties, setProperties] = useState<Property[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [isPropertyDialogOpen, setPropertyDialogOpen] = useState(false);
@@ -52,11 +53,40 @@ export default function PropertiesPage() {
   const [sortOrder, setSortOrder] = useState('default'); // 'price-asc', 'price-desc'
 
   useEffect(() => {
-    setProperties(getProperties());
-  }, []);
+    async function loadProperties() {
+      setIsLoading(true);
+      try {
+        const fetchedProperties = await getProperties();
+        setProperties(fetchedProperties);
+      } catch (error) {
+        console.error("Failed to fetch properties:", error);
+        toast({
+          variant: "destructive",
+          title: "Erro ao Carregar Imóveis",
+          description: "Não foi possível buscar os imóveis do banco de dados.",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadProperties();
+  }, [toast]);
 
-  const refreshProperties = () => {
-    setProperties(getProperties());
+  const refreshProperties = async () => {
+    setIsLoading(true);
+    try {
+        const fetchedProperties = await getProperties();
+        setProperties(fetchedProperties);
+    } catch (error) {
+        console.error("Failed to fetch properties:", error);
+        toast({
+            variant: "destructive",
+            title: "Erro ao Atualizar",
+            description: "Não foi possível recarregar a lista de imóveis.",
+        });
+    } finally {
+        setIsLoading(false);
+    }
   };
 
 
@@ -319,82 +349,103 @@ export default function PropertiesPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredAndSortedProperties.map((property) => (
-              <Card
-                key={property.id}
-                onClick={() => handleCardClick(property)}
-                className={cn(
-                  "overflow-hidden transition-all duration-200 flex flex-col",
-                  property.status === 'Disponível'
-                      ? 'cursor-pointer hover:shadow-xl hover:-translate-y-1'
-                      : ''
-                )}
-              >
-                <div className="relative">
-                  <Image
-                    alt={property.name}
-                    className="aspect-video w-full object-cover"
-                    height={225}
-                    src={property.imageUrl}
-                    width={400}
-                    data-ai-hint={property.imageHint}
-                  />
-                   {property.status === "Vendido" && (
-                    <div className="absolute top-4 left-0 w-full">
-                       <div className="bg-destructive text-destructive-foreground font-bold text-center py-1 px-4 shadow-lg">
-                            VENDIDO
+           {isLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Card key={i} className="overflow-hidden">
+                  <Skeleton className="aspect-video w-full" />
+                  <CardHeader>
+                    <Skeleton className="h-6 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                  </CardHeader>
+                  <CardContent>
+                    <Skeleton className="h-8 w-1/3" />
+                  </CardContent>
+                  <CardFooter className="flex justify-between items-center">
+                    <Skeleton className="h-4 w-1/4" />
+                    <Skeleton className="h-6 w-20 rounded-full" />
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {filteredAndSortedProperties.map((property) => (
+                <Card
+                    key={property.id}
+                    onClick={() => handleCardClick(property)}
+                    className={cn(
+                    "overflow-hidden transition-all duration-200 flex flex-col",
+                    property.status === 'Disponível'
+                        ? 'cursor-pointer hover:shadow-xl hover:-translate-y-1'
+                        : ''
+                    )}
+                >
+                    <div className="relative">
+                    <Image
+                        alt={property.name}
+                        className="aspect-video w-full object-cover"
+                        height={225}
+                        src={property.imageUrl}
+                        width={400}
+                        data-ai-hint={property.imageHint}
+                    />
+                    {property.status === "Vendido" && (
+                        <div className="absolute top-4 left-0 w-full">
+                        <div className="bg-destructive text-destructive-foreground font-bold text-center py-1 px-4 shadow-lg">
+                                VENDIDO
+                            </div>
                         </div>
+                    )}
+                    <div className="absolute top-2 right-2">
+                        <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button
+                            aria-haspopup="true"
+                            size="icon"
+                            variant="secondary"
+                            className="h-8 w-8 rounded-full"
+                            onClick={(e) => e.stopPropagation()}
+                            >
+                            <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Alternar menu</span>
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={(e) => handleEditClick(e, property)}>Editar</DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleCardClick(property); }}>Ver Detalhes</DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive" onClick={(e) => e.stopPropagation()}>
+                            Excluir
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
-                  )}
-                  <div className="absolute top-2 right-2">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                         <Button
-                          aria-haspopup="true"
-                          size="icon"
-                          variant="secondary"
-                          className="h-8 w-8 rounded-full"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Alternar menu</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={(e) => handleEditClick(e, property)}>Editar</DropdownMenuItem>
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleCardClick(property); }}>Ver Detalhes</DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive" onClick={(e) => e.stopPropagation()}>
-                          Excluir
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-                <CardHeader>
-                    <CardTitle className="truncate text-lg">{property.name}</CardTitle>
-                    <CardDescription className="truncate">{property.address}</CardDescription>
-                </CardHeader>
-                <CardContent className="flex-grow">
-                   <div className="text-2xl font-bold">
-                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(property.price)}
-                   </div>
-                </CardContent>
-                <CardFooter className="flex justify-between items-center text-xs text-muted-foreground">
-                    <span>Captador: {property.capturedBy}</span>
-                     <Badge variant={getStatusVariant(property.status)} className={cn(property.status === 'Vendido' && 'hidden', getStatusClass(property.status))}>
-                      {property.status}
-                    </Badge>
-                </CardFooter>
-              </Card>
-            ))}
-             {filteredAndSortedProperties.length === 0 && (
-                <div className="col-span-full h-24 text-center flex items-center justify-center">
-                    Nenhum imóvel encontrado com os filtros atuais.
-                </div>
-            )}
-          </div>
+                    </div>
+                    <CardHeader>
+                        <CardTitle className="truncate text-lg">{property.name}</CardTitle>
+                        <CardDescription className="truncate">{property.address}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex-grow">
+                    <div className="text-2xl font-bold">
+                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(property.price)}
+                    </div>
+                    </CardContent>
+                    <CardFooter className="flex justify-between items-center text-xs text-muted-foreground">
+                        <span>Captador: {property.capturedBy}</span>
+                        <Badge variant={getStatusVariant(property.status)} className={cn(property.status === 'Vendido' && 'hidden', getStatusClass(property.status))}>
+                        {property.status}
+                        </Badge>
+                    </CardFooter>
+                </Card>
+                ))}
+                {filteredAndSortedProperties.length === 0 && (
+                    <div className="col-span-full h-24 text-center flex items-center justify-center">
+                        Nenhum imóvel encontrado com os filtros atuais.
+                    </div>
+                )}
+            </div>
+           )}
         </CardContent>
       </Card>
 

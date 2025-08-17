@@ -1,5 +1,8 @@
 
 
+import { db } from '@/lib/firebase';
+import { collection, getDocs, query } from 'firebase/firestore';
+
 export type NegotiationStage = 'Proposta Enviada' | 'Em Negociação' | 'Contrato Gerado' | 'Venda Concluída' | 'Aluguel Ativo';
 export type NegotiationType = 'Venda' | 'Aluguel' | 'Leilão';
 export type ContractStatus = 'Não Gerado' | 'Pendente Assinaturas' | 'Assinado' | 'Cancelado';
@@ -276,7 +279,28 @@ let expensesData: Expense[] = [
 
 // --- FUNÇÕES DE MANIPULAÇÃO DE DADOS ---
 
-export const getProperties = () => [...propertiesData];
+export const getProperties = async (): Promise<Property[]> => {
+    try {
+        const propertiesCollection = collection(db, "properties");
+        const q = query(propertiesCollection);
+        const querySnapshot = await getDocs(q);
+        
+        if (querySnapshot.empty) {
+            console.warn("Nenhum imóvel encontrado no Firestore. Retornando dados simulados.");
+            return propertiesData;
+        }
+
+        const properties: Property[] = [];
+        querySnapshot.forEach((doc) => {
+            properties.push({ id: doc.id, ...doc.data() } as Property);
+        });
+        return properties;
+    } catch (error) {
+        console.error("Erro ao buscar imóveis do Firestore, usando dados simulados como fallback: ", error);
+        return propertiesData; // Retorna os dados simulados em caso de erro
+    }
+};
+
 export const addProperty = (newProperty: Property) => {
     if (!propertiesData.some(p => p.id === newProperty.id)) {
         propertiesData.unshift(newProperty);
