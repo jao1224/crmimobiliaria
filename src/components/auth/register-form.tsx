@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -26,6 +27,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { userProfiles } from "@/lib/permissions";
 
 const formSchema = z.object({
   profileType: z.string({ required_error: "Por favor, selecione um tipo de perfil." }),
@@ -37,6 +39,8 @@ const formSchema = z.object({
   address: z.string().min(5, { message: "Por favor, insira um endereço válido." }),
   password: z.string().min(8, { message: "A senha deve ter pelo menos 8 caracteres." }),
 });
+
+const registrationProfiles = userProfiles.filter(p => ['Imobiliária', 'Corretor Autônomo', 'Investidor', 'Construtora'].includes(p));
 
 export function RegisterForm() {
   const router = useRouter();
@@ -88,10 +92,9 @@ export function RegisterForm() {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="real_estate_agency">Imobiliária</SelectItem>
-                      <SelectItem value="independent_broker">Corretor Autônomo</SelectItem>
-                      <SelectItem value="investor">Investidor</SelectItem>
-                      <SelectItem value="construction_company">Construtora</SelectItem>
+                      {registrationProfiles.map(profile => (
+                        <SelectItem key={profile} value={profile}>{profile}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />

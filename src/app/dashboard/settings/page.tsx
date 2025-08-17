@@ -33,9 +33,7 @@ type Team = {
     memberIds: string[];
 };
 
-const roles: UserProfile[] = [
-    'Admin', 'Imobiliária', 'Financeiro', 'Corretor Autônomo', 'Investidor', 'Construtora'
-];
+const roles = userProfiles.filter(p => ['Admin', 'Imobiliária', 'Financeiro', 'Corretor Autônomo', 'Investidor', 'Construtora'].includes(p));
 
 // Dados simulados
 const initialTeamMembers: TeamMember[] = [
