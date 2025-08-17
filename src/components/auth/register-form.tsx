@@ -31,7 +31,6 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { userProfiles } from "@/lib/permissions";
 import { auth, db } from "@/lib/firebase";
-import { ScrollArea } from "../ui/scroll-area";
 import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
@@ -127,7 +126,6 @@ export function RegisterForm() {
   }
 
   return (
-    <ScrollArea className="h-[60vh] pr-6">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
             <FormField
@@ -254,6 +252,5 @@ export function RegisterForm() {
             </Button>
         </form>
       </Form>
-    </ScrollArea>
   );
 }
