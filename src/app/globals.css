@@ -14,7 +14,7 @@ body {
     --card-foreground: 234 73% 15%;
     --popover: 230 33% 99%;
     --popover-foreground: 234 73% 15%;
-    --primary: 230 56% 31%; /* #222f7c */
+    --primary: 231 49% 27%; /* #232d68 */
     --primary-foreground: 210 40% 98%;
     --secondary: 230 29% 90%; /* Lighter version of b1b8d6 */
     --secondary-foreground: 232 35% 30%; /* Darker version of 4f5ba2 */
@@ -36,8 +36,8 @@ body {
     --status-blue-foreground: 0 0% 100%;
     --border: 230 29% 88%; /* Based on b1b8d6 */
     --input: 230 29% 91%;
-    --ring: 230 56% 31%;
-    --chart-1: 230 56% 31%; /* #222f7c */
+    --ring: 231 49% 27%;
+    --chart-1: 231 49% 27%; /* #232d68 */
     --chart-2: 232 35% 47%; /* #4f5ba2 */
     --chart-3: 39 66% 71%; /* #e5bc86 */
     --chart-4: 230 29% 77%; /* #b1b8d6 */
@@ -47,7 +47,7 @@ body {
     --sidebar-foreground: 210 40% 98%;
     --sidebar-primary: 39 66% 71%; /* #e5bc86 */
     --sidebar-primary-foreground: 234 73% 15%;
-    --sidebar-accent: 230 56% 31%; /* #222f7c */
+    --sidebar-accent: 231 49% 27%; /* #232d68 */
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 234 73% 35%;
     --sidebar-ring: 39 66% 71%;
@@ -59,7 +59,7 @@ body {
     --card-foreground: 230 29% 90%;
     --popover: 234 73% 10%;
     --popover-foreground: 230 29% 90%;
-    --primary: 230 56% 41%; /* Lighter #222f7c */
+    --primary: 231 49% 37%; /* Lighter #232d68 */
     --primary-foreground: 210 40% 98%;
     --secondary: 232 35% 25%; /* Muted Blue */
     --secondary-foreground: 230 29% 90%;
@@ -77,12 +77,12 @@ body {
     --info-soft-foreground: 214 80% 80%;
     --warning: 38 82% 41%;
     --warning-foreground: 24 9.8% 10%;
-    --status-blue: 230 56% 41%; /* Lighter #222f7c */
+    --status-blue: 231 49% 37%; /* Lighter #232d68 */
     --status-blue-foreground: 0 0% 100%;
     --border: 232 35% 25%;
     --input: 232 35% 22%;
-    --ring: 230 56% 41%;
-    --chart-1: 230 56% 41%; /* Lighter #222f7c */
+    --ring: 231 49% 37%;
+    --chart-1: 231 49% 37%; /* Lighter #232d68 */
     --chart-2: 232 35% 55%; /* Lighter #4f5ba2 */
     --chart-3: 39 66% 71%; /* #e5bc86 */
     --chart-4: 230 29% 77%; /* #b1b8d6 */
@@ -91,7 +91,7 @@ body {
     --sidebar-foreground: 210 40% 98%;
     --sidebar-primary: 39 66% 71%; /* #e5bc86 */
     --sidebar-primary-foreground: 234 73% 15%;
-    --sidebar-accent: 230 56% 31%; /* #222f7c */
+    --sidebar-accent: 231 49% 27%; /* #232d68 */
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 234 73% 35%;
     --sidebar-ring: 39 66% 71%;
