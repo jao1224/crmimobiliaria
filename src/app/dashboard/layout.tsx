@@ -120,7 +120,8 @@ export default function DashboardLayout({
           </SidebarHeader>
           <SidebarContent>
             <div
-              className="flex-grow rounded-lg shadow-inner bg-sidebar-default"
+              className="flex-grow rounded-lg shadow-inner"
+              style={{ backgroundColor: "var(--sidebar-accent)"}}
             >
               <SidebarMenu className="p-2">
                 {visibleMenuItems.map((item) => (
@@ -177,7 +178,7 @@ export default function DashboardLayout({
                             </Avatar>
                             <div className="flex flex-col items-start truncate">
                                 <span className="truncate font-medium">{user?.displayName || "Usuário"}</span>
-                                <span className="text-xs text-muted-foreground">{activeProfile}</span>
+                                <span className="text-muted-foreground">{activeProfile}</span>
                             </div>
                         </Button>
                       )}
