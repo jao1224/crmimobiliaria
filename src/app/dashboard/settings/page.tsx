@@ -36,6 +36,8 @@ type Team = {
     memberIds: string[];
 };
 
+type PermissionsState = Record<UserProfile, string[]>;
+
 const roles = userProfiles.filter(p => ['Admin', 'Imobiliária', 'Financeiro', 'Corretor Autônomo', 'Investidor', 'Construtora'].includes(p));
 
 
@@ -60,6 +62,10 @@ export default function SettingsPage() {
     const [isTeamMemberDialogOpen, setTeamMemberDialogOpen] = useState(false);
     const [isTeamDialogOpen, setTeamDialogOpen] = useState(false);
     const [isManageMembersDialogOpen, setManageMembersDialogOpen] = useState(false);
+
+    // Estado das Permissões
+    const [permissions, setPermissions] = useState<PermissionsState>(menuConfig);
+
 
     useEffect(() => {
         const currentUser = auth.currentUser;
@@ -238,6 +244,28 @@ export default function SettingsPage() {
                 toast({ variant: "destructive", title: "Erro", description: "Não foi possível excluir a equipe." });
             }
         }
+    };
+    
+    const handlePermissionChange = (profile: UserProfile, moduleId: string, checked: boolean) => {
+        setPermissions(prev => {
+            const currentPermissions = prev[profile] || [];
+            const newPermissions = checked
+                ? [...currentPermissions, moduleId]
+                : currentPermissions.filter(id => id !== moduleId);
+            return { ...prev, [profile]: newPermissions };
+        });
+    };
+
+    const handleSavePermissions = () => {
+        setIsSaving(true);
+        // Simulação de salvamento no Firestore.
+        // Em um projeto real, você faria um loop e salvaria `permissions`
+        // em um documento de configuração no Firestore.
+        console.log("Salvando permissões:", permissions);
+        setTimeout(() => {
+            toast({ title: "Permissões Salvas", description: "As novas regras de permissão foram salvas com sucesso (simulado)." });
+            setIsSaving(false);
+        }, 1000);
     };
 
 
@@ -450,11 +478,11 @@ export default function SettingsPage() {
                         <CardHeader>
                             <CardTitle>Gerenciador de Permissões por Perfil</CardTitle>
                             <CardDescription>
-                                Controle o acesso de cada perfil aos módulos do sistema.
+                                Controle o acesso de cada perfil aos módulos do sistema. As alterações são salvas (simulado).
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6">
-                            {Object.keys(menuConfig).map(profile => (
+                            {Object.entries(permissions).map(([profile, profilePermissions]) => (
                                 <div key={profile}>
                                     <h3 className="text-lg font-semibold mb-2">{profile}</h3>
                                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 rounded-md border p-4">
@@ -462,10 +490,11 @@ export default function SettingsPage() {
                                             <div key={module.id} className="flex items-center space-x-2">
                                                 <Checkbox
                                                     id={`${profile}-${module.id}`}
-                                                    checked={menuConfig[profile as UserProfile].includes(module.id)}
-                                                    disabled
+                                                    checked={profilePermissions.includes(module.id)}
+                                                    onCheckedChange={(checked) => handlePermissionChange(profile as UserProfile, module.id, !!checked)}
+                                                    disabled={profile === 'Admin'}
                                                 />
-                                                <Label htmlFor={`${profile}-${module.id}`} className="font-normal">
+                                                <Label htmlFor={`${profile}-${module.id}`} className={cn("font-normal", profile === 'Admin' && "text-muted-foreground")}>
                                                     {module.label}
                                                 </Label>
                                             </div>
@@ -475,7 +504,9 @@ export default function SettingsPage() {
                             ))}
                         </CardContent>
                          <CardFooter>
-                            <Button disabled>Salvar Permissões</Button>
+                            <Button onClick={handleSavePermissions} disabled={isSaving}>
+                                {isSaving ? "Salvando..." : "Salvar Permissões"}
+                            </Button>
                          </CardFooter>
                     </Card>
                 </TabsContent>
@@ -556,5 +587,3 @@ export default function SettingsPage() {
         </div>
     );
 }
-
-    
