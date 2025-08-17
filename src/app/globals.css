@@ -26,8 +26,8 @@ body {
     --destructive-foreground: 0 0% 98%;
     --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
-    --info: 214 90% 95%;
-    --info-foreground: 221 78% 32%;
+    --info: 221 83% 53%; /* Darker Blue for "Alugado" */
+    --info-foreground: 0 0% 100%;
     --info-soft: 214 90% 95%;
     --info-soft-foreground: 221 78% 32%;
     --warning: 38 92% 51%;
@@ -71,8 +71,8 @@ body {
     --destructive-foreground: 210 40% 98%;
     --success: 142 61% 35%;
     --success-foreground: 0 0% 100%;
-    --info: 214 80% 85%;
-    --info-foreground: 221 68% 22%;
+    --info: 221 83% 53%; /* Darker Blue */
+    --info-foreground: 0 0% 100%;
     --info-soft: 221 68% 12%;
     --info-soft-foreground: 214 80% 80%;
     --warning: 38 82% 41%;

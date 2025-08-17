@@ -56,7 +56,7 @@ export default function PropertiesPage() {
     async function loadProperties() {
       setIsLoading(true);
       try {
-        const fetchedProperties = await getProperties();
+        const fetchedProperties = getProperties();
         setProperties(fetchedProperties);
       } catch (error) {
         console.error("Failed to fetch properties:", error);
@@ -75,7 +75,7 @@ export default function PropertiesPage() {
   const refreshProperties = async () => {
     setIsLoading(true);
     try {
-        const fetchedProperties = await getProperties();
+        const fetchedProperties = getProperties();
         setProperties(fetchedProperties);
     } catch (error) {
         console.error("Failed to fetch properties:", error);
@@ -234,7 +234,7 @@ export default function PropertiesPage() {
   const getStatusClass = (status: string): string => {
     switch (status) {
         case "Alugado":
-            return "border-transparent bg-blue-100 text-blue-800 hover:bg-blue-100/80";
+            return "border-transparent text-info-foreground hover:bg-info/80";
         default:
             return "";
     }
