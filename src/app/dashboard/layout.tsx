@@ -120,8 +120,7 @@ export default function DashboardLayout({
           </SidebarHeader>
           <SidebarContent>
             <div
-              className="flex-grow rounded-lg shadow-inner"
-              style={{ background: 'linear-gradient(to bottom, #1E3A8A, #2563EB)' }}
+              className="flex-grow rounded-lg shadow-inner bg-sidebar-default"
             >
               <SidebarMenu className="p-2">
                 {visibleMenuItems.map((item) => (
