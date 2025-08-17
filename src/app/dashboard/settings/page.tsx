@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 import { type UserProfile, userProfiles, menuConfig, allModules } from "@/lib/permissions";
 import { auth, db } from "@/lib/firebase";
 import { collection, getDocs, doc, setDoc, addDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc } from "firebase/firestore";
-import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, updateProfile } from "firebase/auth";
+import { EmailAuthProvider, onAuthStateChanged, reauthenticateWithCredential, updatePassword, updateProfile, type User } from "firebase/auth";
 
 
 type TeamMember = {
@@ -50,6 +50,7 @@ export default function SettingsPage() {
     const { toast } = useToast();
 
     // Estados do Perfil
+    const [user, setUser] = useState<User | null>(null);
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [currentPassword, setCurrentPassword] = useState('');
@@ -66,15 +67,22 @@ export default function SettingsPage() {
     // Estado das Permissões
     const [permissions, setPermissions] = useState<PermissionsState>(menuConfig);
 
-
     useEffect(() => {
-        const currentUser = auth.currentUser;
-        if (currentUser) {
-            setName(currentUser.displayName || '');
-            setEmail(currentUser.email || '');
+        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+            if (currentUser) {
+                setUser(currentUser);
+                setName(currentUser.displayName || '');
+                setEmail(currentUser.email || '');
+            } else {
+                setUser(null);
+            }
+        });
+
+        if (hasPermission) {
+            fetchTeamData();
         }
-        
-        fetchTeamData();
+
+        return () => unsubscribe();
     }, [hasPermission]);
 
     const fetchTeamData = async () => {
