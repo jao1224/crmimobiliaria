@@ -32,6 +32,7 @@ import { useToast } from "@/hooks/use-toast";
 import { userProfiles } from "@/lib/permissions";
 import { auth, db } from "@/lib/firebase";
 import { ScrollArea } from "../ui/scroll-area";
+import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
   profileType: z.string({ required_error: "Por favor, selecione um tipo de perfil." }),
@@ -42,7 +43,17 @@ const formSchema = z.object({
   creci: z.string().optional(),
   address: z.string().min(5, { message: "Por favor, insira um endereço válido." }),
   password: z.string().min(8, { message: "A senha deve ter pelo menos 8 caracteres." }),
+}).refine(data => {
+    // Torna CRECI obrigatório para corretores e imobiliárias
+    if (data.profileType === 'Corretor Autônomo' || data.profileType === 'Imobiliária') {
+        return data.creci && data.creci.length > 0;
+    }
+    return true;
+}, {
+    message: "O CRECI é obrigatório para este tipo de perfil.",
+    path: ["creci"], // Aponta o erro para o campo CRECI
 });
+
 
 const registrationProfiles = userProfiles.filter(p => ['Imobiliária', 'Corretor Autônomo', 'Investidor', 'Construtora'].includes(p));
 
@@ -64,6 +75,8 @@ export function RegisterForm() {
       password: "",
     },
   });
+  
+  const watchedProfileType = form.watch("profileType");
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
@@ -199,7 +212,9 @@ export function RegisterForm() {
                 name="creci"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>CRECI (Opcional)</FormLabel>
+                    <FormLabel className={cn((watchedProfileType === 'Corretor Autônomo' || watchedProfileType === 'Imobiliária') && "after:content-['*'] after:ml-0.5 after:text-destructive")}>
+                        CRECI
+                    </FormLabel>
                     <FormControl>
                       <Input placeholder="12345-F" {...field} />
                     </FormControl>
