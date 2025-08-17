@@ -19,7 +19,7 @@ import { ProfileContext } from "@/contexts/ProfileContext";
 import { cn } from "@/lib/utils";
 import { type UserProfile, userProfiles, menuConfig, allModules } from "@/lib/permissions";
 import { auth, db } from "@/lib/firebase";
-import { collection, getDocs, doc, setDoc } from "firebase/firestore";
+import { collection, getDocs, doc, setDoc, addDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc } from "firebase/firestore";
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, updateProfile } from "firebase/auth";
 
 
@@ -68,19 +68,19 @@ export default function SettingsPage() {
             setEmail(currentUser.email || '');
         }
         
-        // Carregar membros da equipe e equipes do Firestore (se necessário)
-        const fetchTeamData = async () => {
-            if (hasPermission) {
-                const usersSnapshot = await getDocs(collection(db, "users"));
-                setTeamMembers(usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeamMember)));
-
-                // Simulação para equipes
-                // setTeams(initialTeams);
-            }
-        };
-
         fetchTeamData();
     }, [hasPermission]);
+
+    const fetchTeamData = async () => {
+        if (hasPermission) {
+            const usersSnapshot = await getDocs(collection(db, "users"));
+            setTeamMembers(usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeamMember)));
+
+            const teamsSnapshot = await getDocs(collection(db, "teams"));
+            setTeams(teamsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team)));
+        }
+    };
+
 
     const handleProfileUpdate = async () => {
         setIsSaving(true);
@@ -127,30 +127,117 @@ export default function SettingsPage() {
     };
 
     const handleAddTeamMember = async (event: React.FormEvent<HTMLFormElement>) => {
-        // Implementar lógica de criação de usuário no Firestore se necessário
-        toast({ title: "Simulado", description: "Funcionalidade de adicionar membro não implementada."});
+        event.preventDefault();
+        setIsSaving(true);
+
+        const formData = new FormData(event.currentTarget);
+        const memberName = formData.get("name") as string;
+        const memberEmail = formData.get("email") as string;
+        const memberRole = formData.get("role") as string;
+
+        toast({ title: "Atenção", description: "A criação de usuários via app está desabilitada por segurança. Adicione usuários pelo console do Firebase."});
+
+        setIsSaving(false);
+        setTeamMemberDialogOpen(false);
     };
 
     const handleAddTeam = async (event: React.FormEvent<HTMLFormElement>) => {
-       toast({ title: "Simulado", description: "Funcionalidade de criar equipe não implementada."});
+       event.preventDefault();
+       setIsSaving(true);
+       const formData = new FormData(event.currentTarget);
+       const teamName = formData.get("team-name") as string;
+       
+       try {
+            await addDoc(collection(db, "teams"), {
+                name: teamName,
+                memberIds: []
+            });
+            await fetchTeamData();
+            toast({ title: "Sucesso!", description: `A equipe "${teamName}" foi criada.`});
+            setTeamDialogOpen(false);
+       } catch (error) {
+            toast({ variant: "destructive", title: "Erro", description: "Não foi possível criar a equipe." });
+       } finally {
+           setIsSaving(false);
+       }
     };
     
-    // Funções de Gerenciamento de Equipe (mantidas como simuladas por enquanto)
     const handleManageMembers = (team: Team) => {
         setSelectedTeam(team);
         setManageMembersDialogOpen(true);
     };
 
     const handleAddMemberToTeam = async (event: React.FormEvent<HTMLFormElement>) => {
-        toast({ title: "Simulado", description: "Funcionalidade não implementada."});
+        event.preventDefault();
+        if (!selectedTeam) return;
+
+        const formData = new FormData(event.currentTarget);
+        const memberId = formData.get('memberId') as string;
+
+        setIsSaving(true);
+        try {
+            const teamRef = doc(db, 'teams', selectedTeam.id);
+            await updateDoc(teamRef, {
+                memberIds: arrayUnion(memberId)
+            });
+            await fetchTeamData(); // Refresh all data
+            // Refresh selectedTeam state
+            const updatedTeams = await getDocs(collection(db, "teams"));
+            const updatedTeam = updatedTeams.docs.find(d => d.id === selectedTeam.id)?.data() as Team;
+            if(updatedTeam) {
+                 setSelectedTeam({ ...updatedTeam, id: selectedTeam.id });
+            }
+           
+            toast({ title: "Sucesso!", description: "Membro adicionado à equipe." });
+        } catch (error) {
+            toast({ variant: "destructive", title: "Erro", description: "Não foi possível adicionar o membro." });
+        } finally {
+            setIsSaving(false);
+        }
     };
     
     const handleRemoveMemberFromTeam = async (memberId: string) => {
-        toast({ title: "Simulado", description: "Funcionalidade não implementada."});
+        if (!selectedTeam) return;
+        
+        setIsSaving(true);
+         try {
+            const teamRef = doc(db, 'teams', selectedTeam.id);
+            await updateDoc(teamRef, {
+                memberIds: arrayRemove(memberId)
+            });
+            await fetchTeamData(); // Refresh all data
+            // Refresh selectedTeam state
+             const updatedTeams = await getDocs(collection(db, "teams"));
+             const updatedTeamDoc = updatedTeams.docs.find(d => d.id === selectedTeam.id);
+             if (updatedTeamDoc) {
+                 const updatedTeamData = updatedTeamDoc.data() as Omit<Team, 'id'>;
+                 setSelectedTeam({ ...updatedTeamData, id: selectedTeam.id });
+             } else {
+                 setManageMembersDialogOpen(false); // Team was deleted, close modal
+             }
+
+            toast({ title: "Sucesso!", description: "Membro removido da equipe." });
+        } catch (error) {
+            toast({ variant: "destructive", title: "Erro", description: "Não foi possível remover o membro." });
+        } finally {
+            setIsSaving(false);
+        }
     };
     
     const getMembersForTeam = (team: Team) => {
         return teamMembers.filter(member => team.memberIds.includes(member.id));
+    };
+
+    const handleDeleteTeam = async (teamId: string) => {
+        if (window.confirm("Tem certeza que deseja excluir esta equipe? Esta ação não pode ser desfeita.")) {
+            try {
+                await deleteDoc(doc(db, "teams", teamId));
+                await fetchTeamData();
+                toast({ title: "Sucesso", description: "Equipe excluída." });
+            } catch (error) {
+                toast({ variant: "destructive", title: "Erro", description: "Não foi possível excluir a equipe." });
+            }
+        }
     };
 
 
@@ -228,7 +315,7 @@ export default function SettingsPage() {
                             </div>
                              <Dialog open={isTeamMemberDialogOpen} onOpenChange={setTeamMemberDialogOpen}>
                                 <DialogTrigger asChild>
-                                    <Button disabled>Adicionar Membro</Button>
+                                    <Button>Adicionar Membro</Button>
                                 </DialogTrigger>
                                 <DialogContent>
                                     <DialogHeader>
@@ -299,7 +386,7 @@ export default function SettingsPage() {
                             </div>
                             <Dialog open={isTeamDialogOpen} onOpenChange={setTeamDialogOpen}>
                                 <DialogTrigger asChild>
-                                    <Button disabled>Criar Nova Equipe</Button>
+                                    <Button>Criar Nova Equipe</Button>
                                 </DialogTrigger>
                                 <DialogContent>
                                     <DialogHeader>
@@ -343,8 +430,8 @@ export default function SettingsPage() {
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>Ações</DropdownMenuLabel>
                                                             <DropdownMenuItem onClick={() => handleManageMembers(team)}>Gerenciar Membros</DropdownMenuItem>
-                                                            <DropdownMenuItem>Renomear</DropdownMenuItem>
-                                                            <DropdownMenuItem className="text-destructive">Excluir</DropdownMenuItem>
+                                                            <DropdownMenuItem disabled>Renomear</DropdownMenuItem>
+                                                            <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteTeam(team.id)}>Excluir</DropdownMenuItem>
                                                         </DropdownMenuContent>
                                                     </DropdownMenu>
                                                 </TableCell>
@@ -395,75 +482,78 @@ export default function SettingsPage() {
                 </TabsContent>
             </Tabs>
             
-            <Dialog open={isManageMembersDialogOpen} onOpenChange={setManageMembersDialogOpen}>
+            <Dialog open={isManageMembersDialogOpen} onOpenChange={(isOpen) => {
+                if(!isOpen) setSelectedTeam(null);
+                setManageMembersDialogOpen(isOpen);
+            }}>
                 <DialogContent className="sm:max-w-3xl">
                     <DialogHeader>
                         <DialogTitle>Gerenciar Membros da Equipe: {selectedTeam?.name}</DialogTitle>
                         <DialogDescription>Adicione ou remova membros desta equipe.</DialogDescription>
                     </DialogHeader>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-4">
-                        <div className="space-y-4">
-                            <h3 className="font-semibold">Adicionar Novo Membro</h3>
-                             <form onSubmit={handleAddMemberToTeam} className="space-y-4">
-                                <div className="space-y-2">
-                                     <Label htmlFor="memberId">Selecione um Membro</Label>
-                                     <Select name="memberId" required>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Selecione um membro para adicionar" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {teamMembers.map(member => <SelectItem key={member.id} value={member.id} disabled={selectedTeam?.memberIds.includes(member.id)}>{member.name}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <Button type="submit" className="w-full" disabled={isSaving}>
-                                    <UserPlus className="mr-2 h-4 w-4" />
-                                    {isSaving ? "Adicionando..." : "Adicionar à Equipe"}
-                                </Button>
-                            </form>
-                        </div>
-                        <div className="space-y-4">
-                             <h3 className="font-semibold">Membros Atuais</h3>
-                            <Card>
-                                <CardContent className="p-0 max-h-60 overflow-y-auto">
-                                     <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Nome</TableHead>
-                                                <TableHead>Função</TableHead>
-                                                <TableHead className="text-right">Ações</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {selectedTeam && getMembersForTeam(selectedTeam).length > 0 ? (
-                                                getMembersForTeam(selectedTeam).map(member => (
-                                                    <TableRow key={member.id} className="transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1">
-                                                        <TableCell className="font-medium">{member.name}</TableCell>
-                                                        <TableCell><Badge variant="secondary">{member.role}</Badge></TableCell>
-                                                        <TableCell className="text-right">
-                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleRemoveMemberFromTeam(member.id)}>
-                                                                <Trash2 className="h-4 w-4" />
-                                                            </Button>
+                    {selectedTeam && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-4">
+                            <div className="space-y-4">
+                                <h3 className="font-semibold">Adicionar Novo Membro</h3>
+                                <form onSubmit={handleAddMemberToTeam} className="space-y-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="memberId">Selecione um Membro</Label>
+                                        <Select name="memberId" required>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Selecione um membro para adicionar" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {teamMembers.map(member => <SelectItem key={member.id} value={member.id} disabled={selectedTeam.memberIds.includes(member.id)}>{member.name}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <Button type="submit" className="w-full" disabled={isSaving}>
+                                        <UserPlus className="mr-2 h-4 w-4" />
+                                        {isSaving ? "Adicionando..." : "Adicionar à Equipe"}
+                                    </Button>
+                                </form>
+                            </div>
+                            <div className="space-y-4">
+                                <h3 className="font-semibold">Membros Atuais</h3>
+                                <Card>
+                                    <CardContent className="p-0 max-h-60 overflow-y-auto">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Nome</TableHead>
+                                                    <TableHead>Função</TableHead>
+                                                    <TableHead className="text-right">Ações</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {getMembersForTeam(selectedTeam).length > 0 ? (
+                                                    getMembersForTeam(selectedTeam).map(member => (
+                                                        <TableRow key={member.id}>
+                                                            <TableCell className="font-medium">{member.name}</TableCell>
+                                                            <TableCell><Badge variant="secondary">{member.role}</Badge></TableCell>
+                                                            <TableCell className="text-right">
+                                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleRemoveMemberFromTeam(member.id)} disabled={isSaving}>
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </Button>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))
+                                                ) : (
+                                                    <TableRow>
+                                                        <TableCell colSpan={3} className="text-center h-24 text-muted-foreground">
+                                                            Nenhum membro nesta equipe.
                                                         </TableCell>
                                                     </TableRow>
-                                                ))
-                                            ) : (
-                                                <TableRow>
-                                                    <TableCell colSpan={3} className="text-center h-24 text-muted-foreground">
-                                                        Nenhum membro nesta equipe.
-                                                    </TableCell>
-                                                </TableRow>
-                                            )}
-                                        </TableBody>
-                                    </Table>
-                                </CardContent>
-                            </Card>
+                                                )}
+                                            </TableBody>
+                                        </Table>
+                                    </CardContent>
+                                </Card>
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </DialogContent>
             </Dialog>
         </div>
     );
 }
-
-    
