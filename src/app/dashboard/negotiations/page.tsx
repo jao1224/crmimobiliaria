@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 export default function NegotiationsPage() {
     const router = useRouter();
     const [negotiations, setNegotiations] = useState<Negotiation[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [isNewNegotiationOpen, setNewNegotiationOpen] = useState(false);
     const { toast } = useToast();
     
@@ -47,12 +48,27 @@ export default function NegotiationsPage() {
 
     useEffect(() => {
         refreshData();
-        setAvailableProperties(getProperties().filter(p => p.status === 'Disponível'));
-        setAvailableClients(getClients());
+        const fetchDropdownData = async () => {
+             const [props, clients] = await Promise.all([
+                getProperties(),
+                getClients()
+            ]);
+            setAvailableProperties(props.filter(p => p.status === 'Disponível'));
+            setAvailableClients(clients);
+        }
+        fetchDropdownData();
     }, []);
     
-    const refreshData = () => {
-        setNegotiations(getNegotiations());
+    const refreshData = async () => {
+        setIsLoading(true);
+        try {
+            const data = await getNegotiations();
+            setNegotiations(data);
+        } catch (error) {
+            toast({ variant: 'destructive', title: "Erro ao buscar negociações" });
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleSearch = async () => {
@@ -77,7 +93,7 @@ export default function NegotiationsPage() {
             }
 
             if (prop && cli) {
-                 toast({ title: "Sucesso!", description: "Dados encontrados (simulado)." });
+                 toast({ title: "Sucesso!", description: "Dados encontrados." });
             }
             setIsSearching(false);
         }, 500);
@@ -108,7 +124,7 @@ export default function NegotiationsPage() {
     }, [propertyCode, clientCode]);
 
 
-    const handleAddNegotiation = (event: React.FormEvent<HTMLFormElement>) => {
+    const handleAddNegotiation = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
         if (!foundProperty || !foundClient) {
@@ -116,8 +132,7 @@ export default function NegotiationsPage() {
             return;
         }
 
-        const newNegotiation: Negotiation = {
-            id: `neg${Date.now()}`,
+        const newNegotiationData: Omit<Negotiation, 'id'> = {
             property: foundProperty.name,
             propertyId: foundProperty.id,
             propertyType: foundProperty.type,
@@ -138,16 +153,14 @@ export default function NegotiationsPage() {
             team: 'Equipe A', // Simulado
         };
         
-        addNegotiation(newNegotiation);
-        refreshData();
+        const newNegotiationId = await addNegotiation(newNegotiationData);
         
         if (isFinanced) {
-             addFinancingProcess({
-                id: `finproc-from-${newNegotiation.id}`,
-                negotiationId: newNegotiation.id,
-                clientName: newNegotiation.client,
-                propertyName: newNegotiation.property,
-                realtorName: newNegotiation.salesperson,
+             const newFinancingProcess: Omit<any, 'id'> = {
+                negotiationId: newNegotiationId,
+                clientName: newNegotiationData.client,
+                propertyName: newNegotiationData.property,
+                realtorName: newNegotiationData.salesperson,
                 clientStatus: 'Pendente',
                 clientStatusReason: 'Aguardando documentação inicial',
                 approvedValue: 0,
@@ -166,27 +179,35 @@ export default function NegotiationsPage() {
                 stages: { formSignature: false, compliance: false, financingResources: false, bankSignature: '', registryEntry: '', warranty: '' },
                 generalStatus: 'Ativo',
                 hasPendency: true,
-            });
+            };
+            await addFinancingProcess(newFinancingProcess);
             toast({ title: "Sucesso!", description: "Nova negociação iniciada e processo de financiamento criado para o correspondente." });
         } else {
             toast({ title: "Sucesso!", description: "Nova negociação iniciada." });
         }
         
+        await refreshData();
         setNewNegotiationOpen(false);
     };
     
-    const handleGenerateContract = (negotiationId: string) => {
-        setNegotiations(prev => prev.map(neg => 
-            neg.id === negotiationId ? { ...neg, stage: "Contrato Gerado", contractStatus: "Pendente Assinaturas" } : neg
-        ));
-        toast({ title: "Sucesso!", description: "Contrato gerado. Redirecionando..." });
-        router.push(`/dashboard/negotiations/${negotiationId}/contract`);
+    const handleGenerateContract = async (negotiation: Negotiation) => {
+        try {
+            await updateDoc(doc(db, "negotiations", negotiation.id), { 
+                stage: "Contrato Gerado", 
+                contractStatus: "Pendente Assinaturas" 
+            });
+            await refreshData();
+            toast({ title: "Sucesso!", description: "Contrato gerado. Redirecionando..." });
+            router.push(`/dashboard/negotiations/${negotiation.id}/contract`);
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível atualizar o status do contrato.' });
+        }
     }
 
-    const handleCompleteSale = (neg: Negotiation) => {
-        const { success, message } = completeSaleAndGenerateCommission(neg.id);
+    const handleCompleteSale = async (neg: Negotiation) => {
+        const { success, message } = await completeSaleAndGenerateCommission(neg);
         if (success) {
-            refreshData(); 
+            await refreshData(); 
             toast({
                 title: "Venda Concluída!",
                 description: message
@@ -393,7 +414,13 @@ export default function NegotiationsPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {filteredNegotiations.length > 0 ? (
+                            {isLoading ? (
+                                Array.from({ length: 5 }).map((_, i) => (
+                                    <TableRow key={i}>
+                                        <TableCell colSpan={10}><Skeleton className="h-8 w-full" /></TableCell>
+                                    </TableRow>
+                                ))
+                            ) : filteredNegotiations.length > 0 ? (
                                 filteredNegotiations.map((neg) => (
                                 <TableRow
                                     key={neg.id}
@@ -439,7 +466,7 @@ export default function NegotiationsPage() {
                                                 <DropdownMenuLabel>Ações</DropdownMenuLabel>
                                                 <DropdownMenuItem onClick={() => router.push(`/dashboard/processes`)}>Ver Processo</DropdownMenuItem>
                                                 {neg.contractStatus === 'Não Gerado' ? (
-                                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleGenerateContract(neg.id); }}>
+                                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleGenerateContract(neg); }}>
                                                         Gerar Contrato
                                                     </DropdownMenuItem>
                                                 ) : (
@@ -472,5 +499,3 @@ export default function NegotiationsPage() {
         </div>
     );
 }
-
-    

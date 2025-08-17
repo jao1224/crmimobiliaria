@@ -17,6 +17,8 @@ import { ProfileContext } from "@/contexts/ProfileContext";
 import type { UserProfile } from "@/app/dashboard/layout";
 import { getNegotiations, getProperties, type Property, type Negotiation } from "@/lib/data";
 import { getClients, type Client } from "@/lib/crm-data";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 
 // Tipos para os dados simulados
@@ -78,34 +80,52 @@ export default function ContractPage() {
     
     // Carrega os dados da negociação, imóvel e cliente com base no ID da URL
     useEffect(() => {
-        setIsLoading(true);
-        const allNegotiations = getNegotiations();
-        const foundNegotiation = allNegotiations.find(neg => neg.id === negotiationId);
+        const fetchData = async () => {
+            if (!negotiationId) return;
+            setIsLoading(true);
 
-        if (foundNegotiation) {
-            setNegotiation(foundNegotiation);
-            const allProperties = getProperties();
-            const allClients = getClients();
-            const foundProperty = allProperties.find(prop => prop.id === foundNegotiation.propertyId);
-            const foundClient = allClients.find(cli => cli.id === foundNegotiation.clientId);
+            try {
+                const negDocRef = doc(db, 'negotiations', negotiationId);
+                const negDocSnap = await getDoc(negDocRef);
 
-            setProperty(foundProperty || null);
-            setClient(foundClient || null);
+                if (negDocSnap.exists()) {
+                    const foundNegotiation = { id: negDocSnap.id, ...negDocSnap.data() } as Negotiation;
+                    setNegotiation(foundNegotiation);
 
-            // Simula busca de dados do corretor
-            setRealtor({ name: foundNegotiation.realtor, creci: "N/A" });
+                    // Buscar imóvel, cliente e corretor
+                    const propDocRef = doc(db, 'properties', foundNegotiation.propertyId);
+                    const clientDocRef = doc(db, 'clients', foundNegotiation.clientId);
+                    
+                    const [propDocSnap, clientDocSnap] = await Promise.all([
+                        getDoc(propDocRef),
+                        getDoc(clientDocRef)
+                    ]);
+                    
+                    const foundProperty = propDocSnap.exists() ? { id: propDocSnap.id, ...propDocSnap.data() } as Property : null;
+                    const foundClient = clientDocSnap.exists() ? { id: clientDocSnap.id, ...clientDocSnap.data() } as Client : null;
 
-            // Preenche cláusula de comissão com base nos dados reais
-            if (foundProperty) {
-                 const commissionRate = foundProperty?.commission || 5; // fallback
-                 const commissionValue = foundNegotiation.value * (commissionRate / 100);
-                 const defaultCommissionClause = `Os honorários devidos pela intermediação desta negociação, no montante de ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(commissionValue)}, correspondentes a ${commissionRate}% do valor da venda, são de responsabilidade do VENDEDOR(ES), a serem pagos à INTERVENIENTE ANUENTE na data da compensação do sinal.`;
-                setContractData(prev => ({...prev, commissionClause: defaultCommissionClause}));
+                    setProperty(foundProperty);
+                    setClient(foundClient);
+                    setRealtor({ name: foundNegotiation.realtor, creci: "N/A" }); // Simulado
+
+                    if (foundProperty) {
+                        const commissionRate = foundProperty.commission || 5;
+                        const commissionValue = foundNegotiation.value * (commissionRate / 100);
+                        const defaultCommissionClause = `Os honorários devidos pela intermediação desta negociação, no montante de ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(commissionValue)}, correspondentes a ${commissionRate}% do valor da venda, são de responsabilidade do VENDEDOR(ES), a serem pagos à INTERVENIENTE ANUENTE na data da compensação do sinal.`;
+                        setContractData(prev => ({...prev, commissionClause: defaultCommissionClause}));
+                    }
+                } else {
+                    toast({ variant: 'destructive', title: "Erro", description: "Negociação não encontrada." });
+                }
+            } catch (error) {
+                toast({ variant: 'destructive', title: "Erro", description: "Não foi possível carregar os dados do contrato." });
+            } finally {
+                setIsLoading(false);
             }
-        }
-        
-        setIsLoading(false);
-    }, [negotiationId]);
+        };
+
+        fetchData();
+    }, [negotiationId, toast]);
     
     
     useEffect(() => {
@@ -410,5 +430,3 @@ export default function ContractPage() {
         </div>
     );
 }
-
-    

@@ -14,6 +14,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { updateDoc, doc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { Skeleton } from "@/components/ui/skeleton";
+
 
 const getStatusVariant = (status: ProcessStatus) => {
     switch (status) {
@@ -36,6 +40,7 @@ const getStageVariant = (stage: ProcessStage) => {
 
 export default function ProcessesPage() {
     const [processes, setProcesses] = useState<Negotiation[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [selectedProcess, setSelectedProcess] = useState<Negotiation | null>(null);
     const [isPendencyModalOpen, setPendencyModalOpen] = useState(false);
     const [isFinalizeModalOpen, setFinalizeModalOpen] = useState(false);
@@ -47,8 +52,16 @@ export default function ProcessesPage() {
         refreshProcesses();
     }, []);
 
-    const refreshProcesses = () => {
-        setProcesses(getNegotiations());
+    const refreshProcesses = async () => {
+        setIsLoading(true);
+        try {
+            const data = await getNegotiations();
+            setProcesses(data);
+        } catch (error) {
+            toast({ variant: 'destructive', title: "Erro", description: "Não foi possível carregar os processos."});
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleOpenPendencyModal = (process: Negotiation) => {
@@ -63,24 +76,28 @@ export default function ProcessesPage() {
         setFinalizeModalOpen(true);
     };
 
-    const handleSavePendency = () => {
+    const handleSavePendency = async () => {
         if (!selectedProcess) return;
-        setProcesses(prev => prev.map(p => 
-            p.id === selectedProcess.id 
-            ? { ...p, processStage: 'Pendência', observations: pendencyNote } 
-            : p
-        ));
-        toast({ title: "Pendência Registrada!", description: `Uma nova observação foi adicionada ao processo ${selectedProcess.id.toUpperCase()}.` });
+        try {
+            await updateDoc(doc(db, 'negotiations', selectedProcess.id), {
+                processStage: 'Pendência',
+                observations: pendencyNote
+            });
+            await refreshProcesses();
+            toast({ title: "Pendência Registrada!", description: `Uma nova observação foi adicionada ao processo ${selectedProcess.id.toUpperCase()}.` });
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível salvar a pendência.'});
+        }
         setPendencyModalOpen(false);
     };
 
-    const handleFinalizeProcess = () => {
+    const handleFinalizeProcess = async () => {
         if (!selectedProcess) return;
 
-        const { success, message } = completeSaleAndGenerateCommission(selectedProcess.id, finalizationNote);
+        const { success, message } = await completeSaleAndGenerateCommission(selectedProcess, finalizationNote);
 
         if (success) {
-            refreshProcesses(); // Recarrega todos os processos para refletir as mudanças
+            await refreshProcesses();
             toast({ title: "Processo Finalizado!", description: message });
         } else {
             toast({ variant: "destructive", title: "Erro ao Finalizar", description: message });
@@ -120,48 +137,60 @@ export default function ProcessesPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {processes.map(process => (
-                                <TableRow key={process.id} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
-                                    <TableCell><Badge variant={getStatusVariant(process.status)}>{process.status}</Badge></TableCell>
-                                    <TableCell className="font-mono text-xs">{process.id.toUpperCase()}</TableCell>
-                                    <TableCell className="whitespace-nowrap">
-                                        <div className="flex items-center gap-2">
-                                            {process.processStage === 'Pendência' && <AlertCircle className="h-4 w-4 text-status-orange" />}
-                                            {process.processStage === 'Em andamento' && <Hourglass className="h-4 w-4 text-status-blue" />}
-                                            {process.processStage === 'Finalizado' && <CheckCircle className="h-4 w-4 text-primary" />}
-                                            <Badge variant={getStageVariant(process.processStage)}>{process.processStage}</Badge>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>{process.negotiationType}</TableCell>
-                                    <TableCell>{process.category}</TableCell>
-                                    <TableCell className="font-medium">{process.property}</TableCell>
-                                    <TableCell>{process.salesperson}</TableCell>
-                                    <TableCell>{process.realtor}</TableCell>
-                                    <TableCell>{process.team}</TableCell>
-                                    <TableCell className="text-muted-foreground text-xs max-w-xs truncate">{process.observations}</TableCell>
-                                    <TableCell>
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button aria-haspopup="true" size="icon" variant="ghost">
-                                                    <MoreHorizontal className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuLabel>Ações do Processo</DropdownMenuLabel>
-                                                <DropdownMenuItem onClick={() => handleOpenPendencyModal(process)}>Marcar Pendência</DropdownMenuItem>
-                                                <DropdownMenuSeparator/>
-                                                <DropdownMenuItem 
-                                                    onClick={() => handleOpenFinalizeModal(process)}
-                                                    className="text-green-600 focus:text-green-600 focus:bg-green-50"
-                                                    disabled={process.status === 'Finalizado' || process.status === 'Cancelado'}
-                                                >
-                                                    Finalizar Processo
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </TableCell>
+                            {isLoading ? (
+                                Array.from({ length: 5 }).map((_, i) => (
+                                    <TableRow key={i}>
+                                        <TableCell colSpan={11}><Skeleton className="h-8 w-full" /></TableCell>
+                                    </TableRow>
+                                ))
+                            ) : processes.length > 0 ? (
+                                processes.map(process => (
+                                    <TableRow key={process.id} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
+                                        <TableCell><Badge variant={getStatusVariant(process.status)}>{process.status}</Badge></TableCell>
+                                        <TableCell className="font-mono text-xs">{process.id.toUpperCase()}</TableCell>
+                                        <TableCell className="whitespace-nowrap">
+                                            <div className="flex items-center gap-2">
+                                                {process.processStage === 'Pendência' && <AlertCircle className="h-4 w-4 text-status-orange" />}
+                                                {process.processStage === 'Em andamento' && <Hourglass className="h-4 w-4 text-status-blue" />}
+                                                {process.processStage === 'Finalizado' && <CheckCircle className="h-4 w-4 text-primary" />}
+                                                <Badge variant={getStageVariant(process.processStage)}>{process.processStage}</Badge>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>{process.negotiationType}</TableCell>
+                                        <TableCell>{process.category}</TableCell>
+                                        <TableCell className="font-medium">{process.property}</TableCell>
+                                        <TableCell>{process.salesperson}</TableCell>
+                                        <TableCell>{process.realtor}</TableCell>
+                                        <TableCell>{process.team}</TableCell>
+                                        <TableCell className="text-muted-foreground text-xs max-w-xs truncate">{process.observations}</TableCell>
+                                        <TableCell>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button aria-haspopup="true" size="icon" variant="ghost">
+                                                        <MoreHorizontal className="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuLabel>Ações do Processo</DropdownMenuLabel>
+                                                    <DropdownMenuItem onClick={() => handleOpenPendencyModal(process)}>Marcar Pendência</DropdownMenuItem>
+                                                    <DropdownMenuSeparator/>
+                                                    <DropdownMenuItem 
+                                                        onClick={() => handleOpenFinalizeModal(process)}
+                                                        className="text-green-600 focus:text-green-600 focus:bg-green-50"
+                                                        disabled={process.status === 'Finalizado' || process.status === 'Cancelado'}
+                                                    >
+                                                        Finalizar Processo
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={11} className="h-24 text-center">Nenhum processo encontrado.</TableCell>
                                 </TableRow>
-                            ))}
+                            )}
                         </TableBody>
                     </Table>
                 </CardContent>
@@ -223,5 +252,3 @@ export default function ProcessesPage() {
         </div>
     );
 }
-
-    

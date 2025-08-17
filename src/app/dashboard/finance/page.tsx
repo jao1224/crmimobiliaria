@@ -20,6 +20,8 @@ import type { UserProfile } from "../layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getCommissions, type Commission, addCommission, getPayments, addPayment, type PaymentCLT, getExpenses, addExpense, type Expense, getNegotiations, type Negotiation } from "@/lib/data";
 import { cn } from "@/lib/utils";
+import { doc, updateDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 
 const employees = ['Secretária Admin', 'Gerente de Vendas', 'Corretor A'];
@@ -51,21 +53,37 @@ export default function FinancePage() {
     // Estados para Despesas
     const [expenses, setExpenses] = useState<Expense[]>([]);
     const [isExpenseDialogOpen, setExpenseDialogOpen] = useState(false);
+    
+    const [isLoading, setIsLoading] = useState(true);
 
     const { toast } = useToast();
 
     // Carrega dados iniciais
     useEffect(() => {
-        setCommissions(getCommissions());
-        setPayments(getPayments());
-        setExpenses(getExpenses());
-        setNegotiations(getNegotiations().filter(n => n.status !== 'Cancelado'));
+        refreshFinanceData();
+        const fetchNegotiations = async () => {
+            const negs = await getNegotiations();
+            setNegotiations(negs.filter(n => n.status !== 'Cancelado'));
+        };
+        fetchNegotiations();
     }, []);
 
-    const refreshFinanceData = () => {
-        setCommissions(getCommissions());
-        setPayments(getPayments());
-        setExpenses(getExpenses());
+    const refreshFinanceData = async () => {
+        setIsLoading(true);
+        try {
+            const [commData, payData, expData] = await Promise.all([
+                getCommissions(),
+                getPayments(),
+                getExpenses(),
+            ]);
+            setCommissions(commData);
+            setPayments(payData);
+            setExpenses(expData);
+        } catch (error) {
+            toast({ variant: 'destructive', title: "Erro ao carregar dados financeiros."});
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     // Lógica de Comissões
@@ -79,12 +97,17 @@ export default function FinancePage() {
     const paidCommission = visibleCommissions.filter(c => c.status === 'Pago').reduce((sum, item) => sum + item.amount, 0);
     const pendingCommission = totalCommission - paidCommission;
     
-    const handleStatusChange = (commissionId: string, newStatus: Commission['status']) => {
-        setCommissions(prev => prev.map(c => c.id === commissionId ? { ...c, status: newStatus } : c));
-        toast({ title: "Status Atualizado!", description: `A comissão foi marcada como ${newStatus}.` });
+    const handleStatusChange = async (commissionId: string, newStatus: Commission['status']) => {
+        try {
+            await updateDoc(doc(db, "commissions", commissionId), { status: newStatus });
+            await refreshFinanceData();
+            toast({ title: "Status Atualizado!", description: `A comissão foi marcada como ${newStatus}.` });
+        } catch (error) {
+            toast({ variant: 'destructive', title: "Erro", description: "Não foi possível atualizar o status da comissão."});
+        }
     };
     
-    const handleAddCommission = (event: React.FormEvent<HTMLFormElement>) => {
+    const handleAddCommission = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         const formData = new FormData(event.currentTarget);
         const dealId = formData.get('dealId') as string;
@@ -95,8 +118,7 @@ export default function FinancePage() {
             return;
         }
 
-        const newCommission: Commission = {
-            id: `comm${Date.now()}`, 
+        const newCommissionData: Omit<Commission, 'id' | 'invoiceFile'> = {
             dealId: dealId,
             deal: negotiation.property,
             amount: parseFloat(formData.get('amount') as string),
@@ -104,51 +126,48 @@ export default function FinancePage() {
             paymentDate: formData.get('paymentDate') as string,
             involved: formData.get('involved') as string, 
             advance: formData.has('advance') ? parseFloat(formData.get('advance') as string) : undefined,
-            invoiceFile: formData.get('invoiceFile') as File || null, 
             realtorId: negotiation.salesperson,
         };
-        addCommission(newCommission);
-        refreshFinanceData();
+        await addCommission(newCommissionData);
+        await refreshFinanceData();
         toast({ title: "Sucesso!", description: "Comissão lançada com sucesso." });
         setCommissionDialogOpen(false);
-        event.currentTarget.reset();
+        (event.currentTarget as HTMLFormElement).reset();
         setSelectedNegotiation(null);
     };
 
-    const handleAddPayment = (event: React.FormEvent<HTMLFormElement>) => {
+    const handleAddPayment = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         const formData = new FormData(event.currentTarget);
-        const newPayment: PaymentCLT = {
-            id: `pay${Date.now()}`,
+        const newPaymentData: Omit<PaymentCLT, 'id'> = {
             employee: formData.get('employee') as string,
             type: formData.get('type') as PaymentCLT['type'],
             amount: parseFloat(formData.get('amount') as string),
             paymentDate: formData.get('paymentDate') as string,
             status: formData.get('status') as PaymentCLT['status'],
         };
-        addPayment(newPayment);
-        refreshFinanceData();
+        await addPayment(newPaymentData);
+        await refreshFinanceData();
         toast({ title: "Sucesso!", description: "Pagamento lançado com sucesso." });
         setPaymentDialogOpen(false);
-        event.currentTarget.reset();
+        (event.currentTarget as HTMLFormElement).reset();
     };
 
-    const handleAddExpense = (event: React.FormEvent<HTMLFormElement>) => {
+    const handleAddExpense = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         const formData = new FormData(event.currentTarget);
-        const newExpense: Expense = {
-            id: `exp${Date.now()}`,
+        const newExpenseData: Omit<Expense, 'id'> = {
             description: formData.get('description') as string,
             category: formData.get('category') as Expense['category'],
             amount: parseFloat(formData.get('amount') as string),
             dueDate: formData.get('dueDate') as string,
             status: formData.get('status') as Expense['status'],
         };
-        addExpense(newExpense);
-        refreshFinanceData();
+        await addExpense(newExpenseData);
+        await refreshFinanceData();
         toast({ title: "Sucesso!", description: "Despesa lançada com sucesso." });
         setExpenseDialogOpen(false);
-        event.currentTarget.reset();
+        (event.currentTarget as HTMLFormElement).reset();
     };
     
     const handleNegotiationSelect = (dealId: string) => {
@@ -260,15 +279,15 @@ export default function FinancePage() {
                         <div className="grid gap-4 md:grid-cols-3">
                             <Card className="transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
                                 <CardHeader><CardTitle>Comissão Total</CardTitle></CardHeader>
-                                <CardContent><p className="text-2xl font-bold">{formatCurrency(totalCommission)}</p></CardContent>
+                                <CardContent>{isLoading ? <Skeleton className="h-8 w-3/4" /> : <p className="text-2xl font-bold">{formatCurrency(totalCommission)}</p>}</CardContent>
                             </Card>
                             <Card className="transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
                                 <CardHeader><CardTitle>Total Pago</CardTitle></CardHeader>
-                                <CardContent><p className="text-2xl font-bold">{formatCurrency(paidCommission)}</p></CardContent>
+                                <CardContent>{isLoading ? <Skeleton className="h-8 w-3/4" /> : <p className="text-2xl font-bold">{formatCurrency(paidCommission)}</p>}</CardContent>
                             </Card>
                             <Card className="transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
                                 <CardHeader><CardTitle>Pendente & Vencido</CardTitle></CardHeader>
-                                <CardContent><p className="text-2xl font-bold">{formatCurrency(pendingCommission)}</p></CardContent>
+                                <CardContent>{isLoading ? <Skeleton className="h-8 w-3/4" /> : <p className="text-2xl font-bold">{formatCurrency(pendingCommission)}</p>}</CardContent>
                             </Card>
                         </div>
                         <Card>
@@ -289,7 +308,13 @@ export default function FinancePage() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {visibleCommissions.length > 0 ? (
+                                        {isLoading ? (
+                                            Array.from({ length: 3 }).map((_, i) => (
+                                                <TableRow key={i}>
+                                                    <TableCell colSpan={hasPermission ? 7 : 6}><Skeleton className="h-8 w-full" /></TableCell>
+                                                </TableRow>
+                                            ))
+                                        ) : visibleCommissions.length > 0 ? (
                                             visibleCommissions.map(commission => (
                                                 <TableRow key={commission.id} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
                                                     <TableCell className="font-mono text-xs text-muted-foreground">{commission.dealId.toUpperCase()}</TableCell>
@@ -391,7 +416,13 @@ export default function FinancePage() {
                                     <TableRow><TableHead>Colaborador</TableHead><TableHead>Tipo</TableHead><TableHead>Valor</TableHead><TableHead>Data</TableHead><TableHead>Status</TableHead></TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {payments.map(p => (
+                                    {isLoading ? (
+                                         Array.from({ length: 2 }).map((_, i) => (
+                                            <TableRow key={i}>
+                                                <TableCell colSpan={5}><Skeleton className="h-8 w-full" /></TableCell>
+                                            </TableRow>
+                                        ))
+                                    ) : payments.map(p => (
                                         <TableRow key={p.id} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
                                             <TableCell className="font-medium">{p.employee}</TableCell>
                                             <TableCell>{p.type}</TableCell><TableCell>{formatCurrency(p.amount)}</TableCell>
@@ -468,7 +499,13 @@ export default function FinancePage() {
                                     <TableRow><TableHead>Descrição</TableHead><TableHead>Categoria</TableHead><TableHead>Valor</TableHead><TableHead>Vencimento</TableHead><TableHead>Status</TableHead></TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {expenses.map(e => (
+                                    {isLoading ? (
+                                        Array.from({ length: 3 }).map((_, i) => (
+                                            <TableRow key={i}>
+                                                <TableCell colSpan={5}><Skeleton className="h-8 w-full" /></TableCell>
+                                            </TableRow>
+                                        ))
+                                    ) : expenses.map(e => (
                                         <TableRow key={e.id} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
                                             <TableCell className="font-medium">{e.description}</TableCell>
                                             <TableCell>{e.category}</TableCell>

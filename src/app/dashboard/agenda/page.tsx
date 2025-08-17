@@ -16,6 +16,7 @@ import { ptBR } from "date-fns/locale";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import type { UserProfile } from "../layout";
 import { addEvent, getEvents, type Event } from "@/lib/data";
+import { Skeleton } from "@/components/ui/skeleton";
 
 
 type EventType = 'personal' | 'company' | 'team_visit';
@@ -52,6 +53,7 @@ export default function AgendaPage() {
     }, [activeProfile]);
     
     const [events, setEvents] = useState<Event[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
     const [activeTab, setActiveTab] = useState<EventType>(visibleTabs.length > 0 ? visibleTabs[0].id : 'personal');
     const [isEventDialogOpen, setEventDialogOpen] = useState(false);
@@ -59,8 +61,20 @@ export default function AgendaPage() {
 
     // Carrega os eventos iniciais e atualiza quando a aba muda
     useEffect(() => {
-        setEvents(getEvents());
+        refreshEvents();
     }, []);
+
+    const refreshEvents = async () => {
+        setIsLoading(true);
+        try {
+            const fetchedEvents = await getEvents();
+            setEvents(fetchedEvents);
+        } catch (error) {
+            toast({ variant: 'destructive', title: "Erro", description: "Não foi possível carregar os eventos." });
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     // Sincroniza a aba ativa se o perfil mudar e a aba atual não for mais visível
     useEffect(() => {
@@ -77,14 +91,15 @@ export default function AgendaPage() {
 
     const selectedDayEvents = useMemo(() => {
         if (!selectedDate) return [];
-        const selectedDay = selectedDate.getDate();
-        const selectedMonth = selectedDate.getMonth();
-        const selectedYear = selectedDate.getFullYear();
-
+        const selectedDay = selectedDate.getUTCDate();
+        const selectedMonth = selectedDate.getUTCMonth();
+        const selectedYear = selectedDate.getUTCFullYear();
+    
         return events.filter(event => {
-            const eventDay = event.date.getDate();
-            const eventMonth = event.date.getMonth();
-            const eventYear = event.date.getFullYear();
+            const eventDate = new Date(event.date as any); // Cast to any to handle both Date and Timestamp
+            const eventDay = eventDate.getUTCDate();
+            const eventMonth = eventDate.getUTCMonth();
+            const eventYear = eventDate.getUTCFullYear();
             
             return eventDay === selectedDay &&
                    eventMonth === selectedMonth &&
@@ -93,29 +108,32 @@ export default function AgendaPage() {
         });
     }, [selectedDate, events, activeTab]);
     
-    const handleAddEvent = (event: React.FormEvent<HTMLFormElement>) => {
+    const handleAddEvent = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         const formData = new FormData(event.currentTarget);
         const dateStr = formData.get("date") as string;
         
-        // Corrige o problema de fuso horário criando a data com base em UTC
         const date = new Date(dateStr);
         const userTimezoneOffset = date.getTimezoneOffset() * 60000;
         const correctDate = new Date(date.getTime() + userTimezoneOffset);
 
-        const newEvent: Event = {
-            id: `evt${Date.now()}`,
+        const newEventData: Omit<Event, 'id'> = {
             date: correctDate,
             title: formData.get("title") as string,
             time: formData.get("time") as string,
             description: formData.get("description") as string,
-            type: activeTab, // Adiciona o evento na agenda ativa
+            type: activeTab,
         };
-        addEvent(newEvent);
-        setEvents(getEvents()); // Recarrega os eventos para incluir o novo
-        toast({ title: "Sucesso!", description: "Evento adicionado com sucesso." });
-        setEventDialogOpen(false);
-        event.currentTarget.reset();
+
+        try {
+            await addEvent(newEventData);
+            await refreshEvents();
+            toast({ title: "Sucesso!", description: "Evento adicionado com sucesso." });
+            setEventDialogOpen(false);
+            (event.currentTarget as HTMLFormElement).reset();
+        } catch (error) {
+            toast({ variant: 'destructive', title: "Erro", description: "Não foi possível salvar o evento." });
+        }
     };
 
     const getEventTypeLabel = (type: Event['type']) => {
@@ -127,6 +145,9 @@ export default function AgendaPage() {
         }
     };
 
+    const eventDates = useMemo(() => {
+        return events.map(e => new Date(e.date as any));
+    }, [events]);
 
     return (
         <div className="flex flex-col gap-6">
@@ -184,7 +205,11 @@ export default function AgendaPage() {
                                    ))}
                                 </TabsList>
                                 
-                                {visibleTabs.map(tab => (
+                                {isLoading ? (
+                                    <div className="flex justify-center items-center h-full">
+                                        <Skeleton className="w-full h-[300px]" />
+                                    </div>
+                                ) : visibleTabs.map(tab => (
                                      <TabsContent key={tab.id} value={tab.id} forceMount>
                                          <Calendar
                                             mode="single"
@@ -193,7 +218,7 @@ export default function AgendaPage() {
                                             className="rounded-md"
                                             locale={ptBR}
                                             modifiers={{
-                                                events: events.filter(e => e.type === tab.id).map(e => e.date)
+                                                events: events.filter(e => e.type === tab.id).map(e => new Date(e.date as any))
                                             }}
                                             modifiersStyles={{
                                                events: {
