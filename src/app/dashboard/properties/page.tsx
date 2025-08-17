@@ -340,7 +340,7 @@ export default function PropertiesPage() {
                   "overflow-hidden transition-all duration-200 flex flex-col",
                   property.status === 'Disponível'
                       ? 'cursor-pointer hover:shadow-xl hover:-translate-y-1'
-                      : '' // Remove a opacidade para que a faixa se destaque
+                      : ''
                 )}
               >
                 <div className="relative">
@@ -448,6 +448,9 @@ export default function PropertiesPage() {
                       
                       <span className="font-medium text-foreground">Tipo:</span>
                       <span><Badge variant="secondary">{selectedProperty.type}</Badge></span>
+
+                      <span className="font-medium text-foreground">Cód. Imóvel:</span>
+                      <span className="font-mono text-xs">{selectedProperty.id}</span>
                     </div>
                   </div>
                    <div>
