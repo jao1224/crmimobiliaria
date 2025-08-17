@@ -9,7 +9,7 @@ export default function LoginPage() {
         <Image src="/logo.png" alt="Ideal Imóveis Logo" width={80} height={80} className="dark:invert" />
         <div className="text-center">
           <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            Bem-vindo de volta ao Ideal Imóveis
+            Bem-vindo ao Ideal Imóveis
           </h1>
           <p className="text-muted-foreground">
             Insira suas credenciais para acessar sua conta

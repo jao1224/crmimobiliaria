@@ -11,6 +11,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter
 } from "@/components/ui/card";
 import {
   DropdownMenu,
@@ -181,17 +182,18 @@ export default function PropertiesPage() {
     setEditingProperty(null);
   };
 
-  const handleRowClick = (property: Property) => {
+  const handleCardClick = (property: Property) => {
     setSelectedProperty(property);
     setDetailModalOpen(true);
   };
 
-  const handleEditClick = (property: Property) => {
+  const handleEditClick = (e: React.MouseEvent, property: Property) => {
+    e.stopPropagation();
     setEditingProperty(property);
     setImagePreview(property.imageUrl);
     setEditDialogOpen(true);
   };
-
+  
   const handleRemoveImage = () => {
     setImagePreview("https://placehold.co/600x400.png");
     setSelectedFile(null);
@@ -337,107 +339,82 @@ export default function PropertiesPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="hidden w-[100px] sm:table-cell">
-                  <span className="sr-only">Imagem</span>
-                </TableHead>
-                <TableHead>ID</TableHead>
-                <TableHead>Nome &amp; Endereço</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="hidden md:table-cell">Preço</TableHead>
-                <TableHead className="hidden md:table-cell">Captador</TableHead>
-                <TableHead>
-                  <span className="sr-only">Ações</span>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredAndSortedProperties.map((property) => (
-                <TableRow 
-                  key={property.id} 
-                  onClick={() => handleRowClick(property)} 
-                  className={cn(
-                      "transition-all duration-200",
-                      property.status === 'Disponível' 
-                          ? 'cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1' 
-                          : 'opacity-60'
-                  )}
-                >
-                  <TableCell className="hidden sm:table-cell">
-                    <div className="relative w-16 h-16">
-                      <Image
-                        alt="Imagem do imóvel"
-                        className="aspect-square rounded-md object-cover"
-                        height={64}
-                        src={property.imageUrl}
-                        width={64}
-                        data-ai-hint={property.imageHint}
-                      />
-                      {property.status === 'Vendido' && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-md">
-                           <div className="absolute w-full bg-red-500 text-white text-xs font-bold uppercase text-center py-0.5 transform -rotate-45">
-                                Vendido
-                           </div>
-                        </div>
-                      )}
-                       {property.status === 'Alugado' && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-md">
-                           <div className="absolute w-full bg-blue-500 text-white text-xs font-bold uppercase text-center py-0.5 transform -rotate-45">
-                                Alugado
-                           </div>
-                        </div>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">{property.id.toUpperCase()}</Badge>
-                  </TableCell>
-                  <TableCell className="font-medium">
-                    <div>{property.name}</div>
-                    <div className="text-sm text-muted-foreground">{property.address}</div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={getStatusVariant(property.status)} className={getStatusClass(property.status)}>
-                      {property.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(property.price)}
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell text-muted-foreground">
-                    {property.capturedBy}
-                  </TableCell>
-                  <TableCell>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {filteredAndSortedProperties.map((property) => (
+              <Card
+                key={property.id}
+                onClick={() => handleCardClick(property)}
+                className={cn(
+                  "overflow-hidden transition-all duration-200 flex flex-col",
+                  property.status === 'Disponível'
+                      ? 'cursor-pointer hover:shadow-xl hover:-translate-y-1'
+                      : 'opacity-70'
+                )}
+              >
+                <div className="relative">
+                  <Image
+                    alt={property.name}
+                    className="aspect-video w-full object-cover"
+                    height={225}
+                    src={property.imageUrl}
+                    width={400}
+                    data-ai-hint={property.imageHint}
+                  />
+                  <div className="absolute top-2 right-2">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button aria-haspopup="true" size="icon" variant="ghost" onClick={(e) => e.stopPropagation()}>
+                         <Button
+                          aria-haspopup="true"
+                          size="icon"
+                          variant="secondary"
+                          className="h-8 w-8 rounded-full"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <MoreHorizontal className="h-4 w-4" />
                           <span className="sr-only">Alternar menu</span>
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditClick(property); }}>Editar</DropdownMenuItem>
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleRowClick(property); }}>Ver Detalhes</DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => handleEditClick(e, property)}>Editar</DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleCardClick(property); }}>Ver Detalhes</DropdownMenuItem>
                         <DropdownMenuItem className="text-destructive" onClick={(e) => e.stopPropagation()}>
                           Excluir
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-               {filteredAndSortedProperties.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center">
+                  </div>
+                  {property.status !== 'Disponível' && (
+                     <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                        <Badge variant={getStatusVariant(property.status)} className="text-lg">
+                            {property.status}
+                        </Badge>
+                    </div>
+                  )}
+                </div>
+                <CardHeader>
+                    <CardTitle className="truncate text-lg">{property.name}</CardTitle>
+                    <CardDescription className="truncate">{property.address}</CardDescription>
+                </CardHeader>
+                <CardContent className="flex-grow">
+                   <div className="text-2xl font-bold">
+                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(property.price)}
+                   </div>
+                </CardContent>
+                <CardFooter className="flex justify-between items-center text-xs text-muted-foreground">
+                    <span>Captador: {property.capturedBy}</span>
+                     <Badge variant={getStatusVariant(property.status)} className={cn("hidden", getStatusClass(property.status))}>
+                      {property.status}
+                    </Badge>
+                </CardFooter>
+              </Card>
+            ))}
+             {filteredAndSortedProperties.length === 0 && (
+                <div className="col-span-full h-24 text-center flex items-center justify-center">
                     Nenhum imóvel encontrado com os filtros atuais.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -573,9 +550,3 @@ export default function PropertiesPage() {
     </div>
   );
 }
-
-      
-
-    
-
-    
