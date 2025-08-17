@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 import { getProperties, type Property } from "@/lib/data";
-import { initialNegotiations, type Negotiation } from "@/lib/data";
+import { getNegotiations, type Negotiation } from "@/lib/data";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -66,7 +66,7 @@ export default function RealtorKanbanPage() {
                 .filter(p => p.capturedBy === realtorName)
                 .map(p => ({ ...p, activityType: 'capture' as const, status: 'Ativo' as ActivityStatus }));
 
-            const relatedNegotiations = initialNegotiations
+            const relatedNegotiations = getNegotiations()
                 .filter(n => (n.realtor === realtorName || n.salesperson === realtorName))
                 .map(n => ({ ...n, activityType: 'negotiation' as const, status: n.stage === 'Venda Concluída' ? 'Concluído' : 'Ativo' as ActivityStatus }));
 

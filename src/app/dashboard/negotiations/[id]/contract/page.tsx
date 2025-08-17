@@ -15,13 +15,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import type { UserProfile } from "@/app/dashboard/layout";
-import { initialNegotiations, initialCommissions, initialFinancingProcesses, realtors as mockRealtors, getProperties, type Property } from "@/lib/data";
-import { initialClients, type Client } from "@/lib/crm-data";
+import { getNegotiations, realtors as mockRealtors, getProperties, type Property, type Negotiation } from "@/lib/data";
+import { getClients, type Client } from "@/lib/crm-data";
 
 
 // Tipos para os dados simulados
 type ContractFile = { content: ArrayBuffer; type: string; name: string; };
-type Negotiation = (typeof initialNegotiations)[0] & { contractFile?: ContractFile | null };
+type ExtendedNegotiation = Negotiation & { contractFile?: ContractFile | null };
 
 
 type ContractDetails = {
@@ -51,7 +51,7 @@ export default function ContractPage() {
     const { activeProfile } = useContext(ProfileContext);
     const canEdit = contractEditPermissions.includes(activeProfile);
 
-    const [negotiation, setNegotiation] = useState<Negotiation | null>(null);
+    const [negotiation, setNegotiation] = useState<ExtendedNegotiation | null>(null);
     const [property, setProperty] = useState<Property | null>(null);
     const [client, setClient] = useState<Client | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -78,13 +78,15 @@ export default function ContractPage() {
     // Carrega os dados da negociação, imóvel e cliente com base no ID da URL
     useEffect(() => {
         setIsLoading(true);
-        const foundNegotiation = initialNegotiations.find(neg => neg.id === negotiationId);
+        const allNegotiations = getNegotiations();
+        const foundNegotiation = allNegotiations.find(neg => neg.id === negotiationId);
 
         if (foundNegotiation) {
             setNegotiation(foundNegotiation);
             const allProperties = getProperties();
+            const allClients = getClients();
             const foundProperty = allProperties.find(prop => prop.id === foundNegotiation.propertyId);
-            const foundClient = initialClients.find(cli => cli.id === foundNegotiation.clientId);
+            const foundClient = allClients.find(cli => cli.id === foundNegotiation.clientId);
 
             setProperty(foundProperty || null);
             setClient(foundClient || null);

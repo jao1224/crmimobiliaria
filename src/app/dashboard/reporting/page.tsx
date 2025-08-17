@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Download, Building, Users } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { initialNegotiations, realtors, teams, propertyTypes, type Negotiation, getProperties, type Property } from "@/lib/data";
+import { getNegotiations, realtors, teams, propertyTypes, type Negotiation, getProperties, type Property } from "@/lib/data";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -86,7 +86,7 @@ const processTeamPerformanceData = (negotiations: Negotiation[], teamsData: type
 
 export default function ReportingPage() {
     const router = useRouter();
-    const [negotiations] = useState<Negotiation[]>(initialNegotiations);
+    const [negotiations, setNegotiations] = useState<Negotiation[]>(getNegotiations());
     const [properties] = useState<Property[]>(getProperties());
 
     // Estados dos filtros

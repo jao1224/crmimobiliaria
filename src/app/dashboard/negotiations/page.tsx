@@ -17,13 +17,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { initialNegotiations, realtors, type Negotiation, addFinancingProcess, completeSaleAndGenerateCommission, getProperties, type Property } from "@/lib/data";
+import { getNegotiations, addNegotiation, realtors, type Negotiation, addFinancingProcess, completeSaleAndGenerateCommission, getProperties, type Property } from "@/lib/data";
 import { getClients, type Client } from "@/lib/crm-data";
 import { cn } from "@/lib/utils";
 
 export default function NegotiationsPage() {
     const router = useRouter();
-    const [negotiations, setNegotiations] = useState<Negotiation[]>(initialNegotiations);
+    const [negotiations, setNegotiations] = useState<Negotiation[]>([]);
     const [isNewNegotiationOpen, setNewNegotiationOpen] = useState(false);
     const { toast } = useToast();
     
@@ -31,7 +31,6 @@ export default function NegotiationsPage() {
     const [typeFilter, setTypeFilter] = useState('all');
     const [statusFilter, setStatusFilter] = useState('all');
     const [realtorFilter, setRealtorFilter] = useState('all');
-
 
     const [propertyCode, setPropertyCode] = useState("");
     const [clientCode, setClientCode] = useState("");
@@ -41,6 +40,14 @@ export default function NegotiationsPage() {
     const [proposalValue, setProposalValue] = useState("");
     const [proposalDate, setProposalDate] = useState("");
     const [isSearching, setIsSearching] = useState(false);
+
+    useEffect(() => {
+        setNegotiations(getNegotiations());
+    }, []);
+    
+    const refreshData = () => {
+        setNegotiations(getNegotiations());
+    };
 
     // Carrega dados dinâmicos para os selects
     const availableProperties = getProperties().filter(p => p.status === 'Disponível');
@@ -128,7 +135,9 @@ export default function NegotiationsPage() {
             category: 'Novo',
             team: 'Equipe A', // Simulado
         };
-        setNegotiations(prev => [...prev, newNegotiation]);
+        
+        addNegotiation(newNegotiation);
+        refreshData();
         
         // Se for financiado, cria o processo para o correspondente
         if (isFinanced) {
@@ -176,9 +185,7 @@ export default function NegotiationsPage() {
     const handleCompleteSale = (neg: Negotiation) => {
         const { success, message } = completeSaleAndGenerateCommission(neg.id);
         if (success) {
-            setNegotiations(prev => prev.map(n => 
-                n.id === neg.id ? { ...n, stage: "Venda Concluída", contractStatus: "Assinado", completionDate: new Date().toISOString() } : n
-            ));
+            refreshData(); // Recarrega os dados para refletir as alterações
             toast({
                 title: "Venda Concluída!",
                 description: message
@@ -431,7 +438,7 @@ export default function NegotiationsPage() {
                                                 <DropdownMenuLabel>Ações</DropdownMenuLabel>
                                                 <DropdownMenuItem onClick={() => router.push(`/dashboard/processes`)}>Ver Processo</DropdownMenuItem>
                                                 {neg.contractStatus === 'Não Gerado' ? (
-                                                    <DropdownMenuItem onClick={() => handleGenerateContract(neg.id)}>
+                                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleGenerateContract(neg.id); }}>
                                                         Gerar Contrato
                                                     </DropdownMenuItem>
                                                 ) : (
@@ -441,7 +448,7 @@ export default function NegotiationsPage() {
                                                 )}
                                                  <DropdownMenuSeparator />
                                                 <DropdownMenuItem 
-                                                    onClick={() => handleCompleteSale(neg)}
+                                                    onClick={(e) => { e.stopPropagation(); handleCompleteSale(neg); }}
                                                     disabled={neg.stage === 'Venda Concluída' || neg.stage === 'Aluguel Ativo'}
                                                     className="text-green-600 focus:text-green-600 focus:bg-green-50"
                                                 >

@@ -8,7 +8,7 @@ import { SalesReport } from "@/components/dashboard/sales-report";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { UserProfile } from "./layout";
 import { ProfileContext } from "@/contexts/ProfileContext";
-import { initialNegotiations, type Negotiation } from "@/lib/data"; // Importando dados de negociação
+import { getNegotiations, type Negotiation } from "@/lib/data"; // Importando dados de negociação
 import { initialLeads } from "@/lib/crm-data"; // Importando dados de leads
 
 const welcomeMessages: Record<UserProfile, { title: string; subtitle: string }> = {
@@ -37,8 +37,8 @@ export default function DashboardPage() {
   const [greeting, setGreeting] = useState("Bem-vindo(a) de volta,");
   const { title, subtitle } = welcomeMessages[activeProfile] || welcomeMessages['Admin'];
   
-  const [negotiations, setNegotiations] = useState<Negotiation[]>(initialNegotiations);
-  const [isLoading, setIsLoading] = useState(false); // Não há carregamento real
+  const [negotiations, setNegotiations] = useState<Negotiation[]>([]);
+  const [isLoading, setIsLoading] = useState(true); // Alterado para true
 
   useEffect(() => {
     const currentHour = new Date().getHours();
@@ -49,6 +49,8 @@ export default function DashboardPage() {
     } else {
       setGreeting("Boa noite,");
     }
+    setNegotiations(getNegotiations());
+    setIsLoading(false);
   }, []);
 
   // Calculando estatísticas dinamicamente

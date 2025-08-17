@@ -1,14 +1,14 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, AlertCircle, CheckCircle, Hourglass, PlusCircle } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { initialAdminProcesses, type AdminProcess, type ProcessStatus, type ProcessStage, completeSaleAndGenerateCommission } from "@/lib/data";
+import { getNegotiations, type AdminProcess, type ProcessStatus, type ProcessStage, completeSaleAndGenerateCommission } from "@/lib/data";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -35,13 +35,34 @@ const getStageVariant = (stage: ProcessStage) => {
 };
 
 export default function ProcessesPage() {
-    const [processes, setProcesses] = useState<AdminProcess[]>(initialAdminProcesses);
+    const [processes, setProcesses] = useState<AdminProcess[]>([]);
     const [selectedProcess, setSelectedProcess] = useState<AdminProcess | null>(null);
     const [isPendencyModalOpen, setPendencyModalOpen] = useState(false);
     const [isFinalizeModalOpen, setFinalizeModalOpen] = useState(false);
     const [pendencyNote, setPendencyNote] = useState("");
     const [finalizationNote, setFinalizationNote] = useState("");
     const { toast } = useToast();
+
+    useEffect(() => {
+        refreshProcesses();
+    }, []);
+
+    const refreshProcesses = () => {
+        const negotiations = getNegotiations();
+        const adminProcesses = negotiations.map(neg => ({
+            id: neg.id,
+            status: neg.status,
+            stage: neg.processStage,
+            negotiationType: neg.negotiationType,
+            category: neg.category,
+            property: neg.property,
+            salesperson: neg.salesperson,
+            realtor: neg.realtor,
+            team: neg.team,
+            observations: neg.observations,
+        }));
+        setProcesses(adminProcesses);
+    };
 
     const handleOpenPendencyModal = (process: AdminProcess) => {
         setSelectedProcess(process);
@@ -72,12 +93,7 @@ export default function ProcessesPage() {
         const { success, message } = completeSaleAndGenerateCommission(selectedProcess.id, finalizationNote);
 
         if (success) {
-            // Atualiza a visualização local dos processos
-            setProcesses(prev => prev.map(p => 
-                p.id === selectedProcess.id 
-                ? { ...p, status: 'Finalizado', stage: 'Finalizado', observations: `Processo finalizado. Detalhes: ${finalizationNote}` } 
-                : p
-            ));
+            refreshProcesses(); // Recarrega todos os processos para refletir as mudanças
             toast({ title: "Processo Finalizado!", description: message });
         } else {
             toast({ variant: "destructive", title: "Erro ao Finalizar", description: message });
@@ -220,5 +236,3 @@ export default function ProcessesPage() {
         </div>
     );
 }
-
-    

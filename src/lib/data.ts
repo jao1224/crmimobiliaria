@@ -183,7 +183,7 @@ export const teams = [
     { id: 'team-b', name: 'Equipe B', members: ['Joana Doe', 'Admin'] },
 ];
 
-export let initialNegotiations: Negotiation[] = [
+let negotiationsData: Negotiation[] = [
     { id: 'neg1', property: 'Apartamento Vista Mar', propertyId: 'prop1', propertyType: 'Apartamento', client: 'João Comprador', clientId: 'cli1', stage: 'Venda Concluída', type: 'Venda', value: 850000, salesperson: 'Carlos Pereira', realtor: 'Carlos Pereira', contractStatus: 'Assinado', completionDate: '2024-07-15T10:00:00Z', isFinanced: true, status: 'Finalizado', processStage: 'Finalizado', negotiationType: 'Repasse', category: 'Usado', team: 'Equipe A' },
     { id: 'neg2', property: 'Casa com Piscina', propertyId: 'prop2', propertyType: 'Casa', client: 'Maria Investidora', clientId: 'cli2', stage: 'Em Negociação', type: 'Venda', value: 1200000, salesperson: 'Sofia Lima', realtor: 'Sofia Lima', contractStatus: 'Não Gerado', completionDate: null, isFinanced: false, status: 'Ativo', processStage: 'Em andamento', negotiationType: 'Novo', category: 'Usado', team: 'Equipe A', observations: 'Aguardando contra-proposta do cliente.' },
     { id: 'neg3', property: 'Terreno Comercial', propertyId: 'prop3', propertyType: 'Terreno', client: 'Construtora Build S.A.', clientId: 'cli3', stage: 'Contrato Gerado', type: 'Venda', value: 2500000, salesperson: 'Admin', realtor: 'Carlos Pereira', contractStatus: 'Pendente Assinaturas', completionDate: null, isFinanced: true, status: 'Ativo', processStage: 'Pendência', negotiationType: 'Lote', category: 'Novo', team: 'Equipe A', observations: 'Pendente assinatura do contrato pelo vendedor.' },
@@ -201,7 +201,7 @@ export const mockClients: Client[] = [
 ];
 
 // Dados derivados para a nova tabela de Processos Admin
-export let initialAdminProcesses: AdminProcess[] = initialNegotiations.map(neg => ({
+export let initialAdminProcesses: AdminProcess[] = negotiationsData.map(neg => ({
     id: neg.id,
     status: neg.status,
     stage: neg.processStage,
@@ -283,6 +283,13 @@ export const addProperty = (newProperty: Property) => {
     }
 };
 
+export const getNegotiations = () => [...negotiationsData];
+export const addNegotiation = (newNegotiation: Negotiation) => {
+    if (!negotiationsData.some(n => n.id === newNegotiation.id)) {
+        negotiationsData.unshift(newNegotiation);
+    }
+};
+
 export const getCommissions = () => [...commissionsData];
 export const addCommission = (newCommission: Commission) => {
     if (!commissionsData.some(c => c.id === newCommission.id)) {
@@ -334,20 +341,20 @@ export function addFinancingProcess(newProcess: FinancingProcess) {
  * @returns An object with success status and a message.
  */
 export function completeSaleAndGenerateCommission(negotiationId: string, finalizationNote?: string) {
-    const negIndex = initialNegotiations.findIndex(n => n.id === negotiationId);
+    const negIndex = negotiationsData.findIndex(n => n.id === negotiationId);
 
     if (negIndex === -1) {
         return { success: false, message: "Negociação não encontrada." };
     }
 
-    const neg = initialNegotiations[negIndex];
+    const neg = negotiationsData[negIndex];
 
     if (neg.stage === 'Venda Concluída' || neg.stage === 'Aluguel Ativo') {
         return { success: false, message: "Esta negociação já foi concluída." };
     }
 
     // Atualiza a negociação
-    initialNegotiations[negIndex] = {
+    negotiationsData[negIndex] = {
         ...neg,
         stage: "Venda Concluída",
         contractStatus: "Assinado",
