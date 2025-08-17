@@ -79,11 +79,7 @@ export function RegisterForm() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-        const usersCollection = collection(db, "users");
-        const usersSnapshot = await getDocs(usersCollection);
-        const isFirstUser = usersSnapshot.empty;
-        
-        const role = isFirstUser ? 'Admin' : values.profileType;
+        const role = values.profileType;
 
         // 1. Cria o usuário
         const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
@@ -92,7 +88,7 @@ export function RegisterForm() {
         // 2. Mostra sucesso e redireciona IMEDIATAMENTE
         toast({
             title: "Conta Criada com Sucesso!",
-            description: "Você será redirecionado para a página de login.",
+            description: "Você será redirecionado para fazer o login.",
         });
         router.push("/");
 

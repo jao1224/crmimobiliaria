@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { MoreHorizontal, UserPlus, Trash2 } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ProfileContext } from "@/contexts/ProfileContext";
@@ -276,6 +276,20 @@ export default function SettingsPage() {
         }, 1000);
     };
 
+    const handleChangeUserRole = async (memberId: string, newRole: UserProfile) => {
+        setIsSaving(true);
+        try {
+            const userRef = doc(db, 'users', memberId);
+            await updateDoc(userRef, { role: newRole });
+            await fetchTeamData();
+            toast({ title: "Sucesso", description: `Função do usuário alterada para ${newRole}.` });
+        } catch (error) {
+             toast({ variant: "destructive", title: "Erro", description: "Não foi possível alterar a função do usuário." });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
 
     return (
         <div className="flex flex-col gap-6">
@@ -394,6 +408,7 @@ export default function SettingsPage() {
                                         <TableHead>Nome</TableHead>
                                         <TableHead>E-mail</TableHead>
                                         <TableHead>Função</TableHead>
+                                        <TableHead className="text-right">Ações</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -403,10 +418,35 @@ export default function SettingsPage() {
                                                 <TableCell className="font-medium">{member.name}</TableCell>
                                                 <TableCell>{member.email}</TableCell>
                                                 <TableCell><Badge variant={member.role === 'Admin' || member.role === 'Imobiliária' ? 'default' : 'secondary'}>{member.role}</Badge></TableCell>
+                                                <TableCell className="text-right">
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button size="icon" variant="ghost"><MoreHorizontal /></Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent>
+                                                            <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                                                            <DropdownMenuSub>
+                                                                <DropdownMenuSubTrigger>Alterar Função</DropdownMenuSubTrigger>
+                                                                <DropdownMenuSubContent>
+                                                                    {userProfiles.map(role => (
+                                                                        <DropdownMenuItem 
+                                                                            key={role} 
+                                                                            onClick={() => handleChangeUserRole(member.id, role)}
+                                                                            disabled={isSaving}
+                                                                        >
+                                                                            {role}
+                                                                        </DropdownMenuItem>
+                                                                    ))}
+                                                                </DropdownMenuSubContent>
+                                                            </DropdownMenuSub>
+                                                            <DropdownMenuItem className="text-destructive">Remover</DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </TableCell>
                                             </TableRow>
                                         ))
                                     ) : (
-                                        <TableRow><TableCell colSpan={3} className="text-center h-24">Nenhum membro encontrado.</TableCell></TableRow>
+                                        <TableRow><TableCell colSpan={4} className="text-center h-24">Nenhum membro encontrado.</TableCell></TableRow>
                                     )}
                                 </TableBody>
                             </Table>
