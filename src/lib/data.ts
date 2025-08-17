@@ -72,15 +72,18 @@ export type ProcessStage = 'Em andamento' | 'Pendência' | 'Finalizado';
 
 export type Commission = {
     id: string;
-    dealId: string; // ID da negociação para referência
-    deal: string; // Descrição do negócio
-    amount: number;
-    status: 'Pago' | 'Pendente' | 'Vencido';
+    negotiationId: string;
+    propertyValue: number;
+    commissionValue: number;
+    commissionRate: number;
+    clientName: string;
+    realtorName: string; // Captador
+    salespersonName: string; // Vendedor
+    managerName?: string; // Gerente
+    clientSignal?: number; // Sinal do cliente
     paymentDate: string;
-    involved: string;
-    advance?: number;
-    invoiceFile?: File | null;
-    realtorId: string;
+    status: 'Pago' | 'Pendente' | 'Vencido';
+    notes?: string;
 };
 
 // --- NOVOS TIPOS PARA CORRESPONDENTE ---
@@ -178,6 +181,22 @@ export const teams = [
 
 // --- FUNÇÕES DE MANIPULAÇÃO DE DADOS (FIRESTORE) ---
 
+export const getProperties = async (): Promise<Property[]> => {
+    const propertiesCollection = collection(db, 'properties');
+    const snapshot = await getDocs(propertiesCollection);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Property));
+};
+
+export const addProperty = async (newProperty: Omit<Property, 'id'>): Promise<string> => {
+    const docRef = await addDoc(collection(db, 'properties'), newProperty);
+    return docRef.id;
+};
+
+export const updateProperty = async (id: string, data: Partial<Property>): Promise<void> => {
+    const propertyRef = doc(db, "properties", id);
+    await updateDoc(propertyRef, data);
+};
+
 export const getNegotiations = async (): Promise<Negotiation[]> => {
     const negotiationsCollection = collection(db, 'negotiations');
     const snapshot = await getDocs(negotiationsCollection);
@@ -187,6 +206,11 @@ export const getNegotiations = async (): Promise<Negotiation[]> => {
 export const addNegotiation = async (newNegotiation: Omit<Negotiation, 'id'>): Promise<string> => {
     const docRef = await addDoc(collection(db, 'negotiations'), newNegotiation);
     return docRef.id;
+};
+
+export const updateNegotiation = async (id: string, data: Partial<Negotiation>): Promise<void> => {
+    const negotiationRef = doc(db, "negotiations", id);
+    await updateDoc(negotiationRef, data);
 };
 
 export const getCommissions = async (): Promise<Commission[]> => {
@@ -285,17 +309,22 @@ export async function completeSaleAndGenerateCommission(negotiation: Negotiation
     };
     batch.update(negRef, updatedNegotiationData);
 
-    // 2. Simula a geração automática de comissão (se for uma venda)
+    // 2. Gera a comissão com detalhes aprimorados
     if (negotiation.type === 'Venda') {
-        const commissionAmount = negotiation.value * 0.05; // Simulação de 5%
-        const newCommissionData: Omit<Commission, 'id' | 'invoiceFile'> = {
-            dealId: negotiation.id,
-            deal: `Venda ${negotiation.property}`,
-            amount: commissionAmount,
-            status: 'Pendente',
+        const commissionRate = 5; // Simulação de 5%
+        const commissionValue = negotiation.value * (commissionRate / 100);
+        
+        const newCommissionData: Omit<Commission, 'id'> = {
+            negotiationId: negotiation.id,
+            propertyValue: negotiation.value,
+            commissionValue: commissionValue,
+            commissionRate: commissionRate,
+            clientName: negotiation.client,
+            realtorName: negotiation.realtor, // Captador
+            salespersonName: negotiation.salesperson, // Vendedor
             paymentDate: new Date(new Date().setDate(new Date().getDate() + 30)).toISOString().split('T')[0], // Pagar em 30 dias
-            involved: `${negotiation.salesperson} (Vendedor), ${negotiation.realtor} (Captador)`,
-            realtorId: negotiation.salesperson, // Simulação para permissão de visualização
+            status: 'Pendente',
+            notes: 'Comissão gerada automaticamente ao concluir a venda.'
         };
         const commissionRef = doc(collection(db, 'commissions'));
         batch.set(commissionRef, newCommissionData);

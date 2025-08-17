@@ -63,7 +63,8 @@ export default function FinancePage() {
         refreshFinanceData();
         const fetchNegotiations = async () => {
             const negs = await getNegotiations();
-            setNegotiations(negs.filter(n => n.status !== 'Cancelado'));
+            // Filtra para negociações que podem gerar comissão
+            setNegotiations(negs.filter(n => n.status === 'Finalizado' || n.stage === 'Venda Concluída'));
         };
         fetchNegotiations();
     }, []);
@@ -89,12 +90,11 @@ export default function FinancePage() {
     // Lógica de Comissões
     const visibleCommissions = commissions.filter(c => {
         if (hasPermission) return true;
-        // Simulado: 'Carlos Pereira' é o Corretor Autônomo padrão para o exemplo
-        if (activeProfile === 'Corretor Autônomo' && c.involved.includes('Carlos Pereira')) return true; 
+        if (activeProfile === 'Corretor Autônomo' && (c.realtorName === 'Carlos Pereira' || c.salespersonName === 'Carlos Pereira')) return true; 
         return false;
     });
-    const totalCommission = visibleCommissions.reduce((sum, item) => sum + item.amount, 0);
-    const paidCommission = visibleCommissions.filter(c => c.status === 'Pago').reduce((sum, item) => sum + item.amount, 0);
+    const totalCommission = visibleCommissions.reduce((sum, item) => sum + item.commissionValue, 0);
+    const paidCommission = visibleCommissions.filter(c => c.status === 'Pago').reduce((sum, item) => sum + item.commissionValue, 0);
     const pendingCommission = totalCommission - paidCommission;
     
     const handleStatusChange = async (commissionId: string, newStatus: Commission['status']) => {
@@ -110,23 +110,27 @@ export default function FinancePage() {
     const handleAddCommission = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         const formData = new FormData(event.currentTarget);
-        const dealId = formData.get('dealId') as string;
-        const negotiation = negotiations.find(n => n.id === dealId);
+        const negotiationId = formData.get('negotiationId') as string;
+        const negotiation = negotiations.find(n => n.id === negotiationId);
 
         if (!negotiation) {
             toast({ variant: 'destructive', title: "Erro", description: "Negociação selecionada é inválida." });
             return;
         }
 
-        const newCommissionData: Omit<Commission, 'id' | 'invoiceFile'> = {
-            dealId: dealId,
-            deal: negotiation.property,
-            amount: parseFloat(formData.get('amount') as string),
+        const newCommissionData: Omit<Commission, 'id'> = {
+            negotiationId: negotiation.id,
+            propertyValue: negotiation.value,
+            clientName: negotiation.client,
+            realtorName: negotiation.realtor,
+            salespersonName: negotiation.salesperson,
+            managerName: formData.get('managerName') as string || undefined,
+            clientSignal: parseFloat(formData.get('clientSignal') as string) || undefined,
+            commissionValue: parseFloat(formData.get('commissionValue') as string),
+            commissionRate: parseFloat(formData.get('commissionRate') as string),
             status: formData.get('status') as Commission['status'], 
             paymentDate: formData.get('paymentDate') as string,
-            involved: formData.get('involved') as string, 
-            advance: formData.has('advance') ? parseFloat(formData.get('advance') as string) : undefined,
-            realtorId: negotiation.salesperson,
+            notes: formData.get('notes') as string || undefined,
         };
         await addCommission(newCommissionData);
         await refreshFinanceData();
@@ -170,8 +174,8 @@ export default function FinancePage() {
         (event.currentTarget as HTMLFormElement).reset();
     };
     
-    const handleNegotiationSelect = (dealId: string) => {
-        const negotiation = negotiations.find(n => n.id === dealId);
+    const handleNegotiationSelect = (negotiationId: string) => {
+        const negotiation = negotiations.find(n => n.id === negotiationId);
         if (negotiation) {
             setSelectedNegotiation(negotiation);
         }
@@ -205,41 +209,62 @@ export default function FinancePage() {
                                     <DialogTrigger asChild>
                                         <Button><PlusCircle className="mr-2 h-4 w-4" />Lançar Comissão</Button>
                                     </DialogTrigger>
-                                    <DialogContent className="sm:max-w-xl">
+                                    <DialogContent className="sm:max-w-2xl">
                                         <DialogHeader>
                                             <DialogTitle>Lançar Nova Comissão</DialogTitle>
-                                            <DialogDescription>Preencha os detalhes para registrar uma nova comissão.</DialogDescription>
+                                            <DialogDescription>Preencha os detalhes para registrar uma nova comissão de um negócio concluído.</DialogDescription>
                                         </DialogHeader>
-                                        <form onSubmit={handleAddCommission}>
+                                        <form onSubmit={handleAddCommission} key={selectedNegotiation?.id}>
                                             <div className="grid gap-4 py-4">
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="dealId">Cód. do Processo</Label>
-                                                        <Select name="dealId" required onValueChange={handleNegotiationSelect}>
-                                                            <SelectTrigger><SelectValue placeholder="Selecione um processo"/></SelectTrigger>
-                                                            <SelectContent>
-                                                                {negotiations.map(n => (
-                                                                    <SelectItem key={n.id} value={n.id}>
-                                                                        {n.property} ({n.id.toUpperCase()})
-                                                                    </SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="deal">Descrição do Negócio</Label>
-                                                        <Input id="deal" name="deal" required value={selectedNegotiation?.property || ''} readOnly placeholder="Selecione um processo"/>
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="amount">Valor da Comissão (R$)</Label>
-                                                        <Input id="amount" name="amount" type="number" step="0.01" required key={selectedNegotiation?.id} defaultValue={selectedNegotiation ? (selectedNegotiation.value * 0.05).toFixed(2) : ''}/>
-                                                    </div>
-                                                </div>
                                                 <div className="space-y-2">
-                                                    <Label htmlFor="involved">Envolvidos</Label>
-                                                    <Textarea id="involved" name="involved" required key={selectedNegotiation?.id} defaultValue={selectedNegotiation ? `${selectedNegotiation.salesperson} (Vendedor), ${selectedNegotiation.realtor} (Captador)` : ''} placeholder="Ex: Corretor A (50%), Corretor B (50%)" />
+                                                    <Label htmlFor="negotiationId">Cód. do Processo</Label>
+                                                    <Select name="negotiationId" required onValueChange={handleNegotiationSelect}>
+                                                        <SelectTrigger><SelectValue placeholder="Selecione um processo concluído"/></SelectTrigger>
+                                                        <SelectContent>
+                                                            {negotiations.map(n => (
+                                                                <SelectItem key={n.id} value={n.id}>
+                                                                    {n.property} ({n.id.toUpperCase()})
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
                                                 </div>
+                                                
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                     <div className="space-y-2">
+                                                        <Label>Valor do Imóvel</Label>
+                                                        <Input value={selectedNegotiation ? formatCurrency(selectedNegotiation.value) : ''} readOnly placeholder="Selecione um processo"/>
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="clientSignal">Sinal do Cliente (R$)</Label>
+                                                        <Input id="clientSignal" name="clientSignal" type="number" step="0.01" placeholder="Opcional" />
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    <div className="space-y-2">
+                                                        <Label>Captador</Label>
+                                                        <Input value={selectedNegotiation?.realtor || ''} readOnly placeholder="Selecione um processo" />
+                                                    </div>
+                                                     <div className="space-y-2">
+                                                        <Label>Vendedor</Label>
+                                                        <Input value={selectedNegotiation?.salesperson || ''} readOnly placeholder="Selecione um processo" />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="managerName">Gerente</Label>
+                                                        <Input id="managerName" name="managerName" placeholder="Nome do gerente (opcional)" />
+                                                    </div>
+                                                </div>
+                                                
+                                                <div className="border-t pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                     <div className="space-y-2">
+                                                        <Label htmlFor="commissionRate">Taxa de Comissão (%)</Label>
+                                                        <Input id="commissionRate" name="commissionRate" type="number" step="0.1" required defaultValue={selectedNegotiation ? 5 : ''}/>
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="commissionValue">Valor da Comissão (R$)</Label>
+                                                        <Input id="commissionValue" name="commissionValue" type="number" step="0.01" required defaultValue={selectedNegotiation ? (selectedNegotiation.value * 0.05).toFixed(2) : ''}/>
+                                                    </div>
                                                     <div className="space-y-2">
                                                         <Label htmlFor="paymentDate">Data de Pagamento</Label>
                                                         <Input id="paymentDate" name="paymentDate" type="date" required />
@@ -256,15 +281,10 @@ export default function FinancePage() {
                                                         </Select>
                                                     </div>
                                                 </div>
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="advance">Adiantamento (R$)</Label>
-                                                        <Input id="advance" name="advance" type="number" step="0.01" placeholder="Opcional" />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="invoiceFile">Nota Fiscal (Opcional)</Label>
-                                                        <Input id="invoiceFile" name="invoiceFile" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" />
-                                                    </div>
+
+                                                 <div className="space-y-2">
+                                                    <Label htmlFor="notes">Observações</Label>
+                                                    <Textarea id="notes" name="notes" placeholder="Detalhes sobre a divisão, adiantamentos, etc." />
                                                 </div>
                                             </div>
                                             <DialogFooter>
@@ -300,10 +320,12 @@ export default function FinancePage() {
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead>Cód. Processo</TableHead>
-                                            <TableHead>Descrição</TableHead>
-                                            {hasPermission && <TableHead>Envolvidos</TableHead>}
-                                            <TableHead>Valor</TableHead><TableHead>Status</TableHead>
-                                            <TableHead>Data de Pagamento</TableHead>
+                                            <TableHead>Cliente</TableHead>
+                                            {hasPermission && <TableHead>Captador</TableHead>}
+                                            {hasPermission && <TableHead>Vendedor</TableHead>}
+                                            <TableHead>Valor Comissão</TableHead>
+                                            <TableHead>Status</TableHead>
+                                            <TableHead>Data Pag.</TableHead>
                                             <TableHead><span className="sr-only">Ações</span></TableHead>
                                         </TableRow>
                                     </TableHeader>
@@ -311,16 +333,17 @@ export default function FinancePage() {
                                         {isLoading ? (
                                             Array.from({ length: 3 }).map((_, i) => (
                                                 <TableRow key={i}>
-                                                    <TableCell colSpan={hasPermission ? 7 : 6}><Skeleton className="h-8 w-full" /></TableCell>
+                                                    <TableCell colSpan={hasPermission ? 8 : 5}><Skeleton className="h-8 w-full" /></TableCell>
                                                 </TableRow>
                                             ))
                                         ) : visibleCommissions.length > 0 ? (
                                             visibleCommissions.map(commission => (
                                                 <TableRow key={commission.id} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
-                                                    <TableCell className="font-mono text-xs text-muted-foreground">{commission.dealId.toUpperCase()}</TableCell>
-                                                    <TableCell className="font-medium">{commission.deal}</TableCell>
-                                                    {hasPermission && <TableCell className="text-muted-foreground text-xs">{commission.involved}</TableCell>}
-                                                    <TableCell>{formatCurrency(commission.amount)}</TableCell>
+                                                    <TableCell className="font-mono text-xs text-muted-foreground">{commission.negotiationId.toUpperCase()}</TableCell>
+                                                    <TableCell className="font-medium">{commission.clientName}</TableCell>
+                                                    {hasPermission && <TableCell>{commission.realtorName}</TableCell>}
+                                                    {hasPermission && <TableCell>{commission.salespersonName}</TableCell>}
+                                                    <TableCell>{formatCurrency(commission.commissionValue)}</TableCell>
                                                     <TableCell><Badge variant={commission.status === 'Pago' ? 'success' : commission.status === 'Pendente' ? 'status-orange' : 'destructive'}>{commission.status}</Badge></TableCell>
                                                     <TableCell>{new Date(commission.paymentDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</TableCell>
                                                     <TableCell>
@@ -338,7 +361,7 @@ export default function FinancePage() {
                                                     </TableCell>
                                                 </TableRow>
                                             ))
-                                        ) : <TableRow><TableCell colSpan={hasPermission ? 7 : 6} className="h-24 text-center">Nenhuma comissão encontrada.</TableCell></TableRow>}
+                                        ) : <TableRow><TableCell colSpan={hasPermission ? 8 : 5} className="h-24 text-center">Nenhuma comissão encontrada.</TableCell></TableRow>}
                                     </TableBody>
                                 </Table>
                             </CardContent>
