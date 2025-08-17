@@ -520,7 +520,7 @@ export default function PropertiesPage() {
       </Dialog>
       
       <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>Editar Imóvel</DialogTitle>
             <DialogDescription>Atualize os detalhes do imóvel abaixo.</DialogDescription>
