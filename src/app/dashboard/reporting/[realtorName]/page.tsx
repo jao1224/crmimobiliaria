@@ -4,8 +4,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
-import { getProperties, type Property } from "@/lib/data";
-import { getNegotiations, type Negotiation } from "@/lib/data";
+import { getPropertiesByRealtor, getNegotiationsByRealtor, getActivitiesForRealtor, updateActivityStatus, Activity, ActivityStatus } from "@/lib/data";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,10 +12,6 @@ import { ArrowLeft, Target, Handshake } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-
-type ActivityStatus = 'Ativo' | 'Pendente' | 'Concluído' | 'Cancelado';
-
-type Activity = ((Property & { activityType: 'capture' }) | (Negotiation & { activityType: 'negotiation' })) & { status: ActivityStatus };
 
 type Column = {
     id: ActivityStatus;
@@ -59,38 +54,46 @@ export default function RealtorKanbanPage() {
 
     useEffect(() => {
         if (realtorName) {
-            setIsLoading(true);
-            // Simula o carregamento dos dados
-            const allProperties = getProperties();
-            const capturedProperties = allProperties
-                .filter(p => p.capturedBy === realtorName)
-                .map(p => ({ ...p, activityType: 'capture' as const, status: 'Ativo' as ActivityStatus }));
+            const loadData = async () => {
+                setIsLoading(true);
+                try {
+                    const fetchedActivities = await getActivitiesForRealtor(realtorName);
+                    
+                    const activitiesMap = fetchedActivities.reduce((acc, activity) => {
+                        acc[activity.id] = activity;
+                        return acc;
+                    }, {} as {[key: string]: Activity});
+                    setActivities(activitiesMap);
 
-            const relatedNegotiations = getNegotiations()
-                .filter(n => (n.realtor === realtorName || n.salesperson === realtorName))
-                .map(n => ({ ...n, activityType: 'negotiation' as const, status: n.stage === 'Venda Concluída' ? 'Concluído' : 'Ativo' as ActivityStatus }));
+                    const initialColumns: Columns = {
+                        'Ativo': { id: 'Ativo', title: 'Ativo', activityIds: [] },
+                        'Pendente': { id: 'Pendente', title: 'Pendente', activityIds: [] },
+                        'Concluído': { id: 'Concluído', title: 'Concluído', activityIds: [] },
+                        'Cancelado': { id: 'Cancelado', title: 'Cancelado', activityIds: [] },
+                    };
 
-            const combinedActivities: Activity[] = [...capturedProperties, ...relatedNegotiations];
-            
-            const activitiesMap = combinedActivities.reduce((acc, activity) => {
-                acc[activity.id] = activity;
-                return acc;
-            }, {} as {[key: string]: Activity});
-            setActivities(activitiesMap);
+                    fetchedActivities.forEach(activity => {
+                        if (initialColumns[activity.status]) {
+                            initialColumns[activity.status].activityIds.push(activity.id);
+                        }
+                    });
 
-            const initialColumns: Columns = {
-                'Ativo': { id: 'Ativo', title: 'Ativo', activityIds: combinedActivities.filter(a => a.status === 'Ativo').map(a => a.id) },
-                'Pendente': { id: 'Pendente', title: 'Pendente', activityIds: combinedActivities.filter(a => a.status === 'Pendente').map(a => a.id) },
-                'Concluído': { id: 'Concluído', title: 'Concluído', activityIds: combinedActivities.filter(a => a.status === 'Concluído').map(a => a.id) },
-                'Cancelado': { id: 'Cancelado', title: 'Cancelado', activityIds: combinedActivities.filter(a => a.status === 'Cancelado').map(a => a.id) },
+                    setColumns(initialColumns);
+                } catch (error) {
+                    toast({
+                        variant: 'destructive',
+                        title: "Erro ao carregar atividades",
+                        description: "Não foi possível buscar os dados do Kanban."
+                    });
+                } finally {
+                    setIsLoading(false);
+                }
             };
-            setColumns(initialColumns);
-
-            setIsLoading(false);
+            loadData();
         }
-    }, [realtorName]);
+    }, [realtorName, toast]);
 
-    const onDragEnd = (result: DropResult) => {
+    const onDragEnd = async (result: DropResult) => {
         const { destination, source, draggableId } = result;
 
         if (!destination) return;
@@ -99,18 +102,9 @@ export default function RealtorKanbanPage() {
 
         const startColumn = columns[source.droppableId as ActivityStatus];
         const finishColumn = columns[destination.droppableId as ActivityStatus];
+        const newStatus = destination.droppableId as ActivityStatus;
 
-        if (startColumn === finishColumn) {
-            const newActivityIds = Array.from(startColumn.activityIds);
-            newActivityIds.splice(source.index, 1);
-            newActivityIds.splice(destination.index, 0, draggableId);
-
-            const newColumn = { ...startColumn, activityIds: newActivityIds };
-            setColumns(prev => ({ ...prev!, [startColumn.id]: newColumn }));
-            return;
-        }
-
-        // Moving from one list to another
+        // Optimistic UI Update
         const startTaskIds = Array.from(startColumn.activityIds);
         startTaskIds.splice(source.index, 1);
         const newStart = { ...startColumn, activityIds: startTaskIds };
@@ -119,20 +113,36 @@ export default function RealtorKanbanPage() {
         finishTaskIds.splice(destination.index, 0, draggableId);
         const newFinish = { ...finishColumn, activityIds: finishTaskIds };
         
-        // Update activity status
-        const movedActivity = { ...activities[draggableId], status: destination.droppableId as ActivityStatus };
+        const movedActivity = { ...activities[draggableId], status: newStatus };
+        
         setActivities(prev => ({ ...prev, [draggableId]: movedActivity }));
-
         setColumns(prev => ({
             ...prev!,
             [newStart.id]: newStart,
             [newFinish.id]: newFinish,
         }));
-        
-        toast({
-            title: "Status Atualizado!",
-            description: `Atividade movida para "${destination.droppableId}".`,
-        });
+
+        // Persist change to Firestore
+        try {
+            await updateActivityStatus(draggableId, newStatus);
+            toast({
+                title: "Status Atualizado!",
+                description: `Atividade movida para "${newStatus}".`,
+            });
+        } catch (error) {
+            toast({
+                variant: 'destructive',
+                title: "Erro ao salvar",
+                description: "Não foi possível salvar a alteração. Revertendo.",
+            });
+            // Revert UI on failure
+            setActivities(prev => ({ ...prev, [draggableId]: activities[draggableId] })); // Revert activity
+            setColumns(prev => ({ // Revert columns
+                ...prev!,
+                [startColumn.id]: startColumn,
+                [finishColumn.id]: finishColumn
+            }));
+        }
     };
 
     if (isLoading || !columns) {
@@ -184,7 +194,7 @@ export default function RealtorKanbanPage() {
                                             {column.activityIds.map((activityId, index) => {
                                                 const activity = activities[activityId];
                                                 if (!activity) return null;
-                                                const isCapture = activity.activityType === 'capture';
+                                                const isCapture = activity.type === 'capture';
                                                 const Icon = isCapture ? Target : Handshake;
                                                 const iconBg = isCapture ? 'bg-primary text-primary-foreground' : 'bg-success text-success-foreground';
 
@@ -203,8 +213,8 @@ export default function RealtorKanbanPage() {
                                                                         <Icon className="h-3 w-3" />
                                                                     </div>
                                                                 </div>
-                                                                <p className="font-bold text-sm mt-1">{isCapture ? activity.name : activity.property}</p>
-                                                                <p className="text-xs text-muted-foreground">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(isCapture ? activity.price : activity.value)}</p>
+                                                                <p className="font-bold text-sm mt-1">{activity.name}</p>
+                                                                <p className="text-xs text-muted-foreground">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(activity.value)}</p>
                                                             </div>
                                                         )}
                                                     </Draggable>

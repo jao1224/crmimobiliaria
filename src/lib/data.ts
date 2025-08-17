@@ -1,5 +1,5 @@
 import { db } from './firebase';
-import { collection, getDocs, addDoc, doc, updateDoc, writeBatch, serverTimestamp, query, orderBy, limit } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, updateDoc, writeBatch, serverTimestamp, query, orderBy, limit, where, getDoc, setDoc } from 'firebase/firestore';
 
 // Tipos para os dados de CRM
 export type Lead = {
@@ -74,13 +74,13 @@ export type Commission = {
     id: string;
     negotiationId: string;
     propertyValue: number;
-    commissionValue: number;
-    commissionRate: number;
     clientName: string;
     realtorName: string; // Captador
     salespersonName: string; // Vendedor
     managerName?: string; // Gerente
     clientSignal?: number; // Sinal do cliente
+    commissionValue: number;
+    commissionRate: number;
     paymentDate: string;
     status: 'Pago' | 'Pendente' | 'Vencido';
     notes?: string;
@@ -178,6 +178,19 @@ export type Notification = {
     read: boolean;
 };
 
+// --- TIPO PARA O KANBAN DE ATIVIDADES ---
+export type ActivityStatus = 'Ativo' | 'Pendente' | 'Concluído' | 'Cancelado';
+export type Activity = {
+    id: string; // ID da propriedade ou negociação
+    realtorName: string;
+    type: 'capture' | 'negotiation';
+    name: string; // Nome do imóvel ou negociação
+    value: number;
+    status: ActivityStatus;
+    relatedId: string; // ID original do Firestore (prop ou neg)
+};
+
+
 // --- Dados simulados (para referência e fallback) ---
 export const realtors = ['Carlos Pereira', 'Sofia Lima', 'Joana Doe', 'Admin'];
 export const propertyTypes: PropertyType[] = ['Lançamento', 'Revenda', 'Terreno', 'Casa', 'Apartamento'];
@@ -191,6 +204,12 @@ export const teams = [
 export const getProperties = async (): Promise<Property[]> => {
     const propertiesCollection = collection(db, 'properties');
     const snapshot = await getDocs(propertiesCollection);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Property));
+};
+
+export const getPropertiesByRealtor = async (realtorName: string): Promise<Property[]> => {
+    const q = query(collection(db, "properties"), where("capturedBy", "==", realtorName));
+    const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Property));
 };
 
@@ -209,6 +228,13 @@ export const getNegotiations = async (): Promise<Negotiation[]> => {
     const snapshot = await getDocs(negotiationsCollection);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Negotiation));
 };
+
+export const getNegotiationsByRealtor = async (realtorName: string): Promise<Negotiation[]> => {
+    const q = query(collection(db, "negotiations"), where("salesperson", "==", realtorName));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Negotiation));
+};
+
 
 export const addNegotiation = async (newNegotiation: Omit<Negotiation, 'id'>): Promise<string> => {
     const docRef = await addDoc(collection(db, 'negotiations'), newNegotiation);
@@ -359,10 +385,14 @@ export async function completeSaleAndGenerateCommission(negotiation: Negotiation
         batch.update(propertyRef, { status: "Vendido" });
     }
 
+    // 4. Atualiza a atividade no Kanban para "Concluído"
+    const activityRef = doc(db, 'activities', negotiation.id);
+    batch.update(activityRef, { status: "Concluído" });
+
     try {
         await batch.commit();
         
-        // 4. Cria a notificação após o sucesso do commit
+        // 5. Cria a notificação após o sucesso do commit
         await addNotification({
             title: "Venda Concluída!",
             description: `O imóvel '${negotiation.property}' foi vendido para ${negotiation.client}.`,
@@ -374,3 +404,72 @@ export async function completeSaleAndGenerateCommission(negotiation: Negotiation
         return { success: false, message: "Ocorreu um erro ao tentar finalizar a venda." };
     }
 }
+
+
+// --- Funções para o Kanban de Atividades ---
+
+export const getActivitiesForRealtor = async (realtorName: string): Promise<Activity[]> => {
+    // 1. Obter todas as atividades existentes para o corretor
+    const activitiesQuery = query(collection(db, 'activities'), where('realtorName', '==', realtorName));
+    const activitiesSnapshot = await getDocs(activitiesQuery);
+    const existingActivitiesMap = new Map(activitiesSnapshot.docs.map(doc => [doc.id, doc.data() as Activity]));
+
+    const batch = writeBatch(db);
+    let hasNewActivities = false;
+
+    // 2. Verificar novas captações (properties)
+    const propertiesQuery = query(collection(db, 'properties'), where('capturedBy', '==', realtorName));
+    const propertiesSnapshot = await getDocs(propertiesQuery);
+    propertiesSnapshot.forEach(propDoc => {
+        if (!existingActivitiesMap.has(propDoc.id)) {
+            const prop = propDoc.data() as Property;
+            const newActivity: Activity = {
+                id: propDoc.id,
+                realtorName: prop.capturedBy,
+                type: 'capture',
+                name: prop.name,
+                value: prop.price,
+                status: 'Ativo',
+                relatedId: propDoc.id,
+            };
+            const activityRef = doc(db, 'activities', propDoc.id);
+            batch.set(activityRef, newActivity);
+            existingActivitiesMap.set(propDoc.id, newActivity); // Adiciona ao mapa para retorno imediato
+            hasNewActivities = true;
+        }
+    });
+
+    // 3. Verificar novas negociações
+    const negotiationsQuery = query(collection(db, 'negotiations'), where('salesperson', '==', realtorName));
+    const negsSnapshot = await getDocs(negotiationsQuery);
+    negsSnapshot.forEach(negDoc => {
+        if (!existingActivitiesMap.has(negDoc.id)) {
+            const neg = negDoc.data() as Negotiation;
+            const newActivity: Activity = {
+                id: negDoc.id,
+                realtorName: neg.salesperson,
+                type: 'negotiation',
+                name: neg.property,
+                value: neg.value,
+                status: 'Ativo',
+                relatedId: negDoc.id,
+            };
+            const activityRef = doc(db, 'activities', negDoc.id);
+            batch.set(activityRef, newActivity);
+            existingActivitiesMap.set(negDoc.id, newActivity);
+            hasNewActivities = true;
+        }
+    });
+
+    // 4. Se houver novas atividades, commita o batch
+    if (hasNewActivities) {
+        await batch.commit();
+    }
+
+    return Array.from(existingActivitiesMap.values());
+};
+
+export const updateActivityStatus = async (activityId: string, newStatus: ActivityStatus): Promise<void> => {
+    const activityRef = doc(db, 'activities', activityId);
+    await updateDoc(activityRef, { status: newStatus });
+};
