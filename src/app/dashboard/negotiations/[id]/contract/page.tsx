@@ -15,7 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import type { UserProfile } from "@/app/dashboard/layout";
-import { getNegotiations, realtors as mockRealtors, getProperties, type Property, type Negotiation } from "@/lib/data";
+import { getNegotiations, getProperties, type Property, type Negotiation } from "@/lib/data";
 import { getClients, type Client } from "@/lib/crm-data";
 
 
@@ -54,6 +54,7 @@ export default function ContractPage() {
     const [negotiation, setNegotiation] = useState<ExtendedNegotiation | null>(null);
     const [property, setProperty] = useState<Property | null>(null);
     const [client, setClient] = useState<Client | null>(null);
+    const [realtor, setRealtor] = useState<{name: string, creci: string} | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
@@ -91,9 +92,12 @@ export default function ContractPage() {
             setProperty(foundProperty || null);
             setClient(foundClient || null);
 
+            // Simula busca de dados do corretor
+            setRealtor({ name: foundNegotiation.realtor, creci: "N/A" });
+
             // Preenche cláusula de comissão com base nos dados reais
             if (foundProperty) {
-                 const commissionRate = foundProperty?.commission || 2.5; // fallback
+                 const commissionRate = foundProperty?.commission || 5; // fallback
                  const commissionValue = foundNegotiation.value * (commissionRate / 100);
                  const defaultCommissionClause = `Os honorários devidos pela intermediação desta negociação, no montante de ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(commissionValue)}, correspondentes a ${commissionRate}% do valor da venda, são de responsabilidade do VENDEDOR(ES), a serem pagos à INTERVENIENTE ANUENTE na data da compensação do sinal.`;
                 setContractData(prev => ({...prev, commissionClause: defaultCommissionClause}));
@@ -151,7 +155,7 @@ export default function ContractPage() {
         );
     }
     
-    if (!negotiation || !property || !client) {
+    if (!negotiation || !property || !client || !realtor) {
         return (
              <div className="flex flex-col items-center justify-center h-full text-center">
                 <h2 className="text-xl font-semibold">Negociação não encontrada</h2>
@@ -160,8 +164,6 @@ export default function ContractPage() {
             </div>
         );
     }
-    
-    const realtor = (mockRealtors as any)[negotiation.realtor] || { name: negotiation.realtor, creci: "N/A" };
     
     const handlePrint = () => {
         window.print();

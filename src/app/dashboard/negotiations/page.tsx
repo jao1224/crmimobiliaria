@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MoreHorizontal, Search } from "lucide-react";
+import { MoreHorizontal } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -40,18 +40,20 @@ export default function NegotiationsPage() {
     const [proposalValue, setProposalValue] = useState("");
     const [proposalDate, setProposalDate] = useState("");
     const [isSearching, setIsSearching] = useState(false);
+    
+    // Dados para os selects, carregados uma vez
+    const [availableProperties, setAvailableProperties] = useState<Property[]>([]);
+    const [availableClients, setAvailableClients] = useState<Client[]>([]);
 
     useEffect(() => {
-        setNegotiations(getNegotiations());
+        refreshData();
+        setAvailableProperties(getProperties().filter(p => p.status === 'Disponível'));
+        setAvailableClients(getClients());
     }, []);
     
     const refreshData = () => {
         setNegotiations(getNegotiations());
     };
-
-    // Carrega dados dinâmicos para os selects
-    const availableProperties = getProperties().filter(p => p.status === 'Disponível');
-    const availableClients = getClients();
 
     const handleSearch = async () => {
         setIsSearching(true);
@@ -78,7 +80,7 @@ export default function NegotiationsPage() {
                  toast({ title: "Sucesso!", description: "Dados encontrados (simulado)." });
             }
             setIsSearching(false);
-        }, 1000);
+        }, 500);
     };
 
     const resetForm = () => {
@@ -118,15 +120,15 @@ export default function NegotiationsPage() {
             id: `neg${Date.now()}`,
             property: foundProperty.name,
             propertyId: foundProperty.id,
-            propertyType: foundProperty.type, // Usando o tipo do imóvel
+            propertyType: foundProperty.type,
             client: foundClient.name,
             clientId: foundClient.id,
             stage: "Proposta Enviada",
-            type: 'Venda', // Default
+            type: 'Venda',
             contractStatus: "Não Gerado",
             value: Number(proposalValue),
             salesperson: "Joana Doe", // Simulado
-            realtor: foundProperty.capturedBy, // Usando o captador do imóvel
+            realtor: foundProperty.capturedBy,
             completionDate: null,
             isFinanced: isFinanced,
             status: 'Ativo',
@@ -139,7 +141,6 @@ export default function NegotiationsPage() {
         addNegotiation(newNegotiation);
         refreshData();
         
-        // Se for financiado, cria o processo para o correspondente
         if (isFinanced) {
              addFinancingProcess({
                 id: `finproc-from-${newNegotiation.id}`,
@@ -168,7 +169,7 @@ export default function NegotiationsPage() {
             });
             toast({ title: "Sucesso!", description: "Nova negociação iniciada e processo de financiamento criado para o correspondente." });
         } else {
-            toast({ title: "Sucesso!", description: "Nova negociação iniciada (simulado)." });
+            toast({ title: "Sucesso!", description: "Nova negociação iniciada." });
         }
         
         setNewNegotiationOpen(false);
@@ -185,7 +186,7 @@ export default function NegotiationsPage() {
     const handleCompleteSale = (neg: Negotiation) => {
         const { success, message } = completeSaleAndGenerateCommission(neg.id);
         if (success) {
-            refreshData(); // Recarrega os dados para refletir as alterações
+            refreshData(); 
             toast({
                 title: "Venda Concluída!",
                 description: message
@@ -471,3 +472,5 @@ export default function NegotiationsPage() {
         </div>
     );
 }
+
+    

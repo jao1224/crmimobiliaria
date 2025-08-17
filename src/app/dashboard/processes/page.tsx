@@ -6,10 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, AlertCircle, CheckCircle, Hourglass, PlusCircle } from "lucide-react";
+import { MoreHorizontal, AlertCircle, CheckCircle, Hourglass } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { getNegotiations, type AdminProcess, type ProcessStatus, type ProcessStage, completeSaleAndGenerateCommission } from "@/lib/data";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { getNegotiations, type Negotiation, type ProcessStatus, type ProcessStage, completeSaleAndGenerateCommission } from "@/lib/data";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
@@ -35,8 +35,8 @@ const getStageVariant = (stage: ProcessStage) => {
 };
 
 export default function ProcessesPage() {
-    const [processes, setProcesses] = useState<AdminProcess[]>([]);
-    const [selectedProcess, setSelectedProcess] = useState<AdminProcess | null>(null);
+    const [processes, setProcesses] = useState<Negotiation[]>([]);
+    const [selectedProcess, setSelectedProcess] = useState<Negotiation | null>(null);
     const [isPendencyModalOpen, setPendencyModalOpen] = useState(false);
     const [isFinalizeModalOpen, setFinalizeModalOpen] = useState(false);
     const [pendencyNote, setPendencyNote] = useState("");
@@ -48,29 +48,16 @@ export default function ProcessesPage() {
     }, []);
 
     const refreshProcesses = () => {
-        const negotiations = getNegotiations();
-        const adminProcesses = negotiations.map(neg => ({
-            id: neg.id,
-            status: neg.status,
-            stage: neg.processStage,
-            negotiationType: neg.negotiationType,
-            category: neg.category,
-            property: neg.property,
-            salesperson: neg.salesperson,
-            realtor: neg.realtor,
-            team: neg.team,
-            observations: neg.observations,
-        }));
-        setProcesses(adminProcesses);
+        setProcesses(getNegotiations());
     };
 
-    const handleOpenPendencyModal = (process: AdminProcess) => {
+    const handleOpenPendencyModal = (process: Negotiation) => {
         setSelectedProcess(process);
         setPendencyNote(process.observations || "");
         setPendencyModalOpen(true);
     };
 
-    const handleOpenFinalizeModal = (process: AdminProcess) => {
+    const handleOpenFinalizeModal = (process: Negotiation) => {
         setSelectedProcess(process);
         setFinalizationNote("");
         setFinalizeModalOpen(true);
@@ -80,7 +67,7 @@ export default function ProcessesPage() {
         if (!selectedProcess) return;
         setProcesses(prev => prev.map(p => 
             p.id === selectedProcess.id 
-            ? { ...p, stage: 'Pendência', observations: pendencyNote } 
+            ? { ...p, processStage: 'Pendência', observations: pendencyNote } 
             : p
         ));
         toast({ title: "Pendência Registrada!", description: `Uma nova observação foi adicionada ao processo ${selectedProcess.id.toUpperCase()}.` });
@@ -139,10 +126,10 @@ export default function ProcessesPage() {
                                     <TableCell className="font-mono text-xs">{process.id.toUpperCase()}</TableCell>
                                     <TableCell className="whitespace-nowrap">
                                         <div className="flex items-center gap-2">
-                                            {process.stage === 'Pendência' && <AlertCircle className="h-4 w-4 text-status-orange" />}
-                                            {process.stage === 'Em andamento' && <Hourglass className="h-4 w-4 text-status-blue" />}
-                                            {process.stage === 'Finalizado' && <CheckCircle className="h-4 w-4 text-primary" />}
-                                            <Badge variant={getStageVariant(process.stage)}>{process.stage}</Badge>
+                                            {process.processStage === 'Pendência' && <AlertCircle className="h-4 w-4 text-status-orange" />}
+                                            {process.processStage === 'Em andamento' && <Hourglass className="h-4 w-4 text-status-blue" />}
+                                            {process.processStage === 'Finalizado' && <CheckCircle className="h-4 w-4 text-primary" />}
+                                            <Badge variant={getStageVariant(process.processStage)}>{process.processStage}</Badge>
                                         </div>
                                     </TableCell>
                                     <TableCell>{process.negotiationType}</TableCell>
@@ -236,3 +223,5 @@ export default function ProcessesPage() {
         </div>
     );
 }
+
+    

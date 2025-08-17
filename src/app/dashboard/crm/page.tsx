@@ -26,9 +26,7 @@ export default function CrmPage() {
 
     // Carrega os dados iniciais
     useEffect(() => {
-        setLeads(getLeads());
-        setDeals(getDeals());
-        setClients(getClients());
+        refreshData();
     }, []);
 
     const refreshData = () => {
@@ -309,3 +307,5 @@ export default function CrmPage() {
         </div>
     )
 }
+
+    

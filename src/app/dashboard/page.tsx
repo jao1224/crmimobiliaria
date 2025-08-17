@@ -8,8 +8,8 @@ import { SalesReport } from "@/components/dashboard/sales-report";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { UserProfile } from "./layout";
 import { ProfileContext } from "@/contexts/ProfileContext";
-import { getNegotiations, type Negotiation } from "@/lib/data"; // Importando dados de negociação
-import { initialLeads } from "@/lib/crm-data"; // Importando dados de leads
+import { getNegotiations, type Negotiation } from "@/lib/data";
+import { getLeads } from "@/lib/crm-data"; 
 
 const welcomeMessages: Record<UserProfile, { title: string; subtitle: string }> = {
   'Admin': { title: "Admin!", subtitle: "Visão geral completa do sistema. Monitore o desempenho e gerencie todas as operações." },
@@ -20,7 +20,7 @@ const welcomeMessages: Record<UserProfile, { title: string; subtitle: string }> 
   'Financeiro': { title: "Financeiro!", subtitle: "Acompanhe o fluxo de caixa e as métricas financeiras." },
 };
 
-// Dados simulados para vendas
+// Dados simulados para vendas - estático para fins visuais
 const salesData = [
   { month: "Jan", sales: 95000 },
   { month: "Fev", sales: 150000 },
@@ -38,7 +38,7 @@ export default function DashboardPage() {
   const { title, subtitle } = welcomeMessages[activeProfile] || welcomeMessages['Admin'];
   
   const [negotiations, setNegotiations] = useState<Negotiation[]>([]);
-  const [isLoading, setIsLoading] = useState(true); // Alterado para true
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const currentHour = new Date().getHours();
@@ -60,7 +60,7 @@ export default function DashboardPage() {
       .reduce((sum, n) => sum + n.value, 0),
     activeDeals: negotiations.filter(n => n.stage !== 'Venda Concluída' && n.stage !== 'Aluguel Ativo').length,
     soldProperties: negotiations.filter(n => n.stage === 'Venda Concluída').length,
-    newLeads: initialLeads.length, // Sincronizado com os dados reais de leads
+    newLeads: getLeads().length, // Sincronizado com os dados reais de leads
   };
 
   const overviewCards = [
@@ -139,3 +139,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    

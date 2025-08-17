@@ -1,4 +1,5 @@
 
+
 // Tipos para os dados de CRM
 export type Lead = {
     id: string;
@@ -70,6 +71,4 @@ export const addClient = (newClient: Client) => {
     }
 };
 
-export const initialLeads = getLeads();
-export const initialDeals = getDeals();
-export const initialClients = getClients();
+    
