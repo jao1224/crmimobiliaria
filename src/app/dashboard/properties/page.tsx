@@ -91,7 +91,7 @@ export default function PropertiesPage() {
 
 
   const captadores = useMemo(() => {
-    if (!properties) return ['all'];
+    if (!properties || properties.length === 0) return ['all'];
     const captadorSet = new Set(properties.map(p => p.capturedBy));
     return ['all', ...Array.from(captadorSet)];
   }, [properties]);
@@ -236,7 +236,7 @@ export default function PropertiesPage() {
   const getStatusClass = (status: string): string => {
     switch (status) {
         case "Alugado":
-            return "border-transparent text-info-foreground hover:bg-info/80";
+            return "border-transparent bg-info text-info-foreground hover:bg-info/80";
         default:
             return "";
     }
@@ -401,7 +401,7 @@ export default function PropertiesPage() {
                     )}
                     {property.status === "Alugado" && (
                         <div className="absolute top-4 left-0 w-full">
-                        <div className="bg-status-info text-primary-foreground font-bold text-center py-1 px-4 shadow-lg">
+                        <div className="bg-info text-info-foreground font-bold text-center py-1 px-4 shadow-lg">
                                 ALUGADO
                             </div>
                         </div>
@@ -520,81 +520,89 @@ export default function PropertiesPage() {
       </Dialog>
       
       <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-xl">
+        <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>Editar Imóvel</DialogTitle>
             <DialogDescription>Atualize os detalhes do imóvel abaixo.</DialogDescription>
           </DialogHeader>
           {editingProperty && (
             <form onSubmit={handleUpdateProperty}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-name">Nome do Imóvel</Label>
-                  <Input id="edit-name" name="name" defaultValue={editingProperty.name} required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-address">Endereço</Label>
-                  <Input id="edit-address" name="address" defaultValue={editingProperty.address} required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-price">Preço (R$)</Label>
-                  <Input id="edit-price" name="price" type="number" defaultValue={editingProperty.price} required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-commission">Comissão (%)</Label>
-                  <Input id="edit-commission" name="commission" type="number" step="0.1" defaultValue={editingProperty.commission} required />
-                </div>
-                 <div className="space-y-2">
-                  <Label htmlFor="edit-capturedBy">Captado por</Label>
-                   <Select name="capturedBy" defaultValue={editingProperty.capturedBy} required>
-                      <SelectTrigger><SelectValue/></SelectTrigger>
-                      <SelectContent>
-                          {realtors.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                      </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="type">Tipo de Imóvel</Label>
-                    <Select name="type" defaultValue={editingProperty.type}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="Lançamento">Lançamento</SelectItem>
-                            <SelectItem value="Revenda">Revenda</SelectItem>
-                            <SelectItem value="Terreno">Terreno</SelectItem>
-                            <SelectItem value="Casa">Casa</SelectItem>
-                            <SelectItem value="Apartamento">Apartamento</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className="md:col-span-2 space-y-2">
-                  <Label htmlFor="edit-description">Descrição</Label>
-                  <Textarea id="edit-description" name="description" defaultValue={editingProperty.description} />
-                </div>
-                <div className="md:col-span-2 space-y-2">
-                  <Label htmlFor="edit-owner">Informações do Proprietário</Label>
-                  <Textarea id="edit-owner" name="owner" defaultValue={editingProperty.ownerInfo} />
-                </div>
-                <div className="md:col-span-2 space-y-2">
-                  <Label htmlFor="edit-image">Imagem do Imóvel</Label>
-                    <div className="flex items-center gap-4">
-                        {imagePreview ? (
-                            <Image src={imagePreview} alt="Preview do imóvel" width={80} height={80} className="rounded-md object-cover aspect-square"/>
-                        ) : (
-                             <div className="w-20 h-20 bg-muted rounded-md flex items-center justify-center text-muted-foreground">
-                                <Upload className="h-6 w-6"/>
-                            </div>
-                        )}
-                        <div className="flex flex-col gap-2">
-                          <Input id="edit-image" name="image" type="file" onChange={handleFileChange} accept="image/png, image/jpeg, image/gif, image/webp" />
-                          <Button type="button" variant="outline" size="sm" onClick={handleRemoveImage} disabled={!imagePreview || imagePreview.includes('placehold.co')}>
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Remover Foto
-                          </Button>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 py-4">
+                {/* Coluna da Imagem */}
+                <div className="space-y-2 flex flex-col items-center">
+                    <Label>Imagem do Imóvel</Label>
+                    {imagePreview ? (
+                        <Image src={imagePreview} alt="Preview do imóvel" width={400} height={225} className="rounded-md object-cover aspect-video w-full"/>
+                    ) : (
+                         <div className="w-full aspect-video bg-muted rounded-md flex items-center justify-center text-muted-foreground">
+                            <Upload className="h-10 w-10"/>
                         </div>
+                    )}
+                    <div className="flex w-full gap-2 pt-2">
+                      <Input id="edit-image" name="image" type="file" onChange={handleFileChange} className="w-full" accept="image/png, image/jpeg, image/gif, image/webp" />
+                      <Button type="button" variant="outline" size="icon" onClick={handleRemoveImage} disabled={!imagePreview || imagePreview.includes('placehold.co')}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                 </div>
+
+                {/* Coluna dos Campos */}
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-name">Nome do Imóvel</Label>
+                      <Input id="edit-name" name="name" defaultValue={editingProperty.name} required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-address">Endereço</Label>
+                      <Input id="edit-address" name="address" defaultValue={editingProperty.address} required />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-price">Preço (R$)</Label>
+                      <Input id="edit-price" name="price" type="number" defaultValue={editingProperty.price} required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-commission">Comissão (%)</Label>
+                      <Input id="edit-commission" name="commission" type="number" step="0.1" defaultValue={editingProperty.commission} required />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-capturedBy">Captado por</Label>
+                       <Select name="capturedBy" defaultValue={editingProperty.capturedBy} required>
+                          <SelectTrigger><SelectValue/></SelectTrigger>
+                          <SelectContent>
+                              {realtors.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                          </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="type">Tipo de Imóvel</Label>
+                        <Select name="type" defaultValue={editingProperty.type}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Lançamento">Lançamento</SelectItem>
+                                <SelectItem value="Revenda">Revenda</SelectItem>
+                                <SelectItem value="Terreno">Terreno</SelectItem>
+                                <SelectItem value="Casa">Casa</SelectItem>
+                                <SelectItem value="Apartamento">Apartamento</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-description">Descrição</Label>
+                    <Textarea id="edit-description" name="description" defaultValue={editingProperty.description} rows={3} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-owner">Informações do Proprietário</Label>
+                    <Textarea id="edit-owner" name="owner" defaultValue={editingProperty.ownerInfo} rows={3} />
+                  </div>
+                </div>
               </div>
-              <DialogFooter>
+              <DialogFooter className="pt-4 border-t">
                 <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>Cancelar</Button>
                 <Button type="submit">Salvar Alterações</Button>
               </DialogFooter>
