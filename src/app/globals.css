@@ -47,7 +47,7 @@ body {
     /* Dark Sidebar Theme */
     --sidebar-background: 222 47% 11%; /* #111827 */
     --sidebar-foreground: 220 14% 71%; /* light gray for text */
-    --sidebar-primary: 225 73% 57%; /* indigo-500 */
+    --sidebar-primary: 228 41% 16%; /* #192138 */
     --sidebar-primary-foreground: 210 40% 98%;
     --sidebar-accent: 222 47% 16%; /* slightly lighter bg for hover */
     --sidebar-accent-foreground: 210 40% 98%; /* white text on hover */
@@ -93,7 +93,7 @@ body {
     /* Dark Sidebar Theme also for dark mode */
     --sidebar-background: 222 47% 11%; /* #111827 */
     --sidebar-foreground: 220 14% 71%; /* light gray for text */
-    --sidebar-primary: 225 73% 57%; /* indigo-500 */
+    --sidebar-primary: 228 41% 16%; /* #192138 */
     --sidebar-primary-foreground: 210 40% 98%;
     --sidebar-accent: 222 47% 16%; /* slightly lighter bg for hover */
     --sidebar-accent-foreground: 210 40% 98%; /* white text on hover */
