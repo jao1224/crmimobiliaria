@@ -18,7 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import type { UserProfile } from "../layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getCommissions, type Commission, addCommission, getPayments, addPayment, type PaymentCLT, getExpenses, addExpense, type Expense } from "@/lib/data";
+import { getCommissions, type Commission, addCommission, getPayments, addPayment, type PaymentCLT, getExpenses, addExpense, type Expense, getNegotiations, type Negotiation } from "@/lib/data";
 import { cn } from "@/lib/utils";
 
 
@@ -41,6 +41,8 @@ export default function FinancePage() {
     // Estados para Comissões
     const [commissions, setCommissions] = useState<Commission[]>([]);
     const [isCommissionDialogOpen, setCommissionDialogOpen] = useState(false);
+    const [negotiations, setNegotiations] = useState<Negotiation[]>([]);
+    const [selectedNegotiation, setSelectedNegotiation] = useState<Negotiation | null>(null);
 
     // Estados para Pagamentos CLT
     const [payments, setPayments] = useState<PaymentCLT[]>([]);
@@ -57,6 +59,7 @@ export default function FinancePage() {
         setCommissions(getCommissions());
         setPayments(getPayments());
         setExpenses(getExpenses());
+        setNegotiations(getNegotiations().filter(n => n.status !== 'Cancelado'));
     }, []);
 
     const refreshFinanceData = () => {
@@ -84,19 +87,32 @@ export default function FinancePage() {
     const handleAddCommission = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         const formData = new FormData(event.currentTarget);
+        const dealId = formData.get('dealId') as string;
+        const negotiation = negotiations.find(n => n.id === dealId);
+
+        if (!negotiation) {
+            toast({ variant: 'destructive', title: "Erro", description: "Negociação selecionada é inválida." });
+            return;
+        }
+
         const newCommission: Commission = {
             id: `comm${Date.now()}`, 
-            dealId: formData.get('dealId') as string,
-            deal: formData.get('deal') as string, amount: parseFloat(formData.get('amount') as string),
-            status: formData.get('status') as Commission['status'], paymentDate: formData.get('paymentDate') as string,
-            involved: formData.get('involved') as string, advance: formData.has('advance') ? parseFloat(formData.get('advance') as string) : undefined,
-            invoiceFile: formData.get('invoiceFile') as File || null, realtorId: 'user1' // Simulado
+            dealId: dealId,
+            deal: negotiation.property,
+            amount: parseFloat(formData.get('amount') as string),
+            status: formData.get('status') as Commission['status'], 
+            paymentDate: formData.get('paymentDate') as string,
+            involved: formData.get('involved') as string, 
+            advance: formData.has('advance') ? parseFloat(formData.get('advance') as string) : undefined,
+            invoiceFile: formData.get('invoiceFile') as File || null, 
+            realtorId: negotiation.salesperson,
         };
         addCommission(newCommission);
         refreshFinanceData();
         toast({ title: "Sucesso!", description: "Comissão lançada com sucesso." });
         setCommissionDialogOpen(false);
         event.currentTarget.reset();
+        setSelectedNegotiation(null);
     };
 
     const handleAddPayment = (event: React.FormEvent<HTMLFormElement>) => {
@@ -134,6 +150,14 @@ export default function FinancePage() {
         setExpenseDialogOpen(false);
         event.currentTarget.reset();
     };
+    
+    const handleNegotiationSelect = (dealId: string) => {
+        const negotiation = negotiations.find(n => n.id === dealId);
+        if (negotiation) {
+            setSelectedNegotiation(negotiation);
+        }
+    };
+
 
     return (
         <div className="flex flex-col gap-6">
@@ -155,7 +179,10 @@ export default function FinancePage() {
                         <div className="flex items-center justify-between">
                             <h2 className="text-xl font-semibold">Resumo de Comissões</h2>
                              {hasPermission && (
-                                <Dialog open={isCommissionDialogOpen} onOpenChange={setCommissionDialogOpen}>
+                                <Dialog open={isCommissionDialogOpen} onOpenChange={(isOpen) => {
+                                    setCommissionDialogOpen(isOpen);
+                                    if (!isOpen) setSelectedNegotiation(null);
+                                }}>
                                     <DialogTrigger asChild>
                                         <Button><PlusCircle className="mr-2 h-4 w-4" />Lançar Comissão</Button>
                                     </DialogTrigger>
@@ -169,20 +196,29 @@ export default function FinancePage() {
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                     <div className="space-y-2">
                                                         <Label htmlFor="dealId">Cód. do Processo</Label>
-                                                        <Input id="dealId" name="dealId" required placeholder="Ex: neg1"/>
+                                                        <Select name="dealId" required onValueChange={handleNegotiationSelect}>
+                                                            <SelectTrigger><SelectValue placeholder="Selecione um processo"/></SelectTrigger>
+                                                            <SelectContent>
+                                                                {negotiations.map(n => (
+                                                                    <SelectItem key={n.id} value={n.id}>
+                                                                        {n.property} ({n.id.toUpperCase()})
+                                                                    </SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
                                                     </div>
                                                     <div className="space-y-2">
                                                         <Label htmlFor="deal">Descrição do Negócio</Label>
-                                                        <Input id="deal" name="deal" required placeholder="Ex: Venda Apto Vista Mar"/>
+                                                        <Input id="deal" name="deal" required value={selectedNegotiation?.property || ''} readOnly placeholder="Selecione um processo"/>
                                                     </div>
                                                     <div className="space-y-2">
                                                         <Label htmlFor="amount">Valor da Comissão (R$)</Label>
-                                                        <Input id="amount" name="amount" type="number" step="0.01" required />
+                                                        <Input id="amount" name="amount" type="number" step="0.01" required key={selectedNegotiation?.id} defaultValue={selectedNegotiation ? (selectedNegotiation.value * 0.05).toFixed(2) : ''}/>
                                                     </div>
                                                 </div>
                                                 <div className="space-y-2">
                                                     <Label htmlFor="involved">Envolvidos</Label>
-                                                    <Textarea id="involved" name="involved" placeholder="Ex: Corretor A (50%), Corretor B (50%)" required />
+                                                    <Textarea id="involved" name="involved" required key={selectedNegotiation?.id} defaultValue={selectedNegotiation ? `${selectedNegotiation.salesperson} (Vendedor), ${selectedNegotiation.realtor} (Captador)` : ''} placeholder="Ex: Corretor A (50%), Corretor B (50%)" />
                                                 </div>
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                     <div className="space-y-2">
