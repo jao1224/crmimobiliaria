@@ -1,5 +1,5 @@
 import { db } from './firebase';
-import { collection, getDocs, addDoc, doc, updateDoc, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, updateDoc, writeBatch, serverTimestamp, query, orderBy, limit } from 'firebase/firestore';
 
 // Tipos para os dados de CRM
 export type Lead = {
@@ -11,7 +11,7 @@ export type Lead = {
 };
 
 export type Deal = {
-    id: string;
+    id:string;
     property: string;
     client: string;
     stage: string;
@@ -170,6 +170,13 @@ export type Expense = {
     status: 'Pendente' | 'Pago';
 };
 
+export type Notification = {
+    id: string;
+    title: string;
+    description: string;
+    createdAt: { seconds: number, nanoseconds: number };
+    read: boolean;
+};
 
 // --- Dados simulados (para referência e fallback) ---
 export const realtors = ['Carlos Pereira', 'Sofia Lima', 'Joana Doe', 'Admin'];
@@ -289,6 +296,22 @@ export const addEvent = async (newEvent: Omit<Event, 'id'>): Promise<string> => 
     return docRef.id;
 };
 
+// --- Funções de Notificação ---
+export const addNotification = async (notification: Omit<Notification, 'id' | 'createdAt' | 'read'>): Promise<string> => {
+    const docRef = await addDoc(collection(db, 'notifications'), {
+        ...notification,
+        createdAt: serverTimestamp(),
+        read: false,
+    });
+    return docRef.id;
+};
+
+export const getNotifications = async (): Promise<Notification[]> => {
+    const notificationsQuery = query(collection(db, 'notifications'), orderBy('createdAt', 'desc'), limit(10));
+    const snapshot = await getDocs(notificationsQuery);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
+};
+
 
 export async function completeSaleAndGenerateCommission(negotiation: Negotiation, finalizationNote?: string) {
     if (negotiation.stage === 'Venda Concluída' || negotiation.stage === 'Aluguel Ativo') {
@@ -338,6 +361,13 @@ export async function completeSaleAndGenerateCommission(negotiation: Negotiation
 
     try {
         await batch.commit();
+        
+        // 4. Cria a notificação após o sucesso do commit
+        await addNotification({
+            title: "Venda Concluída!",
+            description: `O imóvel '${negotiation.property}' foi vendido para ${negotiation.client}.`,
+        });
+
         return { success: true, message: `A comissão para a venda de "${negotiation.property}" foi gerada no módulo Financeiro.` };
     } catch (error) {
         console.error("Erro ao completar a venda:", error);

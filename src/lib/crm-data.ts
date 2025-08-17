@@ -1,6 +1,7 @@
 
 import { db } from './firebase';
 import { collection, getDocs, addDoc, doc, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { addNotification } from './data';
 
 // Tipos para os dados de CRM
 export type Lead = {
@@ -49,6 +50,13 @@ export const getClients = async (): Promise<Client[]> => {
 
 export const addLead = async (newLead: Omit<Lead, 'id'>): Promise<string> => {
     const docRef = await addDoc(collection(db, 'leads'), newLead);
+    
+    // Gera uma notificação
+    await addNotification({
+        title: "Novo Lead!",
+        description: `${newLead.name} foi adicionado como um novo lead de ${newLead.source}.`,
+    });
+
     return docRef.id;
 };
 
@@ -80,6 +88,12 @@ export const convertLeadToClient = async (lead: Lead): Promise<void> => {
 
     // Executa as operações em lote
     await batch.commit();
+
+     // Gera uma notificação
+    await addNotification({
+        title: "Lead Convertido!",
+        description: `O lead ${lead.name} foi convertido em cliente.`,
+    });
 };
 
     

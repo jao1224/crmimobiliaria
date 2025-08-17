@@ -1,7 +1,8 @@
 
 "use client"
 
-import { Bell } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Bell, AlertCircle } from 'lucide-react'
 import {
   Popover,
   PopoverContent,
@@ -9,16 +10,36 @@ import {
 } from "@/components/ui/popover"
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-
-// Dados simulados para notificações
-const notifications = [
-    { title: "Novo Lead!", description: "Carlos Pereira foi adicionado como um novo lead.", time: "2 min atrás" },
-    { title: "Venda Concluída", description: "O imóvel 'Apartamento Vista Mar' foi vendido. Comissão gerada.", time: "1 hora atrás" },
-    { title: "Pendência de Processo", description: "O processo FIN-002 tem uma pendência de documentação.", time: "3 horas atrás" },
-    { title: "Contrato Assinado", description: "O contrato da negociação NEG-004 foi assinado.", time: "1 dia atrás" },
-]
+import { getNotifications, type Notification } from '@/lib/data'
+import { Skeleton } from '../ui/skeleton'
+import { formatDistanceToNow } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 export function Notifications() {
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      setIsLoading(true);
+      try {
+        const fetchedNotifications = await getNotifications();
+        // Ordena as notificações da mais recente para a mais antiga
+        const sortedNotifications = fetchedNotifications.sort((a, b) => {
+            const dateA = a.createdAt?.seconds ? new Date(a.createdAt.seconds * 1000) : new Date(0);
+            const dateB = b.createdAt?.seconds ? new Date(b.createdAt.seconds * 1000) : new Date(0);
+            return dateB.getTime() - dateA.getTime();
+        });
+        setNotifications(sortedNotifications);
+      } catch (error) {
+        console.error("Failed to fetch notifications:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchNotifications();
+  }, []);
+
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -44,22 +65,39 @@ export function Notifications() {
           </div>
           <Separator />
           <div className="grid gap-2">
-            {notifications.map((notification, index) => (
-                <div key={index} className="grid grid-cols-[25px_1fr] items-start pb-4 last:pb-0 last:border-b-0 border-b">
-                    <span className="flex h-2 w-2 translate-y-1.5 rounded-full bg-primary" />
-                    <div className="grid gap-1">
-                        <p className="text-sm font-medium leading-none">
-                            {notification.title}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                            {notification.description}
-                        </p>
-                         <p className="text-xs text-muted-foreground/70">
-                            {notification.time}
-                        </p>
+            {isLoading ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-4 p-2">
+                        <Skeleton className="h-8 w-8 rounded-full" />
+                        <div className="space-y-2">
+                            <Skeleton className="h-4 w-40" />
+                            <Skeleton className="h-3 w-20" />
+                        </div>
                     </div>
-              </div>
-            ))}
+                ))
+            ) : notifications.length > 0 ? (
+                notifications.map((notification) => (
+                    <div key={notification.id} className="grid grid-cols-[25px_1fr] items-start pb-4 last:pb-0 last:border-b-0 border-b">
+                        <span className="flex h-2 w-2 translate-y-1.5 rounded-full bg-primary" />
+                        <div className="grid gap-1">
+                            <p className="text-sm font-medium leading-none">
+                                {notification.title}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                                {notification.description}
+                            </p>
+                             <p className="text-xs text-muted-foreground/70">
+                                {notification.createdAt?.seconds ? formatDistanceToNow(new Date(notification.createdAt.seconds * 1000), { addSuffix: true, locale: ptBR }) : 'agora'}
+                            </p>
+                        </div>
+                    </div>
+                ))
+            ) : (
+                <div className="flex flex-col items-center justify-center text-center text-muted-foreground py-4">
+                    <AlertCircle className="h-8 w-8 mb-2" />
+                    <p className="text-sm">Nenhuma notificação nova.</p>
+                </div>
+            )}
           </div>
         </div>
       </PopoverContent>
