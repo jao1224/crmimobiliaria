@@ -10,11 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Download, Building, Users } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { initialNegotiations, realtors, teams, propertyTypes, type Negotiation } from "@/lib/data";
+import { initialNegotiations, realtors, teams, propertyTypes, type Negotiation, getProperties, type Property } from "@/lib/data";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-// Importar os dados e o tipo de Imóvel
-import { initialProperties, type Property } from "../properties/page";
 import { cn } from "@/lib/utils";
 
 // --- DADOS DINÂMICOS ---
@@ -89,7 +87,7 @@ const processTeamPerformanceData = (negotiations: Negotiation[], teamsData: type
 export default function ReportingPage() {
     const router = useRouter();
     const [negotiations] = useState<Negotiation[]>(initialNegotiations);
-    const [properties] = useState<Property[]>(initialProperties);
+    const [properties] = useState<Property[]>(getProperties());
 
     // Estados dos filtros
     const [realtorFilter, setRealtorFilter] = useState('all');

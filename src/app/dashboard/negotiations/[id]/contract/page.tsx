@@ -15,15 +15,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import type { UserProfile } from "@/app/dashboard/layout";
-import { initialNegotiations, initialCommissions, initialFinancingProcesses, realtors as mockRealtors } from "@/lib/data";
-import { initialClients } from "@/lib/crm-data";
-import { initialProperties } from "@/app/dashboard/properties/page";
+import { initialNegotiations, initialCommissions, initialFinancingProcesses, realtors as mockRealtors, getProperties, type Property } from "@/lib/data";
+import { initialClients, type Client } from "@/lib/crm-data";
+
 
 // Tipos para os dados simulados
 type ContractFile = { content: ArrayBuffer; type: string; name: string; };
 type Negotiation = (typeof initialNegotiations)[0] & { contractFile?: ContractFile | null };
-type Property = (typeof initialProperties)[0];
-type Client = (typeof initialClients)[0];
+
 
 type ContractDetails = {
     sellerName: string;
@@ -83,17 +82,20 @@ export default function ContractPage() {
 
         if (foundNegotiation) {
             setNegotiation(foundNegotiation);
-            const foundProperty = initialProperties.find(prop => prop.id === foundNegotiation.propertyId);
+            const allProperties = getProperties();
+            const foundProperty = allProperties.find(prop => prop.id === foundNegotiation.propertyId);
             const foundClient = initialClients.find(cli => cli.id === foundNegotiation.clientId);
 
             setProperty(foundProperty || null);
             setClient(foundClient || null);
 
             // Preenche cláusula de comissão com base nos dados reais
-            const commissionRate = foundProperty?.commission || 2.5; // fallback
-            const commissionValue = foundNegotiation.value * (commissionRate / 100);
-            const defaultCommissionClause = `Os honorários devidos pela intermediação desta negociação, no montante de ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(commissionValue)}, correspondentes a ${commissionRate}% do valor da venda, são de responsabilidade do VENDEDOR(ES), a serem pagos à INTERVENIENTE ANUENTE na data da compensação do sinal.`;
-            setContractData(prev => ({...prev, commissionClause: defaultCommissionClause}));
+            if (foundProperty) {
+                 const commissionRate = foundProperty?.commission || 2.5; // fallback
+                 const commissionValue = foundNegotiation.value * (commissionRate / 100);
+                 const defaultCommissionClause = `Os honorários devidos pela intermediação desta negociação, no montante de ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(commissionValue)}, correspondentes a ${commissionRate}% do valor da venda, são de responsabilidade do VENDEDOR(ES), a serem pagos à INTERVENIENTE ANUENTE na data da compensação do sinal.`;
+                setContractData(prev => ({...prev, commissionClause: defaultCommissionClause}));
+            }
         }
         
         setIsLoading(false);

@@ -1,8 +1,26 @@
 
+
 export type NegotiationStage = 'Proposta Enviada' | 'Em Negociação' | 'Contrato Gerado' | 'Venda Concluída' | 'Aluguel Ativo';
 export type NegotiationType = 'Venda' | 'Aluguel' | 'Leilão';
 export type ContractStatus = 'Não Gerado' | 'Pendente Assinaturas' | 'Assinado' | 'Cancelado';
 export type PropertyType = 'Lançamento' | 'Revenda' | 'Terreno' | 'Casa' | 'Apartamento';
+
+// Define o tipo para um imóvel
+export type Property = {
+  id: string;
+  name: string;
+  address: string;
+  status: string;
+  price: number;
+  type: PropertyType;
+  commission: number; // Armazenado como taxa percentual, ex: 2.5
+  imageUrl: string;
+  imageHint: string;
+  capturedBy: string; // Corretor que captou o imóvel
+  description?: string;
+  ownerInfo?: string;
+};
+
 
 export type Negotiation = {
     id: string;
@@ -46,7 +64,7 @@ export type AdminProcess = {
 }
 
 
-export type Property = { id: string; name: string; address: string; price: number; commission: number; };
+// export type Property = { id: string; name: string; address: string; price: number; commission: number; };
 export type Client = { id: string; name: string; doc: string; };
 
 export type Commission = {
@@ -147,6 +165,16 @@ export type Expense = {
 };
 
 
+// Dados simulados para os imóveis
+let propertiesData: Property[] = [
+    { id: "prop1", name: "Apartamento Vista Mar", address: "Av. Beira Mar, 123, Fortaleza", status: "Disponível", price: 950000, commission: 2.5, imageUrl: "https://placehold.co/600x400.png", imageHint: "apartamento luxo", capturedBy: "Carlos Pereira", description: "Lindo apartamento com 3 quartos, 2 suítes, varanda gourmet com vista para o mar, cozinha moderna e 2 vagas de garagem. Condomínio com lazer completo.", ownerInfo: "Ana Vendedora - (85) 98877-6655", type: 'Revenda' },
+    { id: "prop2", name: "Casa com Piscina", address: "Rua das Flores, 456, Eusébio", status: "Vendido", price: 1200000, commission: 3.0, imageUrl: "https://placehold.co/600x400.png", imageHint: "casa piscina", capturedBy: "Sofia Lima", description: "Espaçosa casa com 4 suítes, piscina, área gourmet com churrasqueira e um grande quintal gramado. Ideal para famílias que buscam conforto e lazer.", ownerInfo: "Bruno Costa - (85) 99988-7766", type: 'Revenda' },
+    { id: "prop3", name: "Terreno Comercial", address: "Av. das Américas, 789, Fortaleza", status: "Disponível", price: 2500000, commission: 4.0, imageUrl: "https://placehold.co/600x400.png", imageHint: "terreno comercial", capturedBy: "Carlos Pereira", description: "Terreno plano de esquina em avenida movimentada, perfeito para construção de lojas, galpões ou centros comerciais. Excelente visibilidade e acesso.", ownerInfo: "Construtora Invest S.A. - (85) 3222-1100", type: 'Terreno' },
+    { id: "prop4", name: "Loft Moderno", address: "Centro, Rua Principal, 100, Fortaleza", status: "Alugado", price: 450000, commission: 1.5, imageUrl: "https://placehold.co/600x400.png", imageHint: "loft moderno", capturedBy: "Joana Doe", description: "Loft no coração da cidade, com design industrial, pé-direito duplo, 1 quarto, cozinha integrada e totalmente mobiliado. Perfeito para solteiros ou casais.", ownerInfo: "Maria Investidora - (85) 98765-4321", type: 'Lançamento' },
+    { id: "prop5", name: "Sítio Ecológico", address: "Guaramiranga, CE", status: "Disponível", price: 780000, commission: 3.5, imageUrl: "https://placehold.co/600x400.png", imageHint: "sitio ecologico", capturedBy: "Sofia Lima", description: "Belo sítio em meio à natureza, com casa principal, casa de hóspedes, pomar e acesso a uma cachoeira. Ideal para quem busca paz e tranquilidade.", ownerInfo: "Família Verde - (85) 91122-3344", type: 'Casa' },
+    { id: "prop6", name: "Apartamento Centro", address: "Rua do Centro, 50, Fortaleza", status: "Disponível", price: 450000, commission: 2.0, imageUrl: "https://placehold.co/600x400.png", imageHint: "apartamento centro", capturedBy: "Joana Doe", description: "Apartamento de 2 quartos no centro da cidade, próximo a tudo. Recém-reformado, com móveis planejados na cozinha.", ownerInfo: "Investidor Anônimo - (85) 95544-3322", type: 'Apartamento' },
+];
+
 
 export const realtors = ['Carlos Pereira', 'Sofia Lima', 'Joana Doe', 'Admin'];
 export const propertyTypes: PropertyType[] = ['Lançamento', 'Revenda', 'Terreno', 'Casa', 'Apartamento'];
@@ -165,7 +193,7 @@ export let initialNegotiations: Negotiation[] = [
 ];
 
 export const mockProperties: Property[] = [
-    { id: 'prop1', name: 'Apartamento Vista Mar', address: 'Av. Beira Mar, 123', price: 900000, commission: 2.5 },
+    { id: 'prop1', name: 'Apartamento Vista Mar', address: 'Av. Beira Mar, 123', price: 900000, commission: 2.5, type: 'Apartamento', capturedBy: 'Carlos Pereira', imageUrl: '', imageHint: '' },
 ];
 
 export const mockClients: Client[] = [
@@ -247,6 +275,13 @@ let expensesData: Expense[] = [
 ];
 
 // --- FUNÇÕES DE MANIPULAÇÃO DE DADOS ---
+
+export const getProperties = () => [...propertiesData];
+export const addProperty = (newProperty: Property) => {
+    if (!propertiesData.some(p => p.id === newProperty.id)) {
+        propertiesData.unshift(newProperty);
+    }
+};
 
 export const getCommissions = () => [...commissionsData];
 export const addCommission = (newCommission: Commission) => {

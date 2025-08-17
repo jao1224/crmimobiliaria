@@ -30,39 +30,13 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
-import type { PropertyType } from "@/lib/data";
+import type { Property, PropertyType } from "@/lib/data";
+import { getProperties, addProperty, realtors } from "@/lib/data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { realtors } from "@/lib/data";
-
-// Define o tipo para um imóvel
-export type Property = {
-  id: string;
-  name: string;
-  address: string;
-  status: string;
-  price: number;
-  type: PropertyType;
-  commission: number; // Armazenado como taxa percentual, ex: 2.5
-  imageUrl: string;
-  imageHint: string;
-  capturedBy: string; // Corretor que captou o imóvel
-  description?: string;
-  ownerInfo?: string;
-};
-
-// Dados simulados para os imóveis
-export const initialProperties: Property[] = [
-    { id: "prop1", name: "Apartamento Vista Mar", address: "Av. Beira Mar, 123, Fortaleza", status: "Disponível", price: 950000, commission: 2.5, imageUrl: "https://placehold.co/600x400.png", imageHint: "apartamento luxo", capturedBy: "Carlos Pereira", description: "Lindo apartamento com 3 quartos, 2 suítes, varanda gourmet com vista para o mar, cozinha moderna e 2 vagas de garagem. Condomínio com lazer completo.", ownerInfo: "Ana Vendedora - (85) 98877-6655", type: 'Revenda' },
-    { id: "prop2", name: "Casa com Piscina", address: "Rua das Flores, 456, Eusébio", status: "Vendido", price: 1200000, commission: 3.0, imageUrl: "https://placehold.co/600x400.png", imageHint: "casa piscina", capturedBy: "Sofia Lima", description: "Espaçosa casa com 4 suítes, piscina, área gourmet com churrasqueira e um grande quintal gramado. Ideal para famílias que buscam conforto e lazer.", ownerInfo: "Bruno Costa - (85) 99988-7766", type: 'Revenda' },
-    { id: "prop3", name: "Terreno Comercial", address: "Av. das Américas, 789, Fortaleza", status: "Disponível", price: 2500000, commission: 4.0, imageUrl: "https://placehold.co/600x400.png", imageHint: "terreno comercial", capturedBy: "Carlos Pereira", description: "Terreno plano de esquina em avenida movimentada, perfeito para construção de lojas, galpões ou centros comerciais. Excelente visibilidade e acesso.", ownerInfo: "Construtora Invest S.A. - (85) 3222-1100", type: 'Terreno' },
-    { id: "prop4", name: "Loft Moderno", address: "Centro, Rua Principal, 100, Fortaleza", status: "Alugado", price: 450000, commission: 1.5, imageUrl: "https://placehold.co/600x400.png", imageHint: "loft moderno", capturedBy: "Joana Doe", description: "Loft no coração da cidade, com design industrial, pé-direito duplo, 1 quarto, cozinha integrada e totalmente mobiliado. Perfeito para solteiros ou casais.", ownerInfo: "Maria Investidora - (85) 98765-4321", type: 'Lançamento' },
-    { id: "prop5", name: "Sítio Ecológico", address: "Guaramiranga, CE", status: "Disponível", price: 780000, commission: 3.5, imageUrl: "https://placehold.co/600x400.png", imageHint: "sitio ecologico", capturedBy: "Sofia Lima", description: "Belo sítio em meio à natureza, com casa principal, casa de hóspedes, pomar e acesso a uma cachoeira. Ideal para quem busca paz e tranquilidade.", ownerInfo: "Família Verde - (85) 91122-3344", type: 'Casa' },
-    { id: "prop6", name: "Apartamento Centro", address: "Rua do Centro, 50, Fortaleza", status: "Disponível", price: 450000, commission: 2.0, imageUrl: "https://placehold.co/600x400.png", imageHint: "apartamento centro", capturedBy: "Joana Doe", description: "Apartamento de 2 quartos no centro da cidade, próximo a tudo. Recém-reformado, com móveis planejados na cozinha.", ownerInfo: "Investidor Anônimo - (85) 95544-3322", type: 'Apartamento' },
-];
 
 
 export default function PropertiesPage() {
-  const [properties, setProperties] = useState<Property[]>(initialProperties);
+  const [properties, setProperties] = useState<Property[]>([]);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [isPropertyDialogOpen, setPropertyDialogOpen] = useState(false);
@@ -77,10 +51,19 @@ export default function PropertiesPage() {
   const [captadorFilter, setCaptadorFilter] = useState('all');
   const [sortOrder, setSortOrder] = useState('default'); // 'price-asc', 'price-desc'
 
-  const captadores = useMemo(() => {
-    const captadorSet = new Set(initialProperties.map(p => p.capturedBy));
-    return ['all', ...Array.from(captadorSet)];
+  useEffect(() => {
+    setProperties(getProperties());
   }, []);
+
+  const refreshProperties = () => {
+    setProperties(getProperties());
+  };
+
+
+  const captadores = useMemo(() => {
+    const captadorSet = new Set(properties.map(p => p.capturedBy));
+    return ['all', ...Array.from(captadorSet)];
+  }, [properties]);
 
   const filteredAndSortedProperties = useMemo(() => {
     let filtered = [...properties];
@@ -144,9 +127,11 @@ export default function PropertiesPage() {
       type: "Revenda", // Simulado
     };
 
-    setProperties(prev => [...prev, newProperty]);
-    toast({ title: "Sucesso!", description: "Imóvel adicionado com sucesso (simulado)." });
+    addProperty(newProperty);
+    refreshProperties();
+    toast({ title: "Sucesso!", description: "Imóvel adicionado com sucesso." });
     setPropertyDialogOpen(false);
+    event.currentTarget.reset();
   };
   
   const handleUpdateProperty = (event: React.FormEvent<HTMLFormElement>) => {
@@ -155,7 +140,7 @@ export default function PropertiesPage() {
 
     const formData = new FormData(event.currentTarget);
     
-    const updatedProperty = {
+    const updatedProperty: Property = {
       ...editingProperty,
       name: formData.get("name") as string,
       address: formData.get("address") as string,
@@ -165,11 +150,14 @@ export default function PropertiesPage() {
       capturedBy: formData.get("capturedBy") as string,
       description: formData.get("description") as string,
       ownerInfo: formData.get("owner") as string,
-      type: editingProperty.type, // Mantém o tipo existente
+      type: formData.get("type") as PropertyType,
     };
-
+    
+    // Na versão simulada, apenas atualizamos o estado local
+    // Em uma app real, você chamaria uma função para atualizar no DB
     setProperties(prev => prev.map(p => p.id === updatedProperty.id ? updatedProperty : p));
-    toast({ title: "Sucesso!", description: "Imóvel atualizado com sucesso (simulado)." });
+
+    toast({ title: "Sucesso!", description: "Imóvel atualizado com sucesso." });
     setEditDialogOpen(false);
     setEditingProperty(null);
   };
@@ -505,7 +493,19 @@ export default function PropertiesPage() {
                       </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2"></div>
+                <div className="space-y-2">
+                    <Label htmlFor="type">Tipo de Imóvel</Label>
+                    <Select name="type" defaultValue={editingProperty.type}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="Lançamento">Lançamento</SelectItem>
+                            <SelectItem value="Revenda">Revenda</SelectItem>
+                            <SelectItem value="Terreno">Terreno</SelectItem>
+                            <SelectItem value="Casa">Casa</SelectItem>
+                            <SelectItem value="Apartamento">Apartamento</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
                 <div className="md:col-span-2 space-y-2">
                   <Label htmlFor="edit-description">Descrição</Label>
                   <Textarea id="edit-description" name="description" defaultValue={editingProperty.description} />

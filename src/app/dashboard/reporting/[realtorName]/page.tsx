@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
-import { initialProperties, type Property } from "../../properties/page";
+import { getProperties, type Property } from "@/lib/data";
 import { initialNegotiations, type Negotiation } from "@/lib/data";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -61,7 +61,8 @@ export default function RealtorKanbanPage() {
         if (realtorName) {
             setIsLoading(true);
             // Simula o carregamento dos dados
-            const capturedProperties = initialProperties
+            const allProperties = getProperties();
+            const capturedProperties = allProperties
                 .filter(p => p.capturedBy === realtorName)
                 .map(p => ({ ...p, activityType: 'capture' as const, status: 'Ativo' as ActivityStatus }));
 
@@ -203,7 +204,7 @@ export default function RealtorKanbanPage() {
                                                                     </div>
                                                                 </div>
                                                                 <p className="font-bold text-sm mt-1">{isCapture ? activity.name : activity.property}</p>
-                                                                <p className="text-xs text-muted-foreground">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(activity.price || activity.value)}</p>
+                                                                <p className="text-xs text-muted-foreground">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(isCapture ? activity.price : activity.value)}</p>
                                                             </div>
                                                         )}
                                                     </Draggable>

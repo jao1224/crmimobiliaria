@@ -17,9 +17,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { initialNegotiations, realtors, type Negotiation, addFinancingProcess, completeSaleAndGenerateCommission } from "@/lib/data";
-import { initialProperties, type Property } from "@/app/dashboard/properties/page";
-import { initialClients, type Client } from "@/lib/crm-data";
+import { initialNegotiations, realtors, type Negotiation, addFinancingProcess, completeSaleAndGenerateCommission, getProperties, type Property } from "@/lib/data";
+import { getClients, type Client } from "@/lib/crm-data";
 import { cn } from "@/lib/utils";
 
 export default function NegotiationsPage() {
@@ -43,12 +42,16 @@ export default function NegotiationsPage() {
     const [proposalDate, setProposalDate] = useState("");
     const [isSearching, setIsSearching] = useState(false);
 
+    // Carrega dados dinâmicos para os selects
+    const availableProperties = getProperties().filter(p => p.status === 'Disponível');
+    const availableClients = getClients();
+
     const handleSearch = async () => {
         setIsSearching(true);
         // Simulação de busca
         setTimeout(() => {
-            const prop = initialProperties.find(p => p.id === propertyCode);
-            const cli = initialClients.find(c => c.id === clientCode);
+            const prop = availableProperties.find(p => p.id === propertyCode);
+            const cli = availableClients.find(c => c.id === clientCode);
 
             if (prop) {
                 setFoundProperty(prop);
@@ -245,7 +248,7 @@ export default function NegotiationsPage() {
                                         <Select value={propertyCode} onValueChange={setPropertyCode} required>
                                             <SelectTrigger><SelectValue placeholder="Selecione um imóvel" /></SelectTrigger>
                                             <SelectContent>
-                                                {initialProperties.filter(p => p.status === 'Disponível').map(prop => (
+                                                {availableProperties.map(prop => (
                                                     <SelectItem key={prop.id} value={prop.id}>
                                                         {prop.name} ({prop.id.toUpperCase()})
                                                     </SelectItem>
@@ -258,7 +261,7 @@ export default function NegotiationsPage() {
                                         <Select value={clientCode} onValueChange={setClientCode} required>
                                             <SelectTrigger><SelectValue placeholder="Selecione um cliente" /></SelectTrigger>
                                             <SelectContent>
-                                                {initialClients.map(cli => (
+                                                {availableClients.map(cli => (
                                                     <SelectItem key={cli.id} value={cli.id}>
                                                         {cli.name} ({cli.id.toUpperCase()})
                                                     </SelectItem>
