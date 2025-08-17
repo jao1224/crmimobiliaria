@@ -79,6 +79,7 @@ export default {
         },
         'status-blue': 'hsl(var(--status-blue))',
         'status-orange': 'hsl(var(--accent))',
+        'status-info': 'hsl(var(--info))',
         'status-red-orange': '#ff6e49',
       },
       borderRadius: {

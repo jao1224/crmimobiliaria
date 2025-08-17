@@ -397,6 +397,13 @@ export default function PropertiesPage() {
                             </div>
                         </div>
                     )}
+                    {property.status === "Alugado" && (
+                        <div className="absolute top-4 left-0 w-full">
+                        <div className="bg-status-info text-primary-foreground font-bold text-center py-1 px-4 shadow-lg">
+                                ALUGADO
+                            </div>
+                        </div>
+                    )}
                     <div className="absolute top-2 right-2">
                         <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -433,7 +440,7 @@ export default function PropertiesPage() {
                     </CardContent>
                     <CardFooter className="flex justify-between items-center text-xs text-muted-foreground">
                         <span>Captador: {property.capturedBy}</span>
-                        <Badge variant={getStatusVariant(property.status)} className={cn(property.status === 'Vendido' && 'hidden', getStatusClass(property.status))}>
+                        <Badge variant={getStatusVariant(property.status)} className={cn((property.status === 'Vendido' || property.status === 'Alugado') && 'hidden', getStatusClass(property.status))}>
                         {property.status}
                         </Badge>
                     </CardFooter>
