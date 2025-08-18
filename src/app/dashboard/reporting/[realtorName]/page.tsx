@@ -96,72 +96,71 @@ export default function RealtorKanbanPage() {
 
     const onDragEnd = async (result: DropResult) => {
         const { destination, source, draggableId } = result;
-    
-        if (!destination) return;
+
+        if (!destination || !columns) return;
         if (destination.droppableId === source.droppableId && destination.index === source.index) return;
-        if (!columns) return;
-    
+
         const startColumn = columns[source.droppableId as ActivityStatus];
         const finishColumn = columns[destination.droppableId as ActivityStatus];
         const newStatus = destination.droppableId as ActivityStatus;
-    
+
         // --- Optimistic UI Update ---
-        const originalColumns = { ...columns };
-    
+        const originalColumns = JSON.parse(JSON.stringify(columns));
+
+        // Moving within the same column
         if (startColumn === finishColumn) {
-            // Movendo dentro da mesma coluna
             const newActivityIds = Array.from(startColumn.activityIds);
             newActivityIds.splice(source.index, 1);
             newActivityIds.splice(destination.index, 0, draggableId);
-    
+
             const newColumn = {
                 ...startColumn,
                 activityIds: newActivityIds,
             };
-    
-            setColumns({
-                ...columns,
+
+            setColumns(prev => prev ? {
+                ...prev,
                 [newColumn.id]: newColumn,
-            });
+            } : null);
         } else {
-            // Movendo entre colunas diferentes
-            const startActivityIds = Array.from(startColumn.activityIds);
-            startActivityIds.splice(source.index, 1);
+            // Moving to a different column
+            const startTaskIds = Array.from(startColumn.activityIds);
+            startTaskIds.splice(source.index, 1);
             const newStartColumn = {
                 ...startColumn,
-                activityIds: startActivityIds,
+                activityIds: startTaskIds,
             };
-    
-            const finishActivityIds = Array.from(finishColumn.activityIds);
-            finishActivityIds.splice(destination.index, 0, draggableId);
+
+            const finishTaskIds = Array.from(finishColumn.activityIds);
+            finishTaskIds.splice(destination.index, 0, draggableId);
             const newFinishColumn = {
                 ...finishColumn,
-                activityIds: finishActivityIds,
+                activityIds: finishTaskIds,
             };
-    
-            setColumns({
-                ...columns,
+
+            setColumns(prev => prev ? {
+                ...prev,
                 [newStartColumn.id]: newStartColumn,
                 [newFinishColumn.id]: newFinishColumn,
-            });
+            } : null);
         }
-    
-        // --- Persistir a mudança no Banco de Dados ---
+
+        // --- Persist change in the database ---
         try {
             await updateActivityStatus(draggableId, newStatus);
             toast({
                 title: "Status Atualizado!",
                 description: `Atividade movida para "${newStatus}".`,
             });
-            // Recarregar os dados após o sucesso para garantir consistência
-            await loadData();
+            // Optional: You can re-fetch data to ensure full consistency, but optimistic update should suffice.
+            // await loadData(); 
         } catch (error) {
             toast({
                 variant: 'destructive',
                 title: "Erro ao salvar",
                 description: "Não foi possível salvar a alteração. Revertendo.",
             });
-            // Reverte o estado da UI em caso de falha na API
+            // Revert UI on failure
             setColumns(originalColumns);
         }
     };
