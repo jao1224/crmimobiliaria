@@ -14,6 +14,7 @@ import { getNegotiations, realtors, teams, propertyTypes, type Negotiation, getP
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 // --- DADOS DINÂMICOS ---
 
@@ -86,8 +87,10 @@ const processTeamPerformanceData = (negotiations: Negotiation[], teamsData: type
 
 export default function ReportingPage() {
     const router = useRouter();
+    const { toast } = useToast();
     const [negotiations, setNegotiations] = useState<Negotiation[]>([]);
     const [properties, setProperties] = useState<Property[]>([]);
+    const [activeTab, setActiveTab] = useState("sales");
 
     // Estados dos filtros
     const [realtorFilter, setRealtorFilter] = useState('all');
@@ -148,6 +151,62 @@ export default function ReportingPage() {
     // Dados de desempenho de equipe usam as negociações filtradas
     const teamPerformanceData = useMemo(() => processTeamPerformanceData(filteredNegotiations, teams), [filteredNegotiations]);
 
+    const handleExport = () => {
+        let csvContent = "data:text/csv;charset=utf-8,";
+        let dataToExport: any[] = [];
+        let filename = "relatorio.csv";
+
+        if (activeTab === 'sales') {
+            dataToExport = filteredNegotiations;
+            if (dataToExport.length > 0) {
+                const headers = Object.keys(dataToExport[0]).join(",");
+                csvContent += headers + "\r\n";
+                filename = 'relatorio_vendas.csv';
+            }
+        } else if (activeTab === 'captures') {
+            dataToExport = [...realtorCaptures.map(r => ({'Corretor': r.name, 'Imoveis Captados': r.captures})), ...propertyTypeCaptures.map(p => ({'Tipo de Imovel': p.type, 'Imoveis Captados': p.captures}))];
+             if (realtorCaptures.length > 0 || propertyTypeCaptures.length > 0) {
+                 const headers = "Relatorio,Valor\r\n";
+                 csvContent += headers;
+                 realtorCaptures.forEach(item => {
+                     csvContent += `Capturas por ${item.name},${item.captures}\r\n`;
+                 });
+                 propertyTypeCaptures.forEach(item => {
+                     csvContent += `Capturas por tipo ${item.type},${item.captures}\r\n`;
+                 });
+                 dataToExport = []; // esvaziar para não entrar no loop de baixo
+                 filename = 'relatorio_captacoes.csv';
+            }
+        } else if (activeTab === 'performance') {
+            dataToExport = teamPerformanceData;
+            if (dataToExport.length > 0) {
+                const headers = Object.keys(dataToExport[0]).join(",");
+                csvContent += headers + "\r\n";
+                filename = 'relatorio_desempenho.csv';
+            }
+        }
+
+        if (dataToExport.length > 0) {
+             dataToExport.forEach(row => {
+                const rowContent = Object.values(row).map(value => `"${String(value).replace(/"/g, '""')}"`).join(",");
+                csvContent += rowContent + "\r\n";
+            });
+        } else if (activeTab !== 'captures') {
+            toast({ variant: 'destructive', title: "Nenhum dado para exportar", description: "Os filtros atuais não retornaram dados para a aba selecionada."});
+            return;
+        }
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", filename);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        toast({ title: "Exportação Concluída", description: `O arquivo ${filename} foi baixado.`});
+    };
+
     return (
         <div className="flex flex-col gap-6">
             <div className="flex items-start justify-between">
@@ -155,13 +214,13 @@ export default function ReportingPage() {
                     <h1 className="text-2xl font-bold">Relatórios & Análises</h1>
                     <p className="text-muted-foreground">Analise o desempenho com relatórios e visualizações detalhadas.</p>
                 </div>
-                <Button>
+                <Button onClick={handleExport}>
                     <Download className="mr-2 h-4 w-4" />
                     Exportar Relatório
                 </Button>
             </div>
 
-            <Tabs defaultValue="sales">
+            <Tabs defaultValue="sales" onValueChange={setActiveTab}>
                 <TabsList>
                     <TabsTrigger value="sales">Vendas</TabsTrigger>
                     <TabsTrigger value="captures">Captações</TabsTrigger>
