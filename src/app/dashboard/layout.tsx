@@ -122,7 +122,7 @@ export default function DashboardLayout({
               className="flex-grow rounded-lg shadow-inner"
               style={{ backgroundColor: "var(--sidebar-accent)"}}
             >
-              <SidebarMenu className="p-2">
+              <SidebarMenu>
                 {visibleMenuItems.map((item) => (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton
