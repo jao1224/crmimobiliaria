@@ -1,7 +1,7 @@
 
 
 import { db } from './firebase';
-import { collection, getDocs, addDoc, doc, updateDoc, writeBatch, serverTimestamp, query, orderBy, limit, where, getDoc, setDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, updateDoc, writeBatch, serverTimestamp, query, orderBy, limit, where, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 
 // Tipos para os dados de CRM
 export type Lead = {
@@ -226,6 +226,11 @@ export const updateProperty = async (id: string, data: Partial<Property>): Promi
     await updateDoc(propertyRef, data);
 };
 
+export const deleteProperty = async (id: string): Promise<void> => {
+    const propertyRef = doc(db, 'properties', id);
+    await deleteDoc(propertyRef);
+};
+
 export const getNegotiations = async (): Promise<Negotiation[]> => {
     const negotiationsCollection = collection(db, 'negotiations');
     const snapshot = await getDocs(negotiationsCollection);
@@ -448,7 +453,7 @@ export const getActivitiesForRealtor = async (realtorName: string): Promise<Acti
 
     // 3. Verificar novas negociações
     const negotiationsQuery = query(collection(db, 'negotiations'), where('salesperson', '==', realtorName));
-    const negsSnapshot = await getDocs(negotiationsQuery);
+    const negsSnapshot = await getDocs(negsQuery);
     negsSnapshot.forEach(negDoc => {
         if (!existingActivitiesMap.has(negDoc.id)) {
             const neg = negDoc.data() as Negotiation;

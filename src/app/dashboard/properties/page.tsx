@@ -23,6 +23,16 @@ import {
 import { PropertyMatcher } from "@/components/dashboard/property-matcher";
 import { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -31,7 +41,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 import type { Property, PropertyType } from "@/lib/data";
-import { getProperties, addProperty, realtors, updateProperty } from "@/lib/data";
+import { getProperties, addProperty, realtors, updateProperty, deleteProperty } from "@/lib/data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 
@@ -43,6 +53,7 @@ export default function PropertiesPage() {
   const [isPropertyDialogOpen, setPropertyDialogOpen] = useState(false);
   const [isDetailModalOpen, setDetailModalOpen] = useState(false);
   const [isEditDialogOpen, setEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const { toast } = useToast();
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -146,7 +157,6 @@ export default function PropertiesPage() {
     await refreshProperties();
     toast({ title: "Sucesso!", description: "Imóvel adicionado com sucesso." });
     setPropertyDialogOpen(false);
-    event.currentTarget.reset();
   };
   
   const handleUpdateProperty = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -190,6 +200,27 @@ export default function PropertiesPage() {
     setImagePreview("https://placehold.co/600x400.png");
     setSelectedFile(null);
     toast({ title: "Imagem Removida", description: "A imagem do imóvel foi redefinida para a padrão. Salve para confirmar." });
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent, property: Property) => {
+    e.stopPropagation();
+    setSelectedProperty(property);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!selectedProperty) return;
+    
+    try {
+        await deleteProperty(selectedProperty.id);
+        await refreshProperties();
+        toast({ title: "Imóvel Excluído", description: `O imóvel "${selectedProperty.name}" foi removido.` });
+    } catch (error) {
+        toast({ variant: "destructive", title: "Erro", description: "Não foi possível excluir o imóvel." });
+    } finally {
+        setDeleteDialogOpen(false);
+        setSelectedProperty(null);
+    }
   };
   
   // Limpar o preview ao fechar o dialog
@@ -404,8 +435,8 @@ export default function PropertiesPage() {
                             <DropdownMenuLabel>Ações</DropdownMenuLabel>
                             <DropdownMenuItem onClick={(e) => handleEditClick(e, property)}>Editar</DropdownMenuItem>
                             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleCardClick(property); }}>Ver Detalhes</DropdownMenuItem>
-                            <DropdownMenuItem className="text-destructive" onClick={(e) => e.stopPropagation()}>
-                            Excluir
+                            <DropdownMenuItem className="text-destructive" onClick={(e) => handleDeleteClick(e, property)}>
+                                Excluir
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                         </DropdownMenu>
@@ -592,6 +623,23 @@ export default function PropertiesPage() {
           )}
         </DialogContent>
       </Dialog>
+      
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. Isso excluirá permanentemente o imóvel
+              "{selectedProperty?.name}" do banco de dados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setSelectedProperty(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm}>Excluir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </div>
   );
 }
