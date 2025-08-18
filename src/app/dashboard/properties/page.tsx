@@ -158,7 +158,7 @@ export default function PropertiesPage() {
     
     try {
         await addProperty(newPropertyData);
-        await refreshProperties();
+        await refreshProperties(); // Recarrega a lista do banco de dados
         toast({ title: "Sucesso!", description: "Imóvel adicionado com sucesso." });
         setPropertyDialogOpen(false);
     } catch (error) {
@@ -676,5 +676,7 @@ export default function PropertiesPage() {
     </div>
   );
 }
+
+    
 
     
