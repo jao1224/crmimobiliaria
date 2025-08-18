@@ -175,6 +175,7 @@ export default function PropertiesPage() {
       description: formData.get("description") as string,
       ownerInfo: formData.get("owner") as string,
       type: formData.get("type") as PropertyType,
+      status: formData.get("status") as Property['status'],
     };
     
     await updateProperty(editingProperty.id, updatedPropertyData);
@@ -608,6 +609,18 @@ export default function PropertiesPage() {
                             </SelectContent>
                         </Select>
                     </div>
+                  </div>
+                  <div className="space-y-2">
+                      <Label htmlFor="edit-status">Status</Label>
+                      <Select name="status" defaultValue={editingProperty.status}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                              <SelectItem value="Disponível">Disponível</SelectItem>
+                              <SelectItem value="Vendido">Vendido</SelectItem>
+                              <SelectItem value="Alugado">Alugado</SelectItem>
+                              <SelectItem value="Reservado">Reservado</SelectItem>
+                          </SelectContent>
+                      </Select>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="edit-owner">Informações do Proprietário</Label>
