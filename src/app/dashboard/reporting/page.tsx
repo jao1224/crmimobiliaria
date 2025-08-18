@@ -152,59 +152,57 @@ export default function ReportingPage() {
     const teamPerformanceData = useMemo(() => processTeamPerformanceData(filteredNegotiations, teams), [filteredNegotiations]);
 
     const handleExport = () => {
-        let csvContent = "data:text/csv;charset=utf-8,";
-        let dataToExport: any[] = [];
-        let filename = "relatorio.csv";
-
-        if (activeTab === 'sales') {
-            dataToExport = filteredNegotiations;
-            if (dataToExport.length > 0) {
-                const headers = Object.keys(dataToExport[0]).join(",");
-                csvContent += headers + "\r\n";
-                filename = 'relatorio_vendas.csv';
-            }
-        } else if (activeTab === 'captures') {
-            dataToExport = [...realtorCaptures.map(r => ({'Corretor': r.name, 'Imoveis Captados': r.captures})), ...propertyTypeCaptures.map(p => ({'Tipo de Imovel': p.type, 'Imoveis Captados': p.captures}))];
-             if (realtorCaptures.length > 0 || propertyTypeCaptures.length > 0) {
-                 const headers = "Relatorio,Valor\r\n";
-                 csvContent += headers;
-                 realtorCaptures.forEach(item => {
-                     csvContent += `Capturas por ${item.name},${item.captures}\r\n`;
-                 });
-                 propertyTypeCaptures.forEach(item => {
-                     csvContent += `Capturas por tipo ${item.type},${item.captures}\r\n`;
-                 });
-                 dataToExport = []; // esvaziar para não entrar no loop de baixo
-                 filename = 'relatorio_captacoes.csv';
-            }
-        } else if (activeTab === 'performance') {
-            dataToExport = teamPerformanceData;
-            if (dataToExport.length > 0) {
-                const headers = Object.keys(dataToExport[0]).join(",");
-                csvContent += headers + "\r\n";
-                filename = 'relatorio_desempenho.csv';
-            }
-        }
-
-        if (dataToExport.length > 0) {
-             dataToExport.forEach(row => {
-                const rowContent = Object.values(row).map(value => `"${String(value).replace(/"/g, '""')}"`).join(",");
-                csvContent += rowContent + "\r\n";
+        if (activeTab !== 'sales' || filteredNegotiations.length === 0) {
+            toast({
+                variant: 'destructive',
+                title: "Nenhum dado para exportar",
+                description: "A exportação detalhada está disponível apenas para a aba 'Vendas' e requer que haja dados nos filtros atuais.",
             });
-        } else if (activeTab !== 'captures') {
-            toast({ variant: 'destructive', title: "Nenhum dado para exportar", description: "Os filtros atuais não retornaram dados para a aba selecionada."});
             return;
         }
 
+        // Prepara os dados para o CSV
+        const dataToExport = filteredNegotiations.map(neg => ({
+            "ID Negociacao": neg.id,
+            "Imovel": neg.property,
+            "Cliente": neg.client,
+            "Vendedor": neg.salesperson,
+            "Captador": neg.realtor,
+            "Equipe": neg.team,
+            "Valor": neg.value,
+            "Data Conclusao": neg.completionDate ? new Date(neg.completionDate).toLocaleDateString('pt-BR') : 'N/A',
+            "Tipo": neg.type,
+            "Status Contrato": neg.contractStatus,
+        }));
+        
+        const headers = Object.keys(dataToExport[0]);
+        // Escapa valores que contêm vírgulas ou aspas
+        const escapeCsvCell = (cell: any) => {
+            const cellStr = String(cell ?? '');
+            if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
+                return `"${cellStr.replace(/"/g, '""')}"`;
+            }
+            return cellStr;
+        };
+
+        let csvContent = "data:text/csv;charset=utf-8,";
+        csvContent += headers.join(",") + "\r\n";
+
+        dataToExport.forEach(row => {
+            const rowValues = headers.map(header => escapeCsvCell(row[header as keyof typeof row]));
+            csvContent += rowValues.join(",") + "\r\n";
+        });
+
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
+        const filename = 'relatorio_vendas_detalhado.csv';
         link.setAttribute("href", encodedUri);
         link.setAttribute("download", filename);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         
-        toast({ title: "Exportação Concluída", description: `O arquivo ${filename} foi baixado.`});
+        toast({ title: "Exportação Concluída", description: `O arquivo ${filename} foi baixado.` });
     };
 
     return (
