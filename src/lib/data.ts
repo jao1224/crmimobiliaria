@@ -485,5 +485,3 @@ export const updateActivityStatus = async (activityId: string, newStatus: Activi
     const activityRef = doc(db, 'activities', activityId);
     await updateDoc(activityRef, { status: newStatus });
 };
-
-
