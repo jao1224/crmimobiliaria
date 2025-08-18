@@ -193,7 +193,7 @@ export type Activity = {
 };
 
 
-// --- Dados simulados (para referência e fallback) ---
+// --- Dados estáticos ---
 export const realtors = ['Carlos Pereira', 'Sofia Lima', 'Joana Doe', 'Admin'];
 export const propertyTypes: PropertyType[] = ['Lançamento', 'Revenda', 'Terreno', 'Casa', 'Apartamento'];
 export const teams = [
@@ -201,157 +201,147 @@ export const teams = [
     { id: 'team-b', name: 'Equipe B', members: ['Joana Doe', 'Admin'] },
 ];
 
-let mockProperties: Property[] = [
-    { id: 'prop1', name: 'Apartamento Vista Mar', address: 'Av. Beira Mar, 123, Fortaleza', status: 'Disponível', price: 950000, type: 'Apartamento', commission: 5, imageUrl: 'https://placehold.co/600x400.png', imageHint: "apartamento moderno", capturedBy: 'Carlos Pereira' },
-    { id: 'prop2', name: 'Casa com Piscina', address: 'Rua das Flores, 45, Eusébio', status: 'Vendido', price: 1200000, type: 'Casa', commission: 5, imageUrl: 'https://placehold.co/600x400.png', imageHint: "casa piscina", capturedBy: 'Sofia Lima' },
-];
-let mockNegotiations: Negotiation[] = [
-    { id: 'neg1', property: 'Apartamento Vista Mar', propertyId: 'prop1', propertyType: 'Apartamento', client: 'João Cliente', clientId: 'client1', stage: 'Proposta Enviada', type: 'Venda', value: 950000, salesperson: 'Carlos Pereira', realtor: 'Carlos Pereira', contractStatus: 'Não Gerado', completionDate: null, isFinanced: true, status: 'Ativo', processStage: 'Em andamento', negotiationType: 'Novo', category: 'Novo', team: 'Equipe A' },
-    { id: 'neg2', property: 'Casa com Piscina', propertyId: 'prop2', propertyType: 'Casa', client: 'Maria Cliente', clientId: 'client2', stage: 'Venda Concluída', type: 'Venda', value: 1200000, salesperson: 'Sofia Lima', realtor: 'Sofia Lima', contractStatus: 'Assinado', completionDate: '2024-05-10T10:00:00Z', isFinanced: false, status: 'Finalizado', processStage: 'Finalizado', negotiationType: 'Revenda', category: 'Revenda', team: 'Equipe A' },
-];
-let mockCommissions: Commission[] = [];
-let mockPayments: PaymentCLT[] = [];
-let mockExpenses: Expense[] = [];
-let mockFinancingProcesses: FinancingProcess[] = [];
-let mockServiceRequests: ServiceRequest[] = [];
-let mockEvents: Event[] = [];
-let mockNotifications: Notification[] = [];
-let mockActivities: Activity[] = [];
-
-// --- FUNÇÕES DE MANIPULAÇÃO DE DADOS (SIMULADO) ---
-
-const generateId = () => Math.random().toString(36).substr(2, 9);
+// --- FUNÇÕES DE MANIPULAÇÃO DE DADOS (FIRESTORE) ---
 
 export const getProperties = async (): Promise<Property[]> => {
-    return Promise.resolve(mockProperties);
+    const snapshot = await getDocs(collection(db, 'properties'));
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Property));
 };
 
 export const getPropertiesByRealtor = async (realtorName: string): Promise<Property[]> => {
-    return Promise.resolve(mockProperties.filter(p => p.capturedBy === realtorName));
+    const q = query(collection(db, 'properties'), where('capturedBy', '==', realtorName));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Property));
 };
 
 export const addProperty = async (newProperty: Omit<Property, 'id'>): Promise<string> => {
-    const id = generateId();
-    mockProperties.push({ id, ...newProperty });
-    return Promise.resolve(id);
+    const docRef = await addDoc(collection(db, 'properties'), newProperty);
+    return docRef.id;
 };
 
 export const updateProperty = async (id: string, data: Partial<Property>): Promise<void> => {
-    mockProperties = mockProperties.map(p => p.id === id ? { ...p, ...data } : p);
-    return Promise.resolve();
+    await updateDoc(doc(db, 'properties', id), data);
 };
 
 export const deleteProperty = async (id: string): Promise<void> => {
-    mockProperties = mockProperties.filter(p => p.id !== id);
-    return Promise.resolve();
+    await deleteDoc(doc(db, 'properties', id));
 };
 
 export const getNegotiations = async (): Promise<Negotiation[]> => {
-    return Promise.resolve(mockNegotiations);
+    const snapshot = await getDocs(collection(db, 'negotiations'));
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Negotiation));
 };
 
 export const getNegotiationsByRealtor = async (realtorName: string): Promise<Negotiation[]> => {
-    return Promise.resolve(mockNegotiations.filter(n => n.salesperson === realtorName));
+    const q = query(collection(db, 'negotiations'), where('salesperson', '==', realtorName));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Negotiation));
 };
 
 export const addNegotiation = async (newNegotiation: Omit<Negotiation, 'id'>): Promise<string> => {
-    const id = generateId();
-    mockNegotiations.push({ id, ...newNegotiation });
-    return Promise.resolve(id);
+    const docRef = await addDoc(collection(db, 'negotiations'), newNegotiation);
+    return docRef.id;
 };
 
 export const updateNegotiation = async (id: string, data: Partial<Negotiation>): Promise<void> => {
-    mockNegotiations = mockNegotiations.map(n => n.id === id ? { ...n, ...data } : n);
-    return Promise.resolve();
+    await updateDoc(doc(db, 'negotiations', id), data);
 };
 
 export const getCommissions = async (): Promise<Commission[]> => {
-    return Promise.resolve(mockCommissions);
+    const snapshot = await getDocs(collection(db, 'commissions'));
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Commission));
 };
 
 export const addCommission = async (newCommission: Omit<Commission, 'id'>): Promise<string> => {
-    const id = generateId();
-    mockCommissions.push({ id, ...newCommission });
-    return Promise.resolve(id);
+    const docRef = await addDoc(collection(db, 'commissions'), newCommission);
+    return docRef.id;
 };
 
 export const getPayments = async (): Promise<PaymentCLT[]> => {
-    return Promise.resolve(mockPayments);
+    const snapshot = await getDocs(collection(db, 'payments'));
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PaymentCLT));
 };
 
 export const addPayment = async (newPayment: Omit<PaymentCLT, 'id'>): Promise<string> => {
-    const id = generateId();
-    mockPayments.push({ id, ...newPayment });
-    return Promise.resolve(id);
+    const docRef = await addDoc(collection(db, 'payments'), newPayment);
+    return docRef.id;
 };
 
 export const getExpenses = async (): Promise<Expense[]> => {
-    return Promise.resolve(mockExpenses);
+    const snapshot = await getDocs(collection(db, 'expenses'));
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Expense));
 };
 
 export const addExpense = async (newExpense: Omit<Expense, 'id'>): Promise<string> => {
-    const id = generateId();
-    mockExpenses.push({ id, ...newExpense });
-    return Promise.resolve(id);
+    const docRef = await addDoc(collection(db, 'expenses'), newExpense);
+    return docRef.id;
 };
 
 export const getServiceRequests = async (): Promise<ServiceRequest[]> => {
-    return Promise.resolve(mockServiceRequests);
+    const snapshot = await getDocs(collection(db, 'serviceRequests'));
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRequest));
 };
 
 export const addServiceRequest = async (newRequest: Omit<ServiceRequest, 'id'>): Promise<string> => {
-    const id = generateId();
-    mockServiceRequests.push({ id, ...newRequest });
-    return Promise.resolve(id);
+    const docRef = await addDoc(collection(db, 'serviceRequests'), newRequest);
+    return docRef.id;
 };
 
 export const getFinancingProcesses = async (): Promise<FinancingProcess[]> => {
-    return Promise.resolve(mockFinancingProcesses);
+    const snapshot = await getDocs(collection(db, 'financingProcesses'));
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FinancingProcess));
 };
 
 export const addFinancingProcess = async (newProcess: Omit<FinancingProcess, 'id'>): Promise<string> => {
-    const id = generateId();
-    mockFinancingProcesses.push({ id, ...newProcess });
-    return Promise.resolve(id);
+    const docRef = await addDoc(collection(db, 'financingProcesses'), newProcess);
+    return docRef.id;
 };
 
 export const updateFinancingProcess = async (id: string, data: Partial<FinancingProcess>): Promise<void> => {
-    mockFinancingProcesses = mockFinancingProcesses.map(p => p.id === id ? { ...p, ...data } : p);
-    return Promise.resolve();
+    await updateDoc(doc(db, 'financingProcesses', id), data);
 };
 
 export const getEvents = async (): Promise<Event[]> => {
-    return Promise.resolve(mockEvents);
+    const snapshot = await getDocs(collection(db, 'events'));
+    return snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+            id: doc.id,
+            ...data,
+            date: data.date.toDate(), // Converte Timestamp para Date
+        } as Event;
+    });
 };
 
 export const addEvent = async (newEvent: Omit<Event, 'id'>): Promise<string> => {
-    const id = generateId();
-    mockEvents.push({ id, ...newEvent });
-    return Promise.resolve(id);
+    const docRef = await addDoc(collection(db, 'events'), newEvent);
+    return docRef.id;
 };
 
 export const addNotification = async (notification: Omit<Notification, 'id' | 'createdAt' | 'read'>): Promise<string> => {
-    const id = generateId();
-    mockNotifications.unshift({
-        id,
+    const docRef = await addDoc(collection(db, 'notifications'), {
         ...notification,
-        createdAt: { seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 },
+        createdAt: serverTimestamp(),
         read: false,
     });
-    mockNotifications = mockNotifications.slice(0, 10);
-    return Promise.resolve(id);
+    return docRef.id;
 };
 
 export const getNotifications = async (): Promise<Notification[]> => {
-    return Promise.resolve(mockNotifications);
+    const q = query(collection(db, 'notifications'), orderBy('createdAt', 'desc'), limit(10));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
 };
 
 export async function completeSaleAndGenerateCommission(negotiation: Negotiation, finalizationNote?: string) {
     if (negotiation.stage === 'Venda Concluída' || negotiation.stage === 'Aluguel Ativo') {
         return { success: false, message: "Esta negociação já foi concluída." };
     }
+    
+    const batch = writeBatch(db);
 
     // 1. Atualiza a negociação
+    const negotiationRef = doc(db, 'negotiations', negotiation.id);
     const updatedNegotiationData = {
         stage: "Venda Concluída" as const,
         contractStatus: "Assinado" as const,
@@ -360,14 +350,14 @@ export async function completeSaleAndGenerateCommission(negotiation: Negotiation
         processStage: 'Finalizado' as const,
         observations: finalizationNote || negotiation.observations || "Processo finalizado com sucesso.",
     };
-    mockNegotiations = mockNegotiations.map(n => n.id === negotiation.id ? { ...n, ...updatedNegotiationData } : n);
+    batch.update(negotiationRef, updatedNegotiationData);
 
-    // 2. Gera a comissão
+    // 2. Gera a comissão se for uma venda
     if (negotiation.type === 'Venda') {
         const commissionRate = 5;
         const commissionValue = negotiation.value * (commissionRate / 100);
-        const newCommissionData: Commission = {
-            id: generateId(),
+        const newCommissionRef = doc(collection(db, 'commissions'));
+        const newCommissionData: Omit<Commission, 'id'> = {
             negotiationId: negotiation.id,
             propertyValue: negotiation.value,
             commissionValue: commissionValue,
@@ -379,59 +369,91 @@ export async function completeSaleAndGenerateCommission(negotiation: Negotiation
             status: 'Pendente',
             notes: 'Comissão gerada automaticamente ao concluir a venda.'
         };
-        mockCommissions.push(newCommissionData);
+        batch.set(newCommissionRef, newCommissionData);
     }
     
-    // 3. Atualiza o status do imóvel
+    // 3. Atualiza o status do imóvel se for uma venda
     if (negotiation.propertyId && negotiation.type === 'Venda') {
-        mockProperties = mockProperties.map(p => p.id === negotiation.propertyId ? { ...p, status: 'Vendido' } : p);
+        const propertyRef = doc(db, 'properties', negotiation.propertyId);
+        batch.update(propertyRef, { status: 'Vendido' });
     }
     
-    // 4. Atualiza a atividade no Kanban para "Concluído"
-    mockActivities = mockActivities.map(a => a.id === negotiation.id ? { ...a, status: 'Concluído' } : a);
+     // 4. Atualiza a atividade no Kanban para "Concluído"
+    const activityRef = doc(db, 'activities', negotiation.id);
+    batch.update(activityRef, { status: 'Concluído' });
     
     // 5. Cria a notificação
     await addNotification({
         title: "Venda Concluída!",
         description: `O imóvel '${negotiation.property}' foi vendido para ${negotiation.client}.`,
     });
+    
+    // 6. Executa todas as operações em lote
+    await batch.commit();
 
     return { success: true, message: `A comissão para a venda de "${negotiation.property}" foi gerada no módulo Financeiro.` };
 }
 
 export const getActivitiesForRealtor = async (realtorName: string): Promise<Activity[]> => {
-    const existingActivityIds = new Set(mockActivities.map(a => a.id));
+    // Busca todas as atividades existentes para esse corretor
+    const activitiesQuery = query(collection(db, 'activities'), where('realtorName', '==', realtorName));
+    const activitiesSnapshot = await getDocs(activitiesQuery);
+    const existingActivities = activitiesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
+    const existingActivityIds = new Set(existingActivities.map(a => a.relatedId));
 
-    const newCaptures = mockProperties
-        .filter(p => p.capturedBy === realtorName && !existingActivityIds.has(p.id))
-        .map(p => ({
-            id: p.id,
-            realtorName: p.capturedBy,
-            type: 'capture' as const,
-            name: p.name,
-            value: p.price,
-            status: 'Ativo' as const,
-            relatedId: p.id,
-        }));
-        
-    const newNegotiations = mockNegotiations
-        .filter(n => n.salesperson === realtorName && !existingActivityIds.has(n.id))
-        .map(n => ({
-            id: n.id,
-            realtorName: n.salesperson,
-            type: 'negotiation' as const,
-            name: n.property,
-            value: n.value,
-            status: 'Ativo' as const,
-            relatedId: n.id,
-        }));
+    // Busca captações que ainda não viraram atividades
+    const capturesQuery = query(collection(db, 'properties'), where('capturedBy', '==', realtorName));
+    const capturesSnapshot = await getDocs(capturesQuery);
+    const newCaptures = capturesSnapshot.docs.filter(doc => !existingActivityIds.has(doc.id));
 
-    mockActivities.push(...newCaptures, ...newNegotiations);
-    
-    return Promise.resolve(mockActivities.filter(a => a.realtorName === realtorName));
+    // Busca negociações que ainda não viraram atividades
+    const negotiationsQuery = query(collection(db, 'negotiations'), where('salesperson', '==', realtorName));
+    const negotiationsSnapshot = await getDocs(negotiationsQuery);
+    const newNegotiations = negotiationsSnapshot.docs.filter(doc => !existingActivityIds.has(doc.id));
+
+    // Cria as novas atividades em lote
+    const batch = writeBatch(db);
+    const createdActivities: Activity[] = [];
+
+    newCaptures.forEach(doc => {
+        const prop = { id: doc.id, ...doc.data() } as Property;
+        const newActivity: Omit<Activity, 'id'> = {
+            realtorName: prop.capturedBy,
+            type: 'capture',
+            name: prop.name,
+            value: prop.price,
+            status: 'Ativo',
+            relatedId: prop.id,
+        };
+        const activityRef = doc(db, 'activities', prop.id); // Usa o mesmo ID do imóvel
+        batch.set(activityRef, newActivity);
+        createdActivities.push({ id: activityRef.id, ...newActivity });
+    });
+
+    newNegotiations.forEach(doc => {
+        const neg = { id: doc.id, ...doc.data() } as Negotiation;
+        const newActivity: Omit<Activity, 'id'> = {
+            realtorName: neg.salesperson,
+            type: 'negotiation',
+            name: neg.property,
+            value: neg.value,
+            status: 'Ativo',
+            relatedId: neg.id,
+        };
+        const activityRef = doc(db, 'activities', neg.id); // Usa o mesmo ID da negociação
+        batch.set(activityRef, newActivity);
+        createdActivities.push({ id: activityRef.id, ...newActivity });
+    });
+
+    if (newCaptures.length > 0 || newNegotiations.length > 0) {
+        await batch.commit();
+    }
+
+    return [...existingActivities, ...createdActivities];
 };
 
 export const updateActivityStatus = async (activityId: string, newStatus: ActivityStatus): Promise<void> => {
-    mockActivities = mockActivities.map(a => a.id === activityId ? { ...a, status: newStatus } : a);
-    return Promise.resolve();
+    const activityRef = doc(db, "activities", activityId);
+    await updateDoc(activityRef, { status: newStatus });
 };
+
