@@ -1,7 +1,7 @@
 
 
 import { db } from './firebase';
-import { collection, getDocs, addDoc, doc, updateDoc, writeBatch, serverTimestamp, query, orderBy, limit, where, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, updateDoc, writeBatch, serverTimestamp, query, orderBy, limit, where, getDoc, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 
 // Tipos para os dados de CRM
 export type Lead = {
@@ -41,6 +41,7 @@ export type Property = {
   description?: string;
   ownerInfo?: string;
   team?: string; // CAMPO ADICIONADO PARA GESTÃO DE LOJAS/EQUIPES
+  createdAt?: { seconds: number; nanoseconds: number } | null;
 };
 
 
@@ -205,7 +206,7 @@ export const teams = [
 // --- FUNÇÕES DE MANIPULAÇÃO DE DADOS (FIRESTORE) ---
 
 export const getProperties = async (): Promise<Property[]> => {
-    const propertiesCollection = collection(db, 'properties');
+    const propertiesCollection = query(collection(db, 'properties'), orderBy('createdAt', 'desc'));
     const snapshot = await getDocs(propertiesCollection);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Property));
 };
@@ -217,8 +218,22 @@ export const getPropertiesByRealtor = async (realtorName: string): Promise<Prope
 };
 
 export const addProperty = async (newProperty: Omit<Property, 'id'>): Promise<string> => {
-    const docRef = await addDoc(collection(db, 'properties'), newProperty);
+    const docRef = await addDoc(collection(db, 'properties'), {
+        ...newProperty,
+        createdAt: serverTimestamp(),
+    });
     return docRef.id;
+};
+
+export const subscribeToProperties = (
+    callback: (properties: Property[]) => void
+): (() => void) => {
+    const q = query(collection(db, 'properties'), orderBy('createdAt', 'desc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Property));
+        callback(list);
+    });
+    return unsubscribe;
 };
 
 export const updateProperty = async (id: string, data: Partial<Property>): Promise<void> => {
