@@ -52,46 +52,47 @@ export default function RealtorKanbanPage() {
         setIsClient(true); // Garante que DND só renderize no cliente
     }, []);
 
-    useEffect(() => {
-        if (realtorName) {
-            const loadData = async () => {
-                setIsLoading(true);
-                try {
-                    const fetchedActivities = await getActivitiesForRealtor(realtorName);
-                    
-                    const activitiesMap = fetchedActivities.reduce((acc, activity) => {
-                        acc[activity.id] = activity;
-                        return acc;
-                    }, {} as {[key: string]: Activity});
-                    setActivities(activitiesMap);
+    const loadData = async () => {
+        if (!realtorName) return;
+        
+        setIsLoading(true);
+        try {
+            const fetchedActivities = await getActivitiesForRealtor(realtorName);
+            
+            const activitiesMap = fetchedActivities.reduce((acc, activity) => {
+                acc[activity.id] = activity;
+                return acc;
+            }, {} as {[key: string]: Activity});
+            setActivities(activitiesMap);
 
-                    const initialColumns: Columns = {
-                        'Ativo': { id: 'Ativo', title: 'Ativo', activityIds: [] },
-                        'Pendente': { id: 'Pendente', title: 'Pendente', activityIds: [] },
-                        'Concluído': { id: 'Concluído', title: 'Concluído', activityIds: [] },
-                        'Cancelado': { id: 'Cancelado', title: 'Cancelado', activityIds: [] },
-                    };
-
-                    fetchedActivities.forEach(activity => {
-                        if (initialColumns[activity.status]) {
-                            initialColumns[activity.status].activityIds.push(activity.id);
-                        }
-                    });
-
-                    setColumns(initialColumns);
-                } catch (error) {
-                    toast({
-                        variant: 'destructive',
-                        title: "Erro ao carregar atividades",
-                        description: "Não foi possível buscar os dados do Kanban."
-                    });
-                } finally {
-                    setIsLoading(false);
-                }
+            const initialColumns: Columns = {
+                'Ativo': { id: 'Ativo', title: 'Ativo', activityIds: [] },
+                'Pendente': { id: 'Pendente', title: 'Pendente', activityIds: [] },
+                'Concluído': { id: 'Concluído', title: 'Concluído', activityIds: [] },
+                'Cancelado': { id: 'Cancelado', title: 'Cancelado', activityIds: [] },
             };
-            loadData();
+
+            fetchedActivities.forEach(activity => {
+                if (initialColumns[activity.status]) {
+                    initialColumns[activity.status].activityIds.push(activity.id);
+                }
+            });
+
+            setColumns(initialColumns);
+        } catch (error) {
+            toast({
+                variant: 'destructive',
+                title: "Erro ao carregar atividades",
+                description: "Não foi possível buscar os dados do Kanban."
+            });
+        } finally {
+            setIsLoading(false);
         }
-    }, [realtorName, toast]);
+    };
+    
+    useEffect(() => {
+        loadData();
+    }, [realtorName]);
 
     const onDragEnd = async (result: DropResult) => {
         const { destination, source, draggableId } = result;
@@ -104,56 +105,53 @@ export default function RealtorKanbanPage() {
         const finishColumn = columns[destination.droppableId as ActivityStatus];
         const newStatus = destination.droppableId as ActivityStatus;
 
-        // Optimistic UI Update
+        // --- Optimistic UI Update ---
+
+        // 1. Clonar os IDs da coluna de origem
         const startTaskIds = Array.from(startColumn.activityIds);
+        // 2. Remover o item arrastado
         startTaskIds.splice(source.index, 1);
-        const newStart = { ...startColumn, activityIds: startTaskIds };
+        const newStartColumn = { ...startColumn, activityIds: startTaskIds };
 
-        let newFinish;
-        // Se movendo na mesma coluna
-        if (startColumn === finishColumn) {
-            startTaskIds.splice(destination.index, 0, draggableId);
-            newFinish = { ...startColumn, activityIds: startTaskIds };
-             setColumns(prev => ({
-                ...prev!,
-                [newStart.id]: newFinish,
-            }));
-        } else {
-            // Movendo para uma coluna diferente
-            const finishTaskIds = Array.from(finishColumn.activityIds);
-            finishTaskIds.splice(destination.index, 0, draggableId);
-            newFinish = { ...finishColumn, activityIds: finishTaskIds };
-            
-            const movedActivity = { ...activities[draggableId], status: newStatus };
-            setActivities(prev => ({ ...prev, [draggableId]: movedActivity }));
-            setColumns(prev => ({
-                ...prev!,
-                [newStart.id]: newStart,
-                [newFinish.id]: newFinish,
-            }));
+        // 3. Clonar os IDs da coluna de destino
+        const finishTaskIds = Array.from(finishColumn.activityIds);
+        // 4. Inserir o item arrastado na nova posição
+        finishTaskIds.splice(destination.index, 0, draggableId);
+        const newFinishColumn = { ...finishColumn, activityIds: finishTaskIds };
+        
+        // 5. Atualizar o estado localmente para refletir a mudança instantaneamente
+        const newColumnsState = {
+            ...columns,
+            [newStartColumn.id]: newStartColumn,
+            [newFinishColumn.id]: newFinishColumn,
+        };
+        // Caso esteja movendo dentro da mesma coluna, a lógica acima funciona,
+        // apenas precisamos garantir que a coluna é atualizada corretamente.
+        if(startColumn.id === finishColumn.id){
+             const columnTaskIds = Array.from(startColumn.activityIds);
+             const [removed] = columnTaskIds.splice(source.index, 1);
+             columnTaskIds.splice(destination.index, 0, removed);
+             newColumnsState[startColumn.id] = {...startColumn, activityIds: columnTaskIds};
         }
+        setColumns(newColumnsState);
 
-
-        // Persist change to Firestore
+        // --- Persistir a mudança no Banco de Dados ---
         try {
             await updateActivityStatus(draggableId, newStatus);
             toast({
                 title: "Status Atualizado!",
                 description: `Atividade movida para "${newStatus}".`,
             });
+            // Recarrega os dados para garantir consistência total após o sucesso
+            await loadData(); 
         } catch (error) {
             toast({
                 variant: 'destructive',
                 title: "Erro ao salvar",
                 description: "Não foi possível salvar a alteração. Revertendo.",
             });
-            // Revert UI on failure
-            setActivities(prev => ({ ...prev, [draggableId]: activities[draggableId] })); // Revert activity
-            setColumns(prev => ({ // Revert columns
-                ...prev!,
-                [startColumn.id]: startColumn,
-                [finishColumn.id]: finishColumn
-            }));
+            // Reverte o estado da UI em caso de falha na API
+            setColumns(columns);
         }
     };
 

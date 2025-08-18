@@ -183,14 +183,15 @@ export type Notification = {
 // --- TIPO PARA O KANBAN DE ATIVIDADES ---
 export type ActivityStatus = 'Ativo' | 'Pendente' | 'Concluído' | 'Cancelado';
 export type Activity = {
-    id: string; // ID da propriedade ou negociação
+    id: string; // ID da atividade, que será o mesmo do relatedId
     realtorName: string;
     type: 'capture' | 'negotiation';
     name: string; // Nome do imóvel ou negociação
     value: number;
     status: ActivityStatus;
-    relatedId: string; // ID original do Firestore (prop ou neg)
+    relatedId: string; // ID original do Firestore (propriedade ou negociação)
 };
+
 
 
 // --- Dados estáticos ---
@@ -394,93 +395,92 @@ export async function completeSaleAndGenerateCommission(negotiation: Negotiation
 }
 
 export const getActivitiesForRealtor = async (realtorName: string): Promise<Activity[]> => {
-    const batch = writeBatch(db);
     const allActivities: Activity[] = [];
+    
+    // Helper para determinar o status da atividade com base no status do imóvel/negociação
+    const determineActivityStatus = (itemStatus: string): ActivityStatus => {
+        if (itemStatus === 'Vendido' || itemStatus === 'Alugado' || itemStatus === 'Finalizado') {
+            return 'Concluído';
+        }
+        if (itemStatus === 'Cancelado') {
+            return 'Cancelado';
+        }
+        if (itemStatus === 'Pendente') { // Exemplo, pode ser outro status
+            return 'Pendente';
+        }
+        return 'Ativo';
+    };
 
-    // Busca captações
+    // 1. Busca captações (imóveis capturados pelo corretor)
     const capturesQuery = query(collection(db, 'properties'), where('capturedBy', '==', realtorName));
     const capturesSnapshot = await getDocs(capturesQuery);
-
-    // Busca negociações
-    const negotiationsQuery = query(collection(db, 'negotiations'), where('salesperson', '==', realtorName));
-    const negotiationsSnapshot = await getDocs(negotiationsQuery);
-
-    // Busca todas as atividades existentes de uma vez
-    const activityIds = [
-        ...capturesSnapshot.docs.map(doc => doc.id),
-        ...negotiationsSnapshot.docs.map(doc => doc.id)
-    ];
-
-    if (activityIds.length === 0) return [];
-    
-    const existingActivitiesQuery = query(collection(db, 'activities'), where('relatedId', 'in', activityIds));
-    const existingActivitiesSnapshot = await getDocs(existingActivitiesQuery);
-    const existingActivitiesMap = new Map(existingActivitiesSnapshot.docs.map(doc => [doc.data().relatedId, { id: doc.id, ...doc.data() } as Activity]));
-    
-    // Processa Captações
     capturesSnapshot.docs.forEach(doc => {
         const prop = { id: doc.id, ...doc.data() } as Property;
-        if (existingActivitiesMap.has(prop.id)) {
-            allActivities.push(existingActivitiesMap.get(prop.id)!);
-        } else {
-            const newActivity: Activity = {
-                id: doc.id, // O ID da atividade é o mesmo do imóvel/negociação
-                realtorName: prop.capturedBy,
-                type: 'capture',
-                name: prop.name,
-                value: prop.price,
-                status: 'Ativo',
-                relatedId: prop.id,
-            };
-            const activityRef = doc(db, 'activities', newActivity.id);
-            batch.set(activityRef, newActivity);
-            allActivities.push(newActivity);
-        }
+        allActivities.push({
+            id: prop.id,
+            relatedId: prop.id,
+            realtorName: prop.capturedBy,
+            type: 'capture',
+            name: prop.name,
+            value: prop.price,
+            status: determineActivityStatus(prop.status),
+        });
     });
 
-    // Processa Negociações
+    // 2. Busca negociações (vendas realizadas pelo corretor)
+    const negotiationsQuery = query(collection(db, 'negotiations'), where('salesperson', '==', realtorName));
+    const negotiationsSnapshot = await getDocs(negotiationsQuery);
     negotiationsSnapshot.docs.forEach(doc => {
         const neg = { id: doc.id, ...doc.data() } as Negotiation;
-        const existing = existingActivitiesMap.has(neg.id);
-
-        if (existing) {
-             // Atualiza o status se a negociação foi concluída/cancelada mas a atividade não
-            const existingActivity = existingActivitiesMap.get(neg.id)!;
-            const expectedStatus = neg.status === 'Finalizado' ? 'Concluído' : neg.status === 'Cancelado' ? 'Cancelado' : existingActivity.status;
-            if (existingActivity.status !== expectedStatus) {
-                const activityRef = doc(db, 'activities', existingActivity.id);
-                batch.update(activityRef, { status: expectedStatus });
-                existingActivity.status = expectedStatus;
-            }
-            allActivities.push(existingActivity);
-        } else {
-            const newActivity: Activity = {
-                id: doc.id,
-                realtorName: neg.salesperson,
-                type: 'negotiation',
-                name: neg.property,
-                value: neg.value,
-                status: neg.status === 'Finalizado' ? 'Concluído' : neg.status === 'Cancelado' ? 'Cancelado' : 'Ativo',
-                relatedId: neg.id,
-            };
-            const activityRef = doc(db, 'activities', newActivity.id);
-            batch.set(activityRef, newActivity);
-            allActivities.push(newActivity);
-        }
+        allActivities.push({
+            id: neg.id,
+            relatedId: neg.id,
+            realtorName: neg.salesperson,
+            type: 'negotiation',
+            name: neg.property,
+            value: neg.value,
+            status: determineActivityStatus(neg.status),
+        });
     });
 
-    await batch.commit();
-    
-    // Remove duplicatas (caso um item seja captação e negociação do mesmo corretor, o que é raro mas possível)
-    const uniqueActivities = Array.from(new Map(allActivities.map(a => [a.id, a])).values());
-
-    return uniqueActivities;
+    return allActivities;
 };
 
 
 export const updateActivityStatus = async (activityId: string, newStatus: ActivityStatus): Promise<void> => {
-    const activityRef = doc(db, "activities", activityId);
-    await updateDoc(activityRef, { status: newStatus });
-};
+    // Como a atividade é uma representação, precisamos atualizar o item original
+    // Primeiro, tentamos atualizar um documento na coleção 'negotiations'
+    const negotiationRef = doc(db, "negotiations", activityId);
+    let updated = false;
 
+    try {
+        const negDoc = await getDoc(negotiationRef);
+        if (negDoc.exists()) {
+            const statusMap: Record<ActivityStatus, Partial<Negotiation>> = {
+                'Ativo': { status: 'Ativo', processStage: 'Em andamento'},
+                'Pendente': { status: 'Ativo', processStage: 'Pendência'},
+                'Concluído': { status: 'Finalizado', processStage: 'Finalizado', stage: 'Venda Concluída' },
+                'Cancelado': { status: 'Cancelado' }
+            }
+            await updateDoc(negotiationRef, statusMap[newStatus]);
+            updated = true;
+        }
+    } catch (e) {}
     
+    // Se não for uma negociação, tentamos atualizar um imóvel (captação)
+    if (!updated) {
+        const propertyRef = doc(db, "properties", activityId);
+        try {
+            const propDoc = await getDoc(propertyRef);
+            if (propDoc.exists()) {
+                 const statusMap: Record<ActivityStatus, string> = {
+                    'Ativo': 'Disponível',
+                    'Pendente': 'Reservado', // Exemplo
+                    'Concluído': 'Vendido',
+                    'Cancelado': 'Disponível' // Ou um status específico
+                }
+                await updateDoc(propertyRef, { status: statusMap[newStatus] });
+            }
+        } catch(e) {}
+    }
+};
