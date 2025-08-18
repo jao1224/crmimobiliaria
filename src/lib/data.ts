@@ -1,5 +1,4 @@
 
-
 import { db } from './firebase';
 import { collection, getDocs, addDoc, doc, updateDoc, writeBatch, serverTimestamp, query, orderBy, limit, where, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 
@@ -485,4 +484,3 @@ export const updateActivityStatus = async (activityId: string, newStatus: Activi
     const activityRef = doc(db, 'activities', activityId);
     await updateDoc(activityRef, { status: newStatus });
 };
-
