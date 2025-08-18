@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { doc, setDoc, getDocs, collection } from "firebase/firestore";
+import { doc, setDoc, getDocs, collection, query, limit } from "firebase/firestore";
 
 
 import { Button } from "@/components/ui/button";
@@ -81,7 +81,14 @@ export function RegisterForm() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-        const role = values.profileType;
+        // Verifica se já existe algum usuário no banco
+        const usersCollection = collection(db, "users");
+        const q = query(usersCollection, limit(1));
+        const usersSnapshot = await getDocs(q);
+        const isFirstUser = usersSnapshot.empty;
+
+        // Se for o primeiro usuário, a role é 'Admin', caso contrário, usa o que foi selecionado
+        const role = isFirstUser ? 'Admin' : values.profileType;
 
         // 1. Cria o usuário
         const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
