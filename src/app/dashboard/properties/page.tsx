@@ -81,7 +81,7 @@ export default function PropertiesPage() {
       toast({
         variant: "destructive",
         title: "Erro ao Carregar Imóveis",
-        description: "Não foi possível buscar os imóveis.",
+        description: "Não foi possível buscar os imóveis do banco de dados.",
       });
     } finally {
       setIsLoading(false);
