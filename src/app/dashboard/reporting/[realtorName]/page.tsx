@@ -3,7 +3,6 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 import { getActivitiesForRealtor, updateActivityStatus, Activity, ActivityStatus } from "@/lib/data";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -46,12 +45,7 @@ export default function RealtorKanbanPage() {
     const [activities, setActivities] = useState<{[key: string]: Activity}>({});
     const [columns, setColumns] = useState<Columns | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [isClient, setIsClient] = useState(false);
-
-    // Garante que a biblioteca de Drag and Drop só seja renderizada no cliente.
-    useEffect(() => {
-        setIsClient(true);
-    }, []);
+    const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null);
 
     const loadData = async () => {
         if (!realtorName) return;
@@ -95,65 +89,56 @@ export default function RealtorKanbanPage() {
         loadData();
     }, [realtorName]);
 
-    const onDragEnd = async (result: DropResult) => {
-        const { destination, source, draggableId } = result;
+    const handleCardClick = (activityId: string) => {
+        // Se o card clicado já está selecionado, deseleciona. Senão, seleciona.
+        setSelectedActivityId(prevId => prevId === activityId ? null : activityId);
+    };
 
-        if (!destination || !columns) return;
-        if (destination.droppableId === source.droppableId && destination.index === source.index) return;
+    const handleColumnClick = async (columnId: ActivityStatus) => {
+        if (!selectedActivityId || !columns) return;
 
-        const startColumn = columns[source.droppableId as ActivityStatus];
-        const finishColumn = columns[destination.droppableId as ActivityStatus];
-        const newStatus = destination.droppableId as ActivityStatus;
+        const sourceColumn = Object.values(columns).find(col => col.activityIds.includes(selectedActivityId));
+        if (!sourceColumn || sourceColumn.id === columnId) {
+            // Não faz nada se a coluna de destino for a mesma ou se não encontrar a de origem
+            setSelectedActivityId(null); // Deseleciona o card
+            return;
+        }
+
+        const destinationColumn = columns[columnId];
 
         // --- Optimistic UI Update ---
-        const originalColumns = JSON.parse(JSON.stringify(columns));
-        
-        const startTaskIds = Array.from(startColumn.activityIds);
-        startTaskIds.splice(source.index, 1);
-        const newStartColumn = {
-            ...startColumn,
-            activityIds: startTaskIds,
-        };
+        const newColumns = { ...columns };
 
-        const finishTaskIds = Array.from(finishColumn.activityIds);
-        finishTaskIds.splice(destination.index, 0, draggableId);
-        const newFinishColumn = {
-            ...finishColumn,
-            activityIds: finishTaskIds,
-        };
+        // Remove from source
+        const sourceActivityIds = [...sourceColumn.activityIds];
+        const activityIndex = sourceActivityIds.indexOf(selectedActivityId);
+        sourceActivityIds.splice(activityIndex, 1);
+        newColumns[sourceColumn.id] = { ...sourceColumn, activityIds: sourceActivityIds };
 
-        const newColumnsState = {
-            ...columns,
-            [newStartColumn.id]: newStartColumn,
-            [newFinishColumn.id]: newFinishColumn,
-        };
-
-        // If it's the same column, we need to update just that one column's state
-        if (startColumn.id === finishColumn.id) {
-             const newActivityIds = Array.from(startColumn.activityIds);
-             newActivityIds.splice(source.index, 1);
-             newActivityIds.splice(destination.index, 0, draggableId);
-             newColumnsState[startColumn.id] = { ...startColumn, activityIds: newActivityIds };
-        }
+        // Add to destination
+        const destActivityIds = [...destinationColumn.activityIds];
+        destActivityIds.push(selectedActivityId);
+        newColumns[destinationColumn.id] = { ...destinationColumn, activityIds: destActivityIds };
         
-        setColumns(newColumnsState);
-        
+        setColumns(newColumns);
+        const movedActivityId = selectedActivityId;
+        setSelectedActivityId(null); // Deseleciona após mover
 
         // --- Persist change in the database ---
         try {
-            await updateActivityStatus(draggableId, newStatus);
+            await updateActivityStatus(movedActivityId, columnId);
             toast({
                 title: "Status Atualizado!",
-                description: `Atividade movida para "${newStatus}".`,
+                description: `Atividade movida para "${columnId}".`,
             });
         } catch (error) {
             toast({
                 variant: 'destructive',
                 title: "Erro ao salvar",
-                description: "Não foi possível salvar a alteração. Revertendo.",
+                description: "Não foi possível salvar a alteração. Por favor, atualize a página.",
             });
-            // Revert UI on failure
-            setColumns(originalColumns);
+            // Idealmente, reverteríamos o estado, mas recarregar os dados é mais simples aqui.
+            await loadData(); 
         }
     };
 
@@ -180,67 +165,58 @@ export default function RealtorKanbanPage() {
                 </Button>
                 <div>
                     <h1 className="text-2xl font-bold">Quadro de Atividades: {realtorName}</h1>
-                    <p className="text-muted-foreground">Gerencie as captações e negociações arrastando os cartões.</p>
+                    <p className="text-muted-foreground">Clique em um card para selecionar e em uma coluna para mover.</p>
                 </div>
             </div>
             
-            {isClient && columns && (
-                <DragDropContext onDragEnd={onDragEnd}>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start flex-1">
-                        {Object.values(columns).map(column => (
-                            <Droppable key={column.id} droppableId={column.id}>
-                                {(provided, snapshot) => (
-                                    <Card className={cn("flex flex-col h-full transition-colors", snapshot.isDraggingOver && "bg-secondary")}>
-                                        <CardHeader className="border-b">
-                                            <CardTitle className="flex items-center gap-2 text-base">
-                                                <span className={cn("h-3 w-3 rounded-full", getStatusColor(column.id))}></span>
-                                                {column.title}
-                                                <Badge variant="secondary" className="ml-auto">{column.activityIds.length}</Badge>
-                                            </CardTitle>
-                                        </CardHeader>
-                                        <CardContent 
-                                            ref={provided.innerRef} 
-                                            {...provided.droppableProps}
-                                            className="p-2 space-y-2 flex-1 overflow-y-auto"
-                                        >
-                                            {column.activityIds.map((activityId, index) => {
-                                                const activity = activities[activityId];
-                                                if (!activity) return null;
-                                                const isCapture = activity.type === 'capture';
-                                                const Icon = isCapture ? Target : Handshake;
-                                                const iconBg = isCapture ? 'bg-primary text-primary-foreground' : 'bg-success text-success-foreground';
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start flex-1">
+                {columns && Object.values(columns).map(column => (
+                    <div key={column.id} onClick={() => handleColumnClick(column.id)} className="h-full">
+                        <Card className={cn("flex flex-col h-full transition-all duration-200", selectedActivityId && "cursor-pointer hover:bg-secondary/80")}>
+                            <CardHeader className="border-b">
+                                <CardTitle className="flex items-center gap-2 text-base">
+                                    <span className={cn("h-3 w-3 rounded-full", getStatusColor(column.id))}></span>
+                                    {column.title}
+                                    <Badge variant="secondary" className="ml-auto">{column.activityIds.length}</Badge>
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-2 space-y-2 flex-1 overflow-y-auto">
+                                {column.activityIds.map((activityId) => {
+                                    const activity = activities[activityId];
+                                    if (!activity) return null;
+                                    const isCapture = activity.type === 'capture';
+                                    const Icon = isCapture ? Target : Handshake;
+                                    const iconBg = isCapture ? 'bg-primary text-primary-foreground' : 'bg-success text-success-foreground';
 
-                                                return (
-                                                    <Draggable key={activity.id} draggableId={activity.id} index={index}>
-                                                        {(provided, snapshot) => (
-                                                            <div
-                                                                ref={provided.innerRef}
-                                                                {...provided.draggableProps}
-                                                                {...provided.dragHandleProps}
-                                                                className={cn("rounded-lg border bg-card p-3 shadow-sm", snapshot.isDragging && "shadow-lg scale-105")}
-                                                            >
-                                                                <div className="flex items-start justify-between">
-                                                                    <span className="text-xs font-semibold">{isCapture ? 'Captação' : 'Negociação'}</span>
-                                                                    <div className={cn("flex h-5 w-5 items-center justify-center rounded-full text-xs", iconBg)}>
-                                                                        <Icon className="h-3 w-3" />
-                                                                    </div>
-                                                                </div>
-                                                                <p className="font-bold text-sm mt-1">{activity.name}</p>
-                                                                <p className="text-xs text-muted-foreground">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(activity.value)}</p>
-                                                            </div>
-                                                        )}
-                                                    </Draggable>
-                                                )
-                                            })}
-                                            {provided.placeholder}
-                                        </CardContent>
-                                    </Card>
-                                )}
-                            </Droppable>
-                        ))}
+                                    return (
+                                        <div
+                                            key={activity.id}
+                                            onClick={(e) => {
+                                                e.stopPropagation(); // Evita que o clique no card dispare o clique da coluna
+                                                handleCardClick(activity.id);
+                                            }}
+                                            className={cn(
+                                                "rounded-lg border bg-card p-3 shadow-sm cursor-pointer transition-all duration-200",
+                                                selectedActivityId === activity.id && "ring-2 ring-primary shadow-lg scale-105"
+                                            )}
+                                        >
+                                            <div className="flex items-start justify-between">
+                                                <span className="text-xs font-semibold">{isCapture ? 'Captação' : 'Negociação'}</span>
+                                                <div className={cn("flex h-5 w-5 items-center justify-center rounded-full text-xs", iconBg)}>
+                                                    <Icon className="h-3 w-3" />
+                                                </div>
+                                            </div>
+                                            <p className="font-bold text-sm mt-1">{activity.name}</p>
+                                            <p className="text-xs text-muted-foreground">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(activity.value)}</p>
+                                        </div>
+                                    )
+                                })}
+                            </CardContent>
+                        </Card>
                     </div>
-                </DragDropContext>
-            )}
+                ))}
+            </div>
         </div>
     );
 }
+
