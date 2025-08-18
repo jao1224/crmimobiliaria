@@ -96,45 +96,56 @@ export default function RealtorKanbanPage() {
 
     const onDragEnd = async (result: DropResult) => {
         const { destination, source, draggableId } = result;
-
+    
         if (!destination) return;
         if (destination.droppableId === source.droppableId && destination.index === source.index) return;
         if (!columns) return;
-        
+    
         const startColumn = columns[source.droppableId as ActivityStatus];
         const finishColumn = columns[destination.droppableId as ActivityStatus];
         const newStatus = destination.droppableId as ActivityStatus;
-
+    
         // --- Optimistic UI Update ---
-
-        // 1. Clonar os IDs da coluna de origem
-        const startTaskIds = Array.from(startColumn.activityIds);
-        // 2. Remover o item arrastado
-        startTaskIds.splice(source.index, 1);
-        const newStartColumn = { ...startColumn, activityIds: startTaskIds };
-
-        // 3. Clonar os IDs da coluna de destino
-        const finishTaskIds = Array.from(finishColumn.activityIds);
-        // 4. Inserir o item arrastado na nova posição
-        finishTaskIds.splice(destination.index, 0, draggableId);
-        const newFinishColumn = { ...finishColumn, activityIds: finishTaskIds };
-        
-        // 5. Atualizar o estado localmente para refletir a mudança instantaneamente
-        const newColumnsState = {
-            ...columns,
-            [newStartColumn.id]: newStartColumn,
-            [newFinishColumn.id]: newFinishColumn,
-        };
-        // Caso esteja movendo dentro da mesma coluna, a lógica acima funciona,
-        // apenas precisamos garantir que a coluna é atualizada corretamente.
-        if(startColumn.id === finishColumn.id){
-             const columnTaskIds = Array.from(startColumn.activityIds);
-             const [removed] = columnTaskIds.splice(source.index, 1);
-             columnTaskIds.splice(destination.index, 0, removed);
-             newColumnsState[startColumn.id] = {...startColumn, activityIds: columnTaskIds};
+        const originalColumns = { ...columns };
+    
+        if (startColumn === finishColumn) {
+            // Movendo dentro da mesma coluna
+            const newActivityIds = Array.from(startColumn.activityIds);
+            newActivityIds.splice(source.index, 1);
+            newActivityIds.splice(destination.index, 0, draggableId);
+    
+            const newColumn = {
+                ...startColumn,
+                activityIds: newActivityIds,
+            };
+    
+            setColumns({
+                ...columns,
+                [newColumn.id]: newColumn,
+            });
+        } else {
+            // Movendo entre colunas diferentes
+            const startActivityIds = Array.from(startColumn.activityIds);
+            startActivityIds.splice(source.index, 1);
+            const newStartColumn = {
+                ...startColumn,
+                activityIds: startActivityIds,
+            };
+    
+            const finishActivityIds = Array.from(finishColumn.activityIds);
+            finishActivityIds.splice(destination.index, 0, draggableId);
+            const newFinishColumn = {
+                ...finishColumn,
+                activityIds: finishActivityIds,
+            };
+    
+            setColumns({
+                ...columns,
+                [newStartColumn.id]: newStartColumn,
+                [newFinishColumn.id]: newFinishColumn,
+            });
         }
-        setColumns(newColumnsState);
-
+    
         // --- Persistir a mudança no Banco de Dados ---
         try {
             await updateActivityStatus(draggableId, newStatus);
@@ -142,8 +153,8 @@ export default function RealtorKanbanPage() {
                 title: "Status Atualizado!",
                 description: `Atividade movida para "${newStatus}".`,
             });
-            // Recarrega os dados para garantir consistência total após o sucesso
-            await loadData(); 
+            // Recarregar os dados após o sucesso para garantir consistência
+            await loadData();
         } catch (error) {
             toast({
                 variant: 'destructive',
@@ -151,7 +162,7 @@ export default function RealtorKanbanPage() {
                 description: "Não foi possível salvar a alteração. Revertendo.",
             });
             // Reverte o estado da UI em caso de falha na API
-            setColumns(columns);
+            setColumns(originalColumns);
         }
     };
 
