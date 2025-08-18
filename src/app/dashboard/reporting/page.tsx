@@ -73,10 +73,12 @@ const processCaptureData = (properties: Property[]) => {
 const processTeamPerformanceData = (negotiations: Negotiation[], teamsData: Team[]) => {
     const performanceData: { [key: string]: { revenue: number, deals: number } } = {};
 
+    // Inicializa o objeto de performance com as equipes reais do banco de dados
     teamsData.forEach(team => {
         performanceData[team.name] = { revenue: 0, deals: 0 };
     });
 
+    // Itera sobre as negociações para calcular a performance
     negotiations.forEach(neg => {
         if (neg.stage === 'Venda Concluída') {
             const team = teamsData.find(t => t.members.includes(neg.salesperson));
@@ -164,7 +166,7 @@ export default function ReportingPage() {
     // Dados para os relatórios de captação usam os imóveis filtrados
     const { realtorCaptures, propertyTypeCaptures } = useMemo(() => processCaptureData(operationTypeFilter === 'venda' ? [] : filteredCaptures), [filteredCaptures, operationTypeFilter]);
     
-    // Dados de desempenho de equipe usam as negociações filtradas
+    // Dados de desempenho de equipe usam as negociações filtradas e as equipes reais
     const teamPerformanceData = useMemo(() => processTeamPerformanceData(filteredNegotiations, teams), [filteredNegotiations, teams]);
 
     const handleExport = () => {
