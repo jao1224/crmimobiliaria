@@ -140,37 +140,35 @@ export default function PropertiesPage() {
 
 
   const handleAddProperty = async (event: React.FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
-      setIsSaving(true);
-      
-      const formData = new FormData(event.currentTarget);
-      
-      const newPropertyData: Omit<Property, 'id'> = {
-        name: formData.get("name") as string,
-        address: formData.get("address") as string,
-        status: "Disponível",
-        price: Number(formData.get("price")),
-        commission: Number(formData.get("commission")),
-        imageUrl: imagePreview || "https://placehold.co/600x400.png",
-        imageHint: "novo imovel",
-        capturedBy: "Admin", // Simulado, poderia ser o usuário logado
-        description: formData.get("description") as string,
-        ownerInfo: formData.get("owner") as string,
-        type: "Revenda", // Simulado
-      };
-      
-      try {
-          await addProperty(newPropertyData);
-          await refreshProperties(); // Recarrega do banco
-          toast({ title: "Sucesso!", description: "Imóvel adicionado com sucesso." });
-          setPropertyDialogOpen(false); // Fecha o dialog
-          addPropertyFormRef.current?.reset(); // Limpa o formulário
-          setImagePreview(null);
-      } catch (error) {
-          toast({ variant: "destructive", title: "Erro", description: "Não foi possível adicionar o imóvel." });
-      } finally {
-          setIsSaving(false);
-      }
+    event.preventDefault();
+    setIsSaving(true);
+    
+    const formData = new FormData(event.currentTarget);
+    
+    const newPropertyData: Omit<Property, 'id'> = {
+      name: formData.get("name") as string,
+      address: formData.get("address") as string,
+      status: "Disponível",
+      price: Number(formData.get("price")),
+      commission: Number(formData.get("commission")),
+      imageUrl: imagePreview || "https://placehold.co/600x400.png",
+      imageHint: "novo imovel",
+      capturedBy: "Admin", // Simulado, poderia ser o usuário logado
+      description: formData.get("description") as string,
+      ownerInfo: formData.get("owner") as string,
+      type: "Revenda", // Simulado
+    };
+    
+    try {
+        const newlyAddedProperty = await addProperty(newPropertyData);
+        setProperties(prev => [newlyAddedProperty, ...prev]);
+        toast({ title: "Sucesso!", description: "Imóvel adicionado com sucesso." });
+        setPropertyDialogOpen(false);
+    } catch (error) {
+        toast({ variant: "destructive", title: "Erro", description: "Não foi possível adicionar o imóvel." });
+    } finally {
+        setIsSaving(false);
+    }
   };
 
   const handleUpdateProperty = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -235,7 +233,7 @@ export default function PropertiesPage() {
     
     try {
         await deleteProperty(selectedProperty.id);
-        await refreshProperties();
+        setProperties(prev => prev.filter(p => p.id !== selectedProperty.id));
         toast({ title: "Imóvel Excluído", description: `O imóvel "${selectedProperty.name}" foi removido.` });
     } catch (error) {
         toast({ variant: "destructive", title: "Erro", description: "Não foi possível excluir o imóvel." });
@@ -245,9 +243,14 @@ export default function PropertiesPage() {
     }
   };
   
-  // Limpar o preview ao fechar o dialog
+  // Limpar o preview e o formulário ao fechar o dialog
   useEffect(() => {
-    if (!isPropertyDialogOpen && !isEditDialogOpen) {
+    if (!isPropertyDialogOpen) {
+        setImagePreview(null);
+        setSelectedFile(null);
+        addPropertyFormRef.current?.reset();
+    }
+    if (!isEditDialogOpen) {
         setImagePreview(null);
         setSelectedFile(null);
     }
@@ -459,7 +462,7 @@ export default function PropertiesPage() {
                             <DropdownMenuLabel>Ações</DropdownMenuLabel>
                             <DropdownMenuItem onClick={(e) => handleEditClick(e, property)}>Editar</DropdownMenuItem>
                             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleCardClick(property); }}>Ver Detalhes</DropdownMenuItem>
-                            <DropdownMenuItem className="text-destructive" onClick={(e) => handleDeleteClick(e, property)}>
+                            <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10" onClick={(e) => handleDeleteClick(e, property)}>
                                 Excluir
                             </DropdownMenuItem>
                         </DropdownMenuContent>

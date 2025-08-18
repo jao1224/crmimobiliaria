@@ -216,9 +216,9 @@ export const getPropertiesByRealtor = async (realtorName: string): Promise<Prope
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Property));
 };
 
-export const addProperty = async (newProperty: Omit<Property, 'id'>): Promise<string> => {
+export const addProperty = async (newProperty: Omit<Property, 'id'>): Promise<Property> => {
     const docRef = await addDoc(collection(db, 'properties'), newProperty);
-    return docRef.id;
+    return { id: docRef.id, ...newProperty };
 };
 
 export const updateProperty = async (id: string, data: Partial<Property>): Promise<void> => {
