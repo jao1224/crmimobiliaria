@@ -85,15 +85,7 @@ export function RegisterForm() {
         const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
         const user = userCredential.user;
         
-        // 2. Mostra sucesso e redireciona IMEDIATAMENTE
-        toast({
-            title: "Conta Criada com Sucesso!",
-            description: "Você será redirecionado para fazer o login.",
-        });
-        router.push("/");
-
-        // 3. Atualiza perfil e salva dados no Firestore em segundo plano
-        // O usuário não precisa esperar por isso.
+        // 2. Atualiza perfil e salva dados no Firestore
         await updateProfile(user, { displayName: values.name });
         await setDoc(doc(db, "users", user.uid), {
             uid: user.uid,
@@ -106,6 +98,13 @@ export function RegisterForm() {
             address: values.address,
             createdAt: new Date().toISOString(),
         });
+        
+        // 3. Mostra sucesso e redireciona
+        toast({
+            title: "Conta Criada com Sucesso!",
+            description: "Você será redirecionado para fazer o login.",
+        });
+        router.push("/");
 
     } catch (error: any) {
         console.error("Registration Error: ", error);
