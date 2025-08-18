@@ -42,7 +42,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 import type { Property, PropertyType } from "@/lib/data";
-import { getProperties, addProperty, realtors, updateProperty, deleteProperty } from "@/lib/data";
+import { getProperties, addProperty, realtors, updateProperty, deleteProperty, propertyTypes } from "@/lib/data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 
@@ -155,12 +155,12 @@ export default function PropertiesPage() {
       capturedBy: "Admin", // Simulado
       description: formData.get("description") as string,
       ownerInfo: formData.get("owner") as string,
-      type: "Revenda", // Simulado
+      type: formData.get("type") as PropertyType,
     };
 
     try {
       await addProperty(newPropertyData);
-      await refreshProperties(); // Força a recarga do banco
+      await refreshProperties();
       toast({ title: "Sucesso!", description: "Imóvel adicionado com sucesso." });
       setPropertyDialogOpen(false);
     } catch (error) {
@@ -315,6 +315,17 @@ export default function PropertiesPage() {
                     <Label htmlFor="commission">Comissão (%)</Label>
                     <Input id="commission" name="commission" type="number" step="0.1" placeholder="2.5" required />
                   </div>
+                   <div className="space-y-2">
+                        <Label htmlFor="type">Tipo de Imóvel</Label>
+                        <Select name="type" required>
+                            <SelectTrigger><SelectValue placeholder="Selecione um tipo"/></SelectTrigger>
+                            <SelectContent>
+                                {propertyTypes.map(type => (
+                                  <SelectItem key={type} value={type}>{type}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
                   <div className="md:col-span-2 space-y-2">
                      <Label htmlFor="description">Descrição</Label>
                      <Textarea id="description" name="description" placeholder="Detalhes do imóvel, como número de quartos, banheiros, área, etc." />
