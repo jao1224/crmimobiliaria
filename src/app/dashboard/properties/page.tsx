@@ -4,7 +4,7 @@
 import Image from "next/image";
 import { MoreHorizontal, Upload, Trash2 } from "lucide-react";
 import { Badge, badgeVariants } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -656,5 +656,3 @@ export default function PropertiesPage() {
     </div>
   );
 }
-
-    
