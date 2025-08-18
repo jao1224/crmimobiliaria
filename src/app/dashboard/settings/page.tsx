@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { MoreHorizontal, UserPlus, Trash2 } from "lucide-react";
+import { MoreHorizontal, UserPlus, Trash2, Eye, EyeOff } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -55,6 +55,8 @@ export default function SettingsPage() {
     const [email, setEmail] = useState('');
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
+    const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+    const [showNewPassword, setShowNewPassword] = useState(false);
 
     // Estados das Equipes
     const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
@@ -322,11 +324,47 @@ export default function SettingsPage() {
                             </div>
                              <div className="space-y-2">
                                 <Label htmlFor="current-password">Senha Atual</Label>
-                                <Input id="current-password" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="Deixe em branco para não alterar"/>
+                                <div className="relative">
+                                    <Input 
+                                        id="current-password" 
+                                        type={showCurrentPassword ? "text" : "password"} 
+                                        value={currentPassword} 
+                                        onChange={(e) => setCurrentPassword(e.target.value)} 
+                                        placeholder="Deixe em branco para não alterar"
+                                    />
+                                    <Button 
+                                      type="button"
+                                      variant="ghost" 
+                                      size="icon" 
+                                      className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
+                                      onClick={() => setShowCurrentPassword(prev => !prev)}
+                                    >
+                                      {showCurrentPassword ? <EyeOff /> : <Eye />}
+                                      <span className="sr-only">{showCurrentPassword ? "Ocultar senha" : "Mostrar senha"}</span>
+                                    </Button>
+                                </div>
                             </div>
                              <div className="space-y-2">
                                 <Label htmlFor="new-password">Nova Senha</Label>
-                                <Input id="new-password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Deixe em branco para não alterar"/>
+                                <div className="relative">
+                                    <Input 
+                                        id="new-password" 
+                                        type={showNewPassword ? "text" : "password"} 
+                                        value={newPassword} 
+                                        onChange={(e) => setNewPassword(e.target.value)} 
+                                        placeholder="Deixe em branco para não alterar"
+                                    />
+                                    <Button 
+                                      type="button"
+                                      variant="ghost" 
+                                      size="icon" 
+                                      className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
+                                      onClick={() => setShowNewPassword(prev => !prev)}
+                                    >
+                                      {showNewPassword ? <EyeOff /> : <Eye />}
+                                      <span className="sr-only">{showNewPassword ? "Ocultar senha" : "Mostrar senha"}</span>
+                                    </Button>
+                                </div>
                             </div>
                         </CardContent>
                         <CardFooter>

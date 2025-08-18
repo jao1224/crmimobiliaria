@@ -31,6 +31,7 @@ import {
     DialogTrigger,
     DialogClose,
 } from "@/components/ui/dialog";
+import { Eye, EyeOff } from "lucide-react";
 
 const formSchema = z.object({
   email: z.string().email({ message: "Por favor, insira um endereço de e-mail válido." }),
@@ -44,6 +45,7 @@ export function LoginForm() {
   const [isResetting, setIsResetting] = React.useState(false);
   const [resetEmail, setResetEmail] = React.useState("");
   const [isResetDialogOpen, setResetDialogOpen] = React.useState(false);
+  const [showPassword, setShowPassword] = React.useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -180,7 +182,19 @@ export function LoginForm() {
                    </Dialog>
                 </div>
                 <FormControl>
-                  <Input type="password" placeholder="••••••••" {...field} />
+                  <div className="relative">
+                    <Input type={showPassword ? "text" : "password"} placeholder="••••••••" {...field} />
+                    <Button 
+                      type="button"
+                      variant="ghost" 
+                      size="icon" 
+                      className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
+                      onClick={() => setShowPassword(prev => !prev)}
+                    >
+                      {showPassword ? <EyeOff /> : <Eye />}
+                      <span className="sr-only">{showPassword ? "Ocultar senha" : "Mostrar senha"}</span>
+                    </Button>
+                  </div>
                 </FormControl>
                 <FormMessage />
               </FormItem>
