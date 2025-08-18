@@ -378,9 +378,12 @@ export async function completeSaleAndGenerateCommission(negotiation: Negotiation
         batch.update(propertyRef, { status: 'Vendido' });
     }
     
-     // 4. Atualiza a atividade no Kanban para "Concluído"
+     // 4. Atualiza a atividade no Kanban para "Concluído", se existir
     const activityRef = doc(db, 'activities', negotiation.id);
-    batch.update(activityRef, { status: 'Concluído' });
+    const activitySnap = await getDoc(activityRef);
+    if (activitySnap.exists()) {
+        batch.update(activityRef, { status: 'Concluído' });
+    }
     
     // 5. Cria a notificação
     await addNotification({
@@ -395,65 +398,91 @@ export async function completeSaleAndGenerateCommission(negotiation: Negotiation
 }
 
 export const getActivitiesForRealtor = async (realtorName: string): Promise<Activity[]> => {
-    // Busca todas as atividades existentes para esse corretor
-    const activitiesQuery = query(collection(db, 'activities'), where('realtorName', '==', realtorName));
-    const activitiesSnapshot = await getDocs(activitiesQuery);
-    const existingActivities = activitiesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
-    const existingActivityIds = new Set(existingActivities.map(a => a.relatedId));
+    const batch = writeBatch(db);
+    const allActivities: Activity[] = [];
 
-    // Busca captações que ainda não viraram atividades
+    // Busca captações
     const capturesQuery = query(collection(db, 'properties'), where('capturedBy', '==', realtorName));
     const capturesSnapshot = await getDocs(capturesQuery);
-    const newCaptures = capturesSnapshot.docs.filter(doc => !existingActivityIds.has(doc.id));
 
-    // Busca negociações que ainda não viraram atividades
+    // Busca negociações
     const negotiationsQuery = query(collection(db, 'negotiations'), where('salesperson', '==', realtorName));
     const negotiationsSnapshot = await getDocs(negotiationsQuery);
-    const newNegotiations = negotiationsSnapshot.docs.filter(doc => !existingActivityIds.has(doc.id));
 
-    // Cria as novas atividades em lote
-    const batch = writeBatch(db);
-    const createdActivities: Activity[] = [];
+    // Busca todas as atividades existentes de uma vez
+    const activityIds = [
+        ...capturesSnapshot.docs.map(doc => doc.id),
+        ...negotiationsSnapshot.docs.map(doc => doc.id)
+    ];
 
-    newCaptures.forEach(doc => {
+    if (activityIds.length === 0) return [];
+    
+    const existingActivitiesQuery = query(collection(db, 'activities'), where('relatedId', 'in', activityIds));
+    const existingActivitiesSnapshot = await getDocs(existingActivitiesQuery);
+    const existingActivitiesMap = new Map(existingActivitiesSnapshot.docs.map(doc => [doc.data().relatedId, { id: doc.id, ...doc.data() } as Activity]));
+    
+    // Processa Captações
+    capturesSnapshot.docs.forEach(doc => {
         const prop = { id: doc.id, ...doc.data() } as Property;
-        const newActivity: Omit<Activity, 'id'> = {
-            realtorName: prop.capturedBy,
-            type: 'capture',
-            name: prop.name,
-            value: prop.price,
-            status: 'Ativo',
-            relatedId: prop.id,
-        };
-        const activityRef = doc(db, 'activities', prop.id); // Usa o mesmo ID do imóvel
-        batch.set(activityRef, newActivity);
-        createdActivities.push({ id: activityRef.id, ...newActivity });
+        if (existingActivitiesMap.has(prop.id)) {
+            allActivities.push(existingActivitiesMap.get(prop.id)!);
+        } else {
+            const newActivity: Activity = {
+                id: doc.id, // O ID da atividade é o mesmo do imóvel/negociação
+                realtorName: prop.capturedBy,
+                type: 'capture',
+                name: prop.name,
+                value: prop.price,
+                status: 'Ativo',
+                relatedId: prop.id,
+            };
+            const activityRef = doc(db, 'activities', newActivity.id);
+            batch.set(activityRef, newActivity);
+            allActivities.push(newActivity);
+        }
     });
 
-    newNegotiations.forEach(doc => {
+    // Processa Negociações
+    negotiationsSnapshot.docs.forEach(doc => {
         const neg = { id: doc.id, ...doc.data() } as Negotiation;
-        const newActivity: Omit<Activity, 'id'> = {
-            realtorName: neg.salesperson,
-            type: 'negotiation',
-            name: neg.property,
-            value: neg.value,
-            status: 'Ativo',
-            relatedId: neg.id,
-        };
-        const activityRef = doc(db, 'activities', neg.id); // Usa o mesmo ID da negociação
-        batch.set(activityRef, newActivity);
-        createdActivities.push({ id: activityRef.id, ...newActivity });
+        const existing = existingActivitiesMap.has(neg.id);
+
+        if (existing) {
+             // Atualiza o status se a negociação foi concluída/cancelada mas a atividade não
+            const existingActivity = existingActivitiesMap.get(neg.id)!;
+            const expectedStatus = neg.status === 'Finalizado' ? 'Concluído' : neg.status === 'Cancelado' ? 'Cancelado' : existingActivity.status;
+            if (existingActivity.status !== expectedStatus) {
+                const activityRef = doc(db, 'activities', existingActivity.id);
+                batch.update(activityRef, { status: expectedStatus });
+                existingActivity.status = expectedStatus;
+            }
+            allActivities.push(existingActivity);
+        } else {
+            const newActivity: Activity = {
+                id: doc.id,
+                realtorName: neg.salesperson,
+                type: 'negotiation',
+                name: neg.property,
+                value: neg.value,
+                status: neg.status === 'Finalizado' ? 'Concluído' : neg.status === 'Cancelado' ? 'Cancelado' : 'Ativo',
+                relatedId: neg.id,
+            };
+            const activityRef = doc(db, 'activities', newActivity.id);
+            batch.set(activityRef, newActivity);
+            allActivities.push(newActivity);
+        }
     });
 
-    if (newCaptures.length > 0 || newNegotiations.length > 0) {
-        await batch.commit();
-    }
+    await batch.commit();
+    
+    // Remove duplicatas (caso um item seja captação e negociação do mesmo corretor, o que é raro mas possível)
+    const uniqueActivities = Array.from(new Map(allActivities.map(a => [a.id, a])).values());
 
-    return [...existingActivities, ...createdActivities];
+    return uniqueActivities;
 };
+
 
 export const updateActivityStatus = async (activityId: string, newStatus: ActivityStatus): Promise<void> => {
     const activityRef = doc(db, "activities", activityId);
     await updateDoc(activityRef, { status: newStatus });
 };
-
