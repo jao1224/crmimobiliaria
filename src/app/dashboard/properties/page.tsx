@@ -292,30 +292,34 @@ export default function PropertiesPage() {
             <DialogTrigger asChild>
               <Button>Adicionar Imóvel</Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-xl">
+            <DialogContent className="sm:max-w-4xl">
               <form onSubmit={handleAddProperty} ref={addPropertyFormRef}>
                 <DialogHeader>
                   <DialogTitle>Adicionar Novo Imóvel</DialogTitle>
                   <DialogDescription>Preencha os detalhes abaixo para cadastrar um novo imóvel.</DialogDescription>
                 </DialogHeader>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Nome do Imóvel</Label>
-                    <Input id="name" name="name" placeholder="Ex: Apartamento Vista Mar" required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="address">Endereço</Label>
-                    <Input id="address" name="address" placeholder="Rua, Número, Bairro, Cidade" required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="price">Preço (R$)</Label>
-                    <Input id="price" name="price" type="number" placeholder="750000" required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="commission">Comissão (%)</Label>
-                    <Input id="commission" name="commission" type="number" step="0.1" placeholder="2.5" required />
-                  </div>
-                   <div className="space-y-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 py-4">
+                  {/* Coluna 1: Campos de texto */}
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Nome do Imóvel</Label>
+                      <Input id="name" name="name" placeholder="Ex: Apartamento Vista Mar" required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="address">Endereço</Label>
+                      <Input id="address" name="address" placeholder="Rua, Número, Bairro, Cidade" required />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="price">Preço (R$)</Label>
+                        <Input id="price" name="price" type="number" placeholder="750000" required />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="commission">Comissão (%)</Label>
+                        <Input id="commission" name="commission" type="number" step="0.1" placeholder="5" required />
+                      </div>
+                    </div>
+                     <div className="space-y-2">
                         <Label htmlFor="type">Tipo de Imóvel</Label>
                         <Select name="type" required>
                             <SelectTrigger><SelectValue placeholder="Selecione um tipo"/></SelectTrigger>
@@ -326,26 +330,31 @@ export default function PropertiesPage() {
                             </SelectContent>
                         </Select>
                     </div>
-                  <div className="md:col-span-2 space-y-2">
-                     <Label htmlFor="description">Descrição</Label>
-                     <Textarea id="description" name="description" placeholder="Detalhes do imóvel, como número de quartos, banheiros, área, etc." />
                   </div>
-                   <div className="md:col-span-2 space-y-2">
-                     <Label htmlFor="owner">Informações do Proprietário</Label>
-                     <Textarea id="owner" name="owner" placeholder="Nome, contato e outras informações do proprietário." />
-                  </div>
-                  <div className="md:col-span-2 space-y-2">
-                    <Label htmlFor="image">Imagem do Imóvel</Label>
-                    <div className="flex items-center gap-4">
-                        {imagePreview ? (
-                            <Image src={imagePreview} alt="Preview do imóvel" width={80} height={80} className="rounded-md object-cover aspect-square"/>
-                        ) : (
-                            <div className="w-20 h-20 bg-muted rounded-md flex items-center justify-center text-muted-foreground">
-                                <Upload className="h-6 w-6"/>
-                            </div>
-                        )}
-                        <Input id="image" name="image" type="file" onChange={handleFileChange} accept="image/png, image/jpeg, image/gif, image/webp" />
+
+                  {/* Coluna 2: Imagem e Textareas */}
+                  <div className="space-y-4">
+                     <div className="space-y-2">
+                        <Label htmlFor="image">Imagem do Imóvel</Label>
+                        <div className="flex items-center gap-4">
+                            {imagePreview ? (
+                                <Image src={imagePreview} alt="Preview do imóvel" width={80} height={80} className="rounded-md object-cover aspect-square"/>
+                            ) : (
+                                <div className="w-20 h-20 bg-muted rounded-md flex items-center justify-center text-muted-foreground">
+                                    <Upload className="h-6 w-6"/>
+                                </div>
+                            )}
+                            <Input id="image" name="image" type="file" onChange={handleFileChange} accept="image/png, image/jpeg, image/gif, image/webp" />
+                        </div>
                     </div>
+                    <div className="space-y-2">
+                     <Label htmlFor="description">Descrição</Label>
+                     <Textarea id="description" name="description" placeholder="Detalhes do imóvel..." rows={2} />
+                   </div>
+                    <div className="space-y-2">
+                     <Label htmlFor="owner">Informações do Proprietário</Label>
+                     <Textarea id="owner" name="owner" placeholder="Nome, contato..." rows={2}/>
+                   </div>
                   </div>
                 </div>
                 <DialogFooter>
