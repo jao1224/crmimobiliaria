@@ -142,10 +142,8 @@ export default function PropertiesPage() {
   const handleAddProperty = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsSaving(true);
-    
+
     const formData = new FormData(event.currentTarget);
-    
-    // Simplificando: usando um placeholder para a imagem para garantir que o salvamento funcione.
     const newPropertyData: Omit<Property, 'id'> = {
       name: formData.get("name") as string,
       address: formData.get("address") as string,
@@ -154,21 +152,22 @@ export default function PropertiesPage() {
       commission: Number(formData.get("commission")),
       imageUrl: "https://placehold.co/600x400.png",
       imageHint: "novo imovel",
-      capturedBy: "Admin", // Simulado, poderia ser o usuário logado
+      capturedBy: "Admin", // Simulado
       description: formData.get("description") as string,
       ownerInfo: formData.get("owner") as string,
       type: "Revenda", // Simulado
     };
-    
+
     try {
-        await addProperty(newPropertyData);
-        toast({ title: "Sucesso!", description: "Imóvel adicionado com sucesso." });
-        setPropertyDialogOpen(false);
-        await refreshProperties(); // Recarrega a lista do banco para garantir consistência
+      await addProperty(newPropertyData);
+      await refreshProperties(); // Força a recarga do banco
+      toast({ title: "Sucesso!", description: "Imóvel adicionado com sucesso." });
+      setPropertyDialogOpen(false);
     } catch (error) {
-        toast({ variant: "destructive", title: "Erro", description: "Não foi possível adicionar o imóvel." });
+      console.error("Error adding property:", error);
+      toast({ variant: "destructive", title: "Erro", description: "Não foi possível adicionar o imóvel." });
     } finally {
-        setIsSaving(false);
+      setIsSaving(false);
     }
   };
 
