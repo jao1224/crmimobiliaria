@@ -24,6 +24,7 @@ export default function CrmPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isLeadDialogOpen, setLeadDialogOpen] = useState(false);
     const [isDealDialogOpen, setDealDialogOpen] = useState(false);
+    const [isClientDialogOpen, setClientDialogOpen] = useState(false);
     const { toast } = useToast();
 
     // Carrega os dados iniciais
@@ -73,6 +74,28 @@ export default function CrmPage() {
             (event.target as HTMLFormElement).reset();
         } catch (error) {
             toast({ variant: "destructive", title: "Erro", description: "Não foi possível adicionar o lead." });
+        }
+    };
+
+    const handleAddClient = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        const formData = new FormData(event.currentTarget);
+        const newClientData = {
+            name: formData.get("name") as string,
+            source: formData.get("source") as string,
+            assignedTo: formData.get("assignedTo") as string,
+            document: formData.get("document") as string,
+            address: formData.get("address") as string,
+        };
+        
+        try {
+            await addClient(newClientData);
+            await refreshData();
+            toast({ title: "Sucesso!", description: "Cliente adicionado com sucesso." });
+            setClientDialogOpen(false);
+            (event.target as HTMLFormElement).reset();
+        } catch (error) {
+            toast({ variant: "destructive", title: "Erro", description: "Não foi possível adicionar o cliente." });
         }
     };
     
@@ -137,20 +160,58 @@ export default function CrmPage() {
                             <form onSubmit={handleAddLead}>
                                 <div className="grid gap-4 py-4">
                                     <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="name" className="text-right">Nome</Label>
-                                        <Input id="name" name="name" className="col-span-3" required />
+                                        <Label htmlFor="name-lead" className="text-right">Nome</Label>
+                                        <Input id="name-lead" name="name" className="col-span-3" required />
                                     </div>
                                     <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="source" className="text-right">Fonte</Label>
-                                        <Input id="source" name="source" className="col-span-3" required />
+                                        <Label htmlFor="source-lead" className="text-right">Fonte</Label>
+                                        <Input id="source-lead" name="source" className="col-span-3" required />
                                     </div>
                                     <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="assignedTo" className="text-right">Atribuído a</Label>
-                                        <Input id="assignedTo" name="assignedTo" className="col-span-3" required />
+                                        <Label htmlFor="assignedTo-lead" className="text-right">Atribuído a</Label>
+                                        <Input id="assignedTo-lead" name="assignedTo" className="col-span-3" required />
                                     </div>
                                 </div>
                                 <DialogFooter>
                                     <Button type="submit">Salvar Lead</Button>
+                                </DialogFooter>
+                            </form>
+                        </DialogContent>
+                    </Dialog>
+                    <Dialog open={isClientDialogOpen} onOpenChange={setClientDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button variant="outline">Adicionar Cliente</Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Adicionar Novo Cliente</DialogTitle>
+                                <DialogDescription>Preencha os detalhes abaixo para criar um novo cliente diretamente.</DialogDescription>
+                            </DialogHeader>
+                            <form onSubmit={handleAddClient}>
+                                <div className="grid gap-4 py-4">
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="name-client" className="text-right">Nome</Label>
+                                        <Input id="name-client" name="name" className="col-span-3" required />
+                                    </div>
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="source-client" className="text-right">Fonte</Label>
+                                        <Input id="source-client" name="source" className="col-span-3" required />
+                                    </div>
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="assignedTo-client" className="text-right">Atribuído a</Label>
+                                        <Input id="assignedTo-client" name="assignedTo" className="col-span-3" required />
+                                    </div>
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="document-client" className="text-right">Documento</Label>
+                                        <Input id="document-client" name="document" placeholder="CPF ou CNPJ" className="col-span-3" />
+                                    </div>
+                                     <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="address-client" className="text-right">Endereço</Label>
+                                        <Input id="address-client" name="address" placeholder="Endereço do cliente" className="col-span-3" />
+                                    </div>
+                                </div>
+                                <DialogFooter>
+                                    <Button type="submit">Salvar Cliente</Button>
                                 </DialogFooter>
                             </form>
                         </DialogContent>
