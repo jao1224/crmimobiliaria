@@ -8,7 +8,7 @@ export default function RegisterPage() {
      <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
         <div className="mx-auto grid w-full max-w-md gap-6">
            <div className="grid gap-2 text-center">
-             <Image src="/logo.png" alt="Ideal Imóveis Logo" width={60} height={60} className="mx-auto" />
+             
             <h1 className="text-3xl font-bold text-foreground">Crie sua Conta</h1>
             <p className="text-balance text-muted-foreground">
               Junte-se à plataforma para otimizar seu negócio imobiliário.

@@ -12,7 +12,7 @@ export default function LoginPage() {
         <div className="w-full max-w-sm">
           <div className="mx-auto grid gap-6">
             <div className="grid gap-4 text-center">
-              <Image src="/logo.png" alt="Ideal Imóveis Logo" width={60} height={60} className="mx-auto" />
+              
               <h1 className="text-3xl font-bold text-foreground">Ideal Imóveis</h1>
               <p className="text-balance text-muted-foreground">
                 Bem-vindo(a) de volta! Insira suas credenciais.
