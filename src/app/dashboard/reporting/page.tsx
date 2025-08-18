@@ -10,11 +10,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Download, Building, Users } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { getNegotiations, realtors, teams, propertyTypes, type Negotiation, getProperties, type Property } from "@/lib/data";
+import { getNegotiations, realtors, propertyTypes, type Negotiation, getProperties, type Property } from "@/lib/data";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+
+
+type Team = {
+    id: string;
+    name: string;
+    members: string[];
+};
+
 
 // --- DADOS DINÂMICOS ---
 
@@ -60,7 +70,7 @@ const processCaptureData = (properties: Property[]) => {
     };
 };
 
-const processTeamPerformanceData = (negotiations: Negotiation[], teamsData: typeof teams) => {
+const processTeamPerformanceData = (negotiations: Negotiation[], teamsData: Team[]) => {
     const performanceData: { [key: string]: { revenue: number, deals: number } } = {};
 
     teamsData.forEach(team => {
@@ -90,6 +100,7 @@ export default function ReportingPage() {
     const { toast } = useToast();
     const [negotiations, setNegotiations] = useState<Negotiation[]>([]);
     const [properties, setProperties] = useState<Property[]>([]);
+    const [teams, setTeams] = useState<Team[]>([]);
     const [activeTab, setActiveTab] = useState("sales");
 
     // Estados dos filtros
@@ -102,9 +113,14 @@ export default function ReportingPage() {
     
     useEffect(() => {
         const loadData = async () => {
-            const [negs, props] = await Promise.all([getNegotiations(), getProperties()]);
+             const [negs, props, teamsSnapshot] = await Promise.all([
+                getNegotiations(), 
+                getProperties(),
+                getDocs(collection(db, "teams"))
+            ]);
             setNegotiations(negs);
             setProperties(props);
+            setTeams(teamsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team)));
         };
         loadData();
     }, []);
@@ -131,7 +147,7 @@ export default function ReportingPage() {
 
             return realtorMatch && teamMatch && propertyTypeMatch && dateMatch && operationTypeMatch;
         });
-    }, [negotiations, realtorFilter, teamFilter, propertyTypeFilter, startDate, endDate, operationTypeFilter]);
+    }, [negotiations, realtorFilter, teamFilter, propertyTypeFilter, startDate, endDate, operationTypeFilter, teams]);
     
     // Simulação de filtragem de captações
     const filteredCaptures = useMemo(() => {
@@ -149,7 +165,7 @@ export default function ReportingPage() {
     const { realtorCaptures, propertyTypeCaptures } = useMemo(() => processCaptureData(operationTypeFilter === 'venda' ? [] : filteredCaptures), [filteredCaptures, operationTypeFilter]);
     
     // Dados de desempenho de equipe usam as negociações filtradas
-    const teamPerformanceData = useMemo(() => processTeamPerformanceData(filteredNegotiations, teams), [filteredNegotiations]);
+    const teamPerformanceData = useMemo(() => processTeamPerformanceData(filteredNegotiations, teams), [filteredNegotiations, teams]);
 
     const handleExport = () => {
         if (activeTab !== 'sales' || filteredNegotiations.length === 0) {
@@ -162,18 +178,21 @@ export default function ReportingPage() {
         }
 
         // Prepara os dados para o CSV
-        const dataToExport = filteredNegotiations.map(neg => ({
-            "ID Negociacao": neg.id,
-            "Imovel": neg.property,
-            "Cliente": neg.client,
-            "Vendedor": neg.salesperson,
-            "Captador": neg.realtor,
-            "Equipe": neg.team,
-            "Valor": neg.value,
-            "Data Conclusao": neg.completionDate ? new Date(neg.completionDate).toLocaleDateString('pt-BR') : 'N/A',
-            "Tipo": neg.type,
-            "Status Contrato": neg.contractStatus,
-        }));
+        const dataToExport = filteredNegotiations.map(neg => {
+            const team = teams.find(t => t.members.includes(neg.salesperson));
+            return {
+                "ID Negociacao": neg.id,
+                "Imovel": neg.property,
+                "Cliente": neg.client,
+                "Vendedor": neg.salesperson,
+                "Captador": neg.realtor,
+                "Equipe": team ? team.name : 'Sem Equipe',
+                "Valor": neg.value,
+                "Data Conclusao": neg.completionDate ? new Date(neg.completionDate).toLocaleDateString('pt-BR') : 'N/A',
+                "Tipo": neg.type,
+                "Status Contrato": neg.contractStatus,
+            };
+        });
         
         const headers = Object.keys(dataToExport[0]);
         // Escapa valores que contêm vírgulas ou aspas
@@ -398,3 +417,5 @@ export default function ReportingPage() {
         </div>
     )
 }
+
+    

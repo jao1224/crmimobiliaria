@@ -196,10 +196,6 @@ export type Activity = {
 // --- Dados estáticos ---
 export const realtors = ['Carlos Pereira', 'Sofia Lima', 'Joana Doe', 'Admin'];
 export const propertyTypes: PropertyType[] = ['Lançamento', 'Revenda', 'Terreno', 'Casa', 'Apartamento'];
-export const teams = [
-    { id: 'team-a', name: 'Equipe A', members: ['Carlos Pereira', 'Sofia Lima'] },
-    { id: 'team-b', name: 'Equipe B', members: ['Joana Doe', 'Admin'] },
-];
 
 // --- FUNÇÕES DE MANIPULAÇÃO DE DADOS (FIRESTORE) ---
 
@@ -486,3 +482,5 @@ export const updateActivityStatus = async (activityId: string, newStatus: Activi
     const activityRef = doc(db, "activities", activityId);
     await updateDoc(activityRef, { status: newStatus });
 };
+
+    
