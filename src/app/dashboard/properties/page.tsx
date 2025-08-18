@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import Image from "next/image";
@@ -21,7 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { PropertyMatcher } from "@/components/dashboard/property-matcher";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -58,6 +59,8 @@ export default function PropertiesPage() {
   const { toast } = useToast();
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const addPropertyFormRef = useRef<HTMLFormElement>(null);
+
 
   // Estados para filtros e ordenação
   const [statusFilter, setStatusFilter] = useState('all');
@@ -137,37 +140,39 @@ export default function PropertiesPage() {
 
 
   const handleAddProperty = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setIsSaving(true);
-    
-    const formData = new FormData(event.currentTarget);
-    
-    const newPropertyData: Omit<Property, 'id'> = {
-      name: formData.get("name") as string,
-      address: formData.get("address") as string,
-      status: "Disponível",
-      price: Number(formData.get("price")),
-      commission: Number(formData.get("commission")),
-      imageUrl: imagePreview || "https://placehold.co/600x400.png",
-      imageHint: "novo imovel",
-      capturedBy: "Admin", // Simulado, poderia ser o usuário logado
-      description: formData.get("description") as string,
-      ownerInfo: formData.get("owner") as string,
-      type: "Revenda", // Simulado
-    };
-    
-    try {
-        const newlyAddedProperty = await addProperty(newPropertyData);
-        setProperties(prevProperties => [newlyAddedProperty, ...prevProperties]);
-        toast({ title: "Sucesso!", description: "Imóvel adicionado com sucesso." });
-        setPropertyDialogOpen(false);
-    } catch (error) {
-        toast({ variant: "destructive", title: "Erro", description: "Não foi possível adicionar o imóvel." });
-    } finally {
-        setIsSaving(false);
-    }
+      event.preventDefault();
+      setIsSaving(true);
+      
+      const formData = new FormData(event.currentTarget);
+      
+      const newPropertyData: Omit<Property, 'id'> = {
+        name: formData.get("name") as string,
+        address: formData.get("address") as string,
+        status: "Disponível",
+        price: Number(formData.get("price")),
+        commission: Number(formData.get("commission")),
+        imageUrl: imagePreview || "https://placehold.co/600x400.png",
+        imageHint: "novo imovel",
+        capturedBy: "Admin", // Simulado, poderia ser o usuário logado
+        description: formData.get("description") as string,
+        ownerInfo: formData.get("owner") as string,
+        type: "Revenda", // Simulado
+      };
+      
+      try {
+          await addProperty(newPropertyData);
+          await refreshProperties(); // Recarrega do banco
+          toast({ title: "Sucesso!", description: "Imóvel adicionado com sucesso." });
+          setPropertyDialogOpen(false); // Fecha o dialog
+          addPropertyFormRef.current?.reset(); // Limpa o formulário
+          setImagePreview(null);
+      } catch (error) {
+          toast({ variant: "destructive", title: "Erro", description: "Não foi possível adicionar o imóvel." });
+      } finally {
+          setIsSaving(false);
+      }
   };
-  
+
   const handleUpdateProperty = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!editingProperty) return;
@@ -285,7 +290,7 @@ export default function PropertiesPage() {
               <Button>Adicionar Imóvel</Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-xl">
-              <form onSubmit={handleAddProperty}>
+              <form onSubmit={handleAddProperty} ref={addPropertyFormRef}>
                 <DialogHeader>
                   <DialogTitle>Adicionar Novo Imóvel</DialogTitle>
                   <DialogDescription>Preencha os detalhes abaixo para cadastrar um novo imóvel.</DialogDescription>
