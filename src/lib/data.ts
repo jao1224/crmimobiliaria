@@ -1,4 +1,5 @@
 
+
 import { db } from './firebase';
 import { collection, getDocs, addDoc, doc, updateDoc, writeBatch, serverTimestamp, query, orderBy, limit, where, getDoc, setDoc } from 'firebase/firestore';
 
@@ -39,6 +40,7 @@ export type Property = {
   capturedBy: string; // Corretor que captou o imóvel
   description?: string;
   ownerInfo?: string;
+  tenantId?: string; // CAMPO ADICIONADO PARA MULTI-TENANT
 };
 
 
@@ -64,6 +66,7 @@ export type Negotiation = {
     category: string;
     team: string;
     observations?: string;
+    tenantId?: string; // CAMPO ADICIONADO PARA MULTI-TENANT
 };
 
 // --- TIPOS PARA GESTÃO DE PROCESSOS ---
@@ -85,6 +88,7 @@ export type Commission = {
     paymentDate: string;
     status: 'Pago' | 'Pendente' | 'Vencido';
     notes?: string;
+    tenantId?: string; // CAMPO ADICIONADO PARA MULTI-TENANT
 };
 
 // --- NOVOS TIPOS PARA CORRESPONDENTE ---
@@ -128,6 +132,7 @@ export type FinancingProcess = {
     }
     generalStatus: GeneralProcessStatus;
     hasPendency: boolean; // para o ícone de alerta
+    tenantId?: string; // CAMPO ADICIONADO PARA MULTI-TENANT
 };
 
 export type ServiceRequestType = 'credit_approval' | 'engineering_report' | 'property_registration' | 'account_opening';
@@ -140,6 +145,7 @@ export type ServiceRequest = {
     propertyInfo: string;
     status: 'Pendente' | 'Em Análise' | 'Concluído';
     date: string;
+    tenantId?: string; // CAMPO ADICIONADO PARA MULTI-TENANT
 };
 
 export type EventType = 'personal' | 'company' | 'team_visit';
@@ -151,6 +157,7 @@ export type Event = {
     type: EventType;
     time: string;
     description: string;
+    tenantId?: string; // CAMPO ADICIONADO PARA MULTI-TENANT
 };
 
 export type PaymentCLT = {
@@ -160,6 +167,7 @@ export type PaymentCLT = {
     amount: number;
     paymentDate: string;
     status: 'Agendado' | 'Pago';
+    tenantId?: string; // CAMPO ADICIONADO PARA MULTI-TENANT
 };
 
 export type Expense = {
@@ -169,6 +177,7 @@ export type Expense = {
     amount: number;
     dueDate: string;
     status: 'Pendente' | 'Pago';
+    tenantId?: string; // CAMPO ADICIONADO PARA MULTI-TENANT
 };
 
 export type Notification = {
@@ -177,6 +186,7 @@ export type Notification = {
     description: string;
     createdAt: { seconds: number, nanoseconds: number };
     read: boolean;
+    tenantId?: string; // CAMPO ADICIONADO PARA MULTI-TENANT
 };
 
 // --- TIPO PARA O KANBAN DE ATIVIDADES ---
@@ -189,6 +199,7 @@ export type Activity = {
     value: number;
     status: ActivityStatus;
     relatedId: string; // ID original do Firestore (prop ou neg)
+    tenantId?: string; // CAMPO ADICIONADO PARA MULTI-TENANT
 };
 
 
@@ -202,9 +213,16 @@ export const teams = [
 
 // --- FUNÇÕES DE MANIPULAÇÃO DE DADOS (FIRESTORE) ---
 
-export const getProperties = async (): Promise<Property[]> => {
-    const propertiesCollection = collection(db, 'properties');
-    const snapshot = await getDocs(propertiesCollection);
+// EXEMPLO DE COMO A FUNÇÃO SERIA ADAPTADA
+// Em uma implementação real, você receberia o `tenantId` do usuário logado.
+export const getProperties = async (tenantId?: string): Promise<Property[]> => {
+    // Se um tenantId for fornecido, a consulta é filtrada.
+    // Caso contrário, ela busca tudo (comportamento atual, inseguro para multi-inquilino).
+    const propertiesQuery = tenantId 
+        ? query(collection(db, 'properties'), where("tenantId", "==", tenantId))
+        : collection(db, 'properties');
+
+    const snapshot = await getDocs(propertiesQuery);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Property));
 };
 
