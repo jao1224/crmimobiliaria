@@ -233,7 +233,7 @@ export default function PropertiesPage() {
     
     try {
         await deleteProperty(selectedProperty.id);
-        setProperties(prev => prev.filter(p => p.id !== selectedProperty.id));
+        await refreshProperties();
         toast({ title: "Imóvel Excluído", description: `O imóvel "${selectedProperty.name}" foi removido.` });
     } catch (error) {
         toast({ variant: "destructive", title: "Erro", description: "Não foi possível excluir o imóvel." });
