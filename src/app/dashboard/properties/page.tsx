@@ -48,6 +48,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 export default function PropertiesPage() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [isPropertyDialogOpen, setPropertyDialogOpen] = useState(false);
@@ -137,6 +138,8 @@ export default function PropertiesPage() {
 
   const handleAddProperty = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setIsSaving(true);
+    
     const formData = new FormData(event.currentTarget);
     
     const newPropertyData: Omit<Property, 'id'> = {
@@ -152,16 +155,23 @@ export default function PropertiesPage() {
       ownerInfo: formData.get("owner") as string,
       type: "Revenda", // Simulado
     };
-
-    await addProperty(newPropertyData);
-    await refreshProperties();
-    toast({ title: "Sucesso!", description: "Imóvel adicionado com sucesso." });
-    setPropertyDialogOpen(false);
+    
+    try {
+        await addProperty(newPropertyData);
+        await refreshProperties();
+        toast({ title: "Sucesso!", description: "Imóvel adicionado com sucesso." });
+        setPropertyDialogOpen(false);
+    } catch (error) {
+        toast({ variant: "destructive", title: "Erro", description: "Não foi possível adicionar o imóvel." });
+    } finally {
+        setIsSaving(false);
+    }
   };
   
   const handleUpdateProperty = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!editingProperty) return;
+    setIsSaving(true);
 
     const formData = new FormData(event.currentTarget);
     
@@ -178,11 +188,17 @@ export default function PropertiesPage() {
       status: formData.get("status") as Property['status'],
     };
     
-    await updateProperty(editingProperty.id, updatedPropertyData);
-    await refreshProperties();
-    toast({ title: "Sucesso!", description: "Imóvel atualizado com sucesso." });
-    setEditDialogOpen(false);
-    setEditingProperty(null);
+    try {
+      await updateProperty(editingProperty.id, updatedPropertyData);
+      await refreshProperties();
+      toast({ title: "Sucesso!", description: "Imóvel atualizado com sucesso." });
+      setEditDialogOpen(false);
+      setEditingProperty(null);
+    } catch (error) {
+      toast({ variant: "destructive", title: "Erro", description: "Não foi possível atualizar o imóvel." });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleCardClick = (property: Property) => {
@@ -269,11 +285,11 @@ export default function PropertiesPage() {
               <Button>Adicionar Imóvel</Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-xl">
-              <DialogHeader>
-                <DialogTitle>Adicionar Novo Imóvel</DialogTitle>
-                <DialogDescription>Preencha os detalhes abaixo para cadastrar um novo imóvel.</DialogDescription>
-              </DialogHeader>
               <form onSubmit={handleAddProperty}>
+                <DialogHeader>
+                  <DialogTitle>Adicionar Novo Imóvel</DialogTitle>
+                  <DialogDescription>Preencha os detalhes abaixo para cadastrar um novo imóvel.</DialogDescription>
+                </DialogHeader>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
                   <div className="space-y-2">
                     <Label htmlFor="name">Nome do Imóvel</Label>
@@ -314,8 +330,10 @@ export default function PropertiesPage() {
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setPropertyDialogOpen(false)}>Cancelar</Button>
-                  <Button type="submit">Salvar Imóvel</Button>
+                  <Button type="button" variant="outline" onClick={() => setPropertyDialogOpen(false)} disabled={isSaving}>Cancelar</Button>
+                  <Button type="submit" disabled={isSaving}>
+                    {isSaving ? "Salvando..." : "Salvar Imóvel"}
+                  </Button>
                 </DialogFooter>
               </form>
             </DialogContent>
@@ -629,8 +647,10 @@ export default function PropertiesPage() {
                 </div>
               </div>
               <DialogFooter className="pt-4 border-t">
-                <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>Cancelar</Button>
-                <Button type="submit">Salvar Alterações</Button>
+                <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)} disabled={isSaving}>Cancelar</Button>
+                <Button type="submit" disabled={isSaving}>
+                  {isSaving ? "Salvando..." : "Salvar Alterações"}
+                </Button>
               </DialogFooter>
             </form>
           )}
