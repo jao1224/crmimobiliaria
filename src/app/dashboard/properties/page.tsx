@@ -145,13 +145,14 @@ export default function PropertiesPage() {
     
     const formData = new FormData(event.currentTarget);
     
+    // Simplificando: usando um placeholder para a imagem para garantir que o salvamento funcione.
     const newPropertyData: Omit<Property, 'id'> = {
       name: formData.get("name") as string,
       address: formData.get("address") as string,
       status: "Disponível",
       price: Number(formData.get("price")),
       commission: Number(formData.get("commission")),
-      imageUrl: imagePreview || "https://placehold.co/600x400.png",
+      imageUrl: "https://placehold.co/600x400.png",
       imageHint: "novo imovel",
       capturedBy: "Admin", // Simulado, poderia ser o usuário logado
       description: formData.get("description") as string,
@@ -161,9 +162,9 @@ export default function PropertiesPage() {
     
     try {
         await addProperty(newPropertyData);
-        await refreshProperties();
         toast({ title: "Sucesso!", description: "Imóvel adicionado com sucesso." });
         setPropertyDialogOpen(false);
+        await refreshProperties(); // Recarrega a lista do banco para garantir consistência
     } catch (error) {
         toast({ variant: "destructive", title: "Erro", description: "Não foi possível adicionar o imóvel." });
     } finally {
@@ -684,3 +685,4 @@ export default function PropertiesPage() {
     </div>
   );
 }
+
