@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, History, Briefcase, Landmark } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
@@ -14,8 +14,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { addClient, addDeal, addLead, getClients, getDeals, getLeads, convertLeadToClient, type Client, type Deal, type Lead } from "@/lib/crm-data";
+import { getFinancingProcesses, getNegotiations, type FinancingProcess, type Negotiation } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Separator } from "@/components/ui/separator";
 
 export default function CrmPage() {
     const [leads, setLeads] = useState<Lead[]>([]);
@@ -26,6 +28,12 @@ export default function CrmPage() {
     const [isDealDialogOpen, setDealDialogOpen] = useState(false);
     const [isClientDialogOpen, setClientDialogOpen] = useState(false);
     const { toast } = useToast();
+
+    // Estados para o Histórico do Cliente
+    const [isHistoryOpen, setHistoryOpen] = useState(false);
+    const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+    const [clientHistory, setClientHistory] = useState<{ negotiations: Negotiation[], financings: FinancingProcess[] }>({ negotiations: [], financings: [] });
+    const [isHistoryLoading, setIsHistoryLoading] = useState(false);
 
     // Carrega os dados iniciais
     useEffect(() => {
@@ -52,6 +60,27 @@ export default function CrmPage() {
             });
         } finally {
             setIsLoading(false);
+        }
+    };
+    
+    const handleShowHistory = async (client: Client) => {
+        setSelectedClient(client);
+        setHistoryOpen(true);
+        setIsHistoryLoading(true);
+        try {
+            const [allNegotiations, allFinancings] = await Promise.all([
+                getNegotiations(),
+                getFinancingProcesses()
+            ]);
+            const clientNegotiations = allNegotiations.filter(n => n.clientId === client.id);
+            const negotiationIds = clientNegotiations.map(n => n.id);
+            const clientFinancings = allFinancings.filter(f => negotiationIds.includes(f.negotiationId));
+
+            setClientHistory({ negotiations: clientNegotiations, financings: clientFinancings });
+        } catch (error) {
+            toast({ variant: 'destructive', title: "Erro", description: "Não foi possível buscar o histórico do cliente."});
+        } finally {
+            setIsHistoryLoading(false);
         }
     };
 
@@ -141,6 +170,7 @@ export default function CrmPage() {
     };
 
     return (
+        <>
         <div className="flex flex-col gap-6">
             <div className="flex items-center justify-between">
                 <div>
@@ -393,7 +423,9 @@ export default function CrmPage() {
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                                                            <DropdownMenuItem>Ver Histórico</DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => handleShowHistory(client)}>
+                                                                <History className="mr-2 h-4 w-4"/>Ver Histórico
+                                                            </DropdownMenuItem>
                                                         </DropdownMenuContent>
                                                     </DropdownMenu>
                                                 </TableCell>
@@ -411,5 +443,71 @@ export default function CrmPage() {
                 </TabsContent>
             </Tabs>
         </div>
+        
+        {/* Modal de Histórico do Cliente */}
+        <Dialog open={isHistoryOpen} onOpenChange={setHistoryOpen}>
+            <DialogContent className="sm:max-w-2xl">
+                <DialogHeader>
+                    <DialogTitle>Histórico do Cliente: {selectedClient?.name}</DialogTitle>
+                    <DialogDescription>
+                        Todas as negociações e processos de financiamento vinculados a este cliente.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="max-h-[60vh] overflow-y-auto p-1">
+                    {isHistoryLoading ? (
+                        <div className="space-y-4">
+                            <Skeleton className="h-24 w-full" />
+                            <Skeleton className="h-24 w-full" />
+                        </div>
+                    ) : (
+                        <div className="space-y-6">
+                            <div>
+                                <h3 className="text-lg font-semibold flex items-center gap-2 mb-2"><Briefcase className="h-5 w-5"/>Negociações</h3>
+                                {clientHistory.negotiations.length > 0 ? (
+                                    <div className="space-y-2">
+                                        {clientHistory.negotiations.map(neg => (
+                                            <div key={neg.id} className="p-3 border rounded-md bg-muted/50">
+                                                <div className="flex justify-between items-start">
+                                                    <p className="font-semibold">{neg.property}</p>
+                                                    <Badge variant={neg.status === 'Finalizado' ? 'success' : 'secondary'}>{neg.status}</Badge>
+                                                </div>
+                                                <p className="text-sm text-muted-foreground">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(neg.value)}</p>
+                                                <p className="text-xs text-muted-foreground mt-1">Vendedor: {neg.salesperson} | Captador: {neg.realtor}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : <p className="text-sm text-muted-foreground">Nenhuma negociação encontrada.</p>}
+                            </div>
+
+                            <Separator/>
+
+                            <div>
+                                <h3 className="text-lg font-semibold flex items-center gap-2 mb-2"><Landmark className="h-5 w-5"/>Processos de Financiamento</h3>
+                                {clientHistory.financings.length > 0 ? (
+                                    <div className="space-y-2">
+                                    {clientHistory.financings.map(fin => (
+                                        <div key={fin.id} className="p-3 border rounded-md bg-muted/50">
+                                            <div className="flex justify-between items-start">
+                                                <p className="font-semibold">{fin.propertyName}</p>
+                                                <Badge variant={fin.generalStatus === 'Concluído' ? 'success' : 'secondary'}>{fin.generalStatus}</Badge>
+                                            </div>
+                                            <p className="text-sm text-muted-foreground">Status do Cliente: <Badge variant={fin.clientStatus === 'Aprovado' ? 'success' : 'destructive'}>{fin.clientStatus}</Badge></p>
+                                            {fin.hasPendency && <p className="text-xs text-destructive mt-1">Possui pendências</p>}
+                                        </div>
+                                    ))}
+                                </div>
+                                ) : <p className="text-sm text-muted-foreground">Nenhum processo de financiamento encontrado.</p>}
+                            </div>
+                        </div>
+                    )}
+                </div>
+                 <DialogFooter>
+                    <Button variant="outline" onClick={() => setHistoryOpen(false)}>Fechar</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+        </>
     )
 }
+
+    
