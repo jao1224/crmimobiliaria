@@ -25,3 +25,4 @@ export const allModules = [
     { id: "/dashboard/services", label: "Outros Serviços" },
     { id: "/dashboard/settings", label: "Configurações" },
 ];
+
