@@ -21,6 +21,7 @@ import {
   FileText,
   Landmark,
   FolderKanban,
+  Trash2,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -55,6 +56,12 @@ import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged, type User } from "firebase/auth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { doc, getDoc } from "firebase/firestore";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
+import { cn } from "@/lib/utils";
 
 
 export default function DashboardLayout({
@@ -119,7 +126,16 @@ export default function DashboardLayout({
       { href: "/dashboard/activity-feed", icon: Activity, label: "Feed de Atividades", tooltip: "Feed de Atividades" },
       { href: "/dashboard/properties", icon: Building2, label: "Imóveis", tooltip: "Imóveis" },
       { href: "/dashboard/crm", icon: Users, label: "CRM", tooltip: "CRM" },
-      { href: "/dashboard/negotiations", icon: Handshake, label: "Negociações", tooltip: "Negociações" },
+      { 
+        id: 'negotiations',
+        icon: Handshake, 
+        label: "Negociações", 
+        subItems: [
+          { href: "/dashboard/negotiations", label: "Ativas" },
+          { href: "/dashboard/negotiations/archived", label: "Arquivadas" },
+          { href: "/dashboard/negotiations/deleted", label: "Histórico de Exclusão" },
+        ]
+      },
       { href: "/dashboard/processes", icon: FileText, label: "Processos Admin", tooltip: "Processos Administrativos" },
       { href: "/dashboard/finance", icon: CircleDollarSign, label: "Financeiro", tooltip: "Financeiro" },
       { href: "/dashboard/agenda", icon: Calendar, label: "Agenda", tooltip: "Agenda" },
@@ -128,7 +144,15 @@ export default function DashboardLayout({
       { href: "/dashboard/services", icon: FolderKanban, label: "Outros Serviços", tooltip: "Outros Serviços" },
   ];
   
-  const visibleMenuItems = menuItems.filter(item => menuConfig[activeProfile].includes(item.href));
+  const isNegotiationsActive = pathname.startsWith('/dashboard/negotiations');
+  
+  const checkPermission = (path: string) => menuConfig[activeProfile].some(p => path.startsWith(p));
+  
+  const visibleMenuItems = menuItems.filter(item => {
+    if (item.href) return checkPermission(item.href);
+    if (item.subItems) return item.subItems.some(sub => checkPermission(sub.href));
+    return false;
+  });
 
 
   return (
@@ -142,20 +166,53 @@ export default function DashboardLayout({
           </SidebarHeader>
           <SidebarContent>
             <SidebarMenu>
-              {visibleMenuItems.map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton
-                    href={item.href}
-                    isActive={pathname === item.href}
-                    tooltip={item.tooltip}
-                    asChild
-                  >
-                    <Link href={item.href}>
-                      <item.icon />
-                      <span>{item.label}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+               {visibleMenuItems.map((item) => (
+                item.subItems ? (
+                  <Collapsible key={item.id} defaultOpen={isNegotiationsActive}>
+                    <SidebarMenuItem>
+                       <CollapsibleTrigger asChild>
+                           <SidebarMenuButton
+                              variant="default"
+                              className="w-full justify-start"
+                              isActive={isNegotiationsActive}
+                              tooltip={item.label}
+                            >
+                                <item.icon />
+                                <span>{item.label}</span>
+                            </SidebarMenuButton>
+                       </CollapsibleTrigger>
+                    </SidebarMenuItem>
+                    <CollapsibleContent>
+                        <SidebarMenuSub>
+                           {item.subItems.map(subItem => (
+                               <SidebarMenuSubItem key={subItem.href}>
+                                    <SidebarMenuSubButton
+                                        href={subItem.href}
+                                        isActive={pathname === subItem.href}
+                                        asChild
+                                    >
+                                        <Link href={subItem.href}>{subItem.label}</Link>
+                                    </SidebarMenuSubButton>
+                                </SidebarMenuSubItem>
+                           ))}
+                        </SidebarMenuSub>
+                    </CollapsibleContent>
+                  </Collapsible>
+                ) : (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                      href={item.href}
+                      isActive={pathname === item.href}
+                      tooltip={item.label}
+                      asChild
+                    >
+                      <Link href={item.href!}>
+                        <item.icon />
+                        <span>{item.label}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
               ))}
             </SidebarMenu>
           </SidebarContent>
@@ -247,3 +304,5 @@ export default function DashboardLayout({
     </ProfileProvider>
   );
 }
+
+    

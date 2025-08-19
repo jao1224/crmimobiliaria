@@ -7,18 +7,18 @@ import { Badge, badgeVariants } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, ArrowLeft, ArchiveX } from "lucide-react";
+import { MoreHorizontal, ArrowLeft, ArchiveRestore } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
-import { getNegotiations, type Negotiation, archiveNegotiation } from "@/lib/data";
+import { getNegotiations, type Negotiation, markAsDeleted } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, type User } from "firebase/auth";
 
-export default function ArchivedNegotiationsPage() {
+export default function DeletedNegotiationsPage() {
     const router = useRouter();
     const { activeProfile } = useContext(ProfileContext);
     const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -51,8 +51,8 @@ export default function ArchivedNegotiationsPage() {
         }
     };
 
-    const archivedNegotiations = useMemo(() => {
-        let negotiations = allNegotiations.filter(neg => neg.isArchived && !neg.isDeleted);
+    const deletedNegotiations = useMemo(() => {
+        let negotiations = allNegotiations.filter(neg => neg.isDeleted);
 
         if (currentUser && activeProfile !== 'Admin' && activeProfile !== 'Imobiliária') {
             negotiations = negotiations.filter(neg =>
@@ -64,9 +64,9 @@ export default function ArchivedNegotiationsPage() {
         return negotiations;
     }, [allNegotiations, activeProfile, currentUser]);
     
-    const handleUnarchiveNegotiation = async (negotiationId: string) => {
+    const handleRestoreNegotiation = async (negotiationId: string) => {
         try {
-            await archiveNegotiation(negotiationId, false);
+            await markAsDeleted(negotiationId, false);
             await refreshData();
             toast({ title: "Negociação Restaurada", description: "A negociação foi movida de volta para a lista principal." });
         } catch (error) {
@@ -85,16 +85,6 @@ export default function ArchivedNegotiationsPage() {
         }
     }
 
-    const getContractStatusVariant = (status: Negotiation['contractStatus']): VariantProps<typeof badgeVariants>['variant'] => {
-        switch (status) {
-            case 'Não Gerado': return 'destructive';
-            case 'Pendente Assinaturas': return 'status-orange';
-            case 'Assinado': return 'success';
-            case 'Cancelado': return 'destructive';
-            default: return 'secondary';
-        }
-    }
-
     return (
         <div className="flex flex-col gap-6">
             <div className="flex items-center gap-4">
@@ -103,16 +93,16 @@ export default function ArchivedNegotiationsPage() {
                     <span className="sr-only">Voltar</span>
                 </Button>
                 <div>
-                    <h1 className="text-2xl font-bold">Negociações Arquivadas</h1>
-                    <p className="text-muted-foreground">Veja as negociações que foram removidas da lista principal.</p>
+                    <h1 className="text-2xl font-bold">Histórico de Exclusão</h1>
+                    <p className="text-muted-foreground">Veja as negociações que foram marcadas como excluídas.</p>
                 </div>
             </div>
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Arquivo</CardTitle>
+                    <CardTitle>Negociações Excluídas</CardTitle>
                     <CardDescription>
-                        Esta é uma lista de todas as negociações que você arquivou.
+                        Esta é uma lista de todas as negociações que foram excluídas. Elas podem ser restauradas.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -135,8 +125,8 @@ export default function ArchivedNegotiationsPage() {
                                         <TableCell colSpan={5}><Skeleton className="h-8 w-full" /></TableCell>
                                     </TableRow>
                                 ))
-                            ) : archivedNegotiations.length > 0 ? (
-                                archivedNegotiations.map((neg) => (
+                            ) : deletedNegotiations.length > 0 ? (
+                                deletedNegotiations.map((neg) => (
                                 <TableRow key={neg.id}>
                                     <TableCell className="font-medium">{neg.property}</TableCell>
                                     <TableCell>{neg.client}</TableCell>
@@ -150,9 +140,9 @@ export default function ArchivedNegotiationsPage() {
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            onClick={() => handleUnarchiveNegotiation(neg.id)}
+                                            onClick={() => handleRestoreNegotiation(neg.id)}
                                         >
-                                            <ArchiveX className="mr-2 h-4 w-4" />
+                                            <ArchiveRestore className="mr-2 h-4 w-4" />
                                             Restaurar
                                         </Button>
                                     </TableCell>
@@ -160,7 +150,7 @@ export default function ArchivedNegotiationsPage() {
                             ))
                             ) : (
                                  <TableRow>
-                                    <TableCell colSpan={5} className="h-24 text-center">Nenhuma negociação arquivada.</TableCell>
+                                    <TableCell colSpan={5} className="h-24 text-center">Nenhuma negociação no histórico de exclusão.</TableCell>
                                  </TableRow>
                             )}
                         </TableBody>

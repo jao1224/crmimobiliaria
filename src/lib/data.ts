@@ -1,5 +1,4 @@
 
-
 import { db } from './firebase';
 import { collection, getDocs, addDoc, doc, updateDoc, writeBatch, serverTimestamp, query, orderBy, limit, where, getDoc, setDoc, deleteDoc, runTransaction } from 'firebase/firestore';
 
@@ -72,6 +71,7 @@ export type Negotiation = {
     team: string;
     observations?: string;
     isArchived?: boolean;
+    isDeleted?: boolean;
 };
 
 // --- TIPOS PARA GESTÃO DE PROCESSOS ---
@@ -289,22 +289,28 @@ export const updateNegotiation = async (id: string, data: Partial<Negotiation>):
     await updateDoc(doc(db, 'negotiations', id), data);
 };
 
-export const deleteNegotiation = async (id: string): Promise<void> => {
-    const negRef = doc(db, 'negotiations', id);
+export const markAsDeleted = async (id: string, deletedStatus: boolean): Promise<void> => {
+    const negRef = doc(db, "negotiations", id);
     const negSnap = await getDoc(negRef);
 
     if (negSnap.exists()) {
         const negotiation = negSnap.data() as Negotiation;
-        
-        const codePart = negotiation.propertyDisplayCode ? `(${negotiation.propertyDisplayCode})` : '';
-        const description = `Imóvel: ${negotiation.property} ${codePart}. Cliente: ${negotiation.client}.`;
-        
-        await addNotification({
-            title: "Negociação Excluída",
-            description: description,
-        });
+        await updateDoc(negRef, { isDeleted: deletedStatus });
 
-        await deleteDoc(negRef);
+        const codePart = negotiation.propertyDisplayCode ? `(${negotiation.propertyDisplayCode})` : '';
+        const description = `Imóvel: ${negotiation.property} ${codePart}. Vendedor: ${negotiation.salesperson}, Captador: ${negotiation.realtor}.`;
+
+        if (deletedStatus) {
+            await addNotification({
+                title: "Negociação Excluída",
+                description: description,
+            });
+        } else {
+             await addNotification({
+                title: "Negociação Restaurada",
+                description: `A negociação ${codePart} foi restaurada do histórico de exclusão.`,
+            });
+        }
     }
 };
 
@@ -573,3 +579,5 @@ export const updateActivityStatus = async (activityId: string, newStatus: Activi
         } catch(e) {}
     }
 };
+
+    
