@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useMemo, useContext } from "react";
@@ -7,6 +8,16 @@ import { Badge, badgeVariants } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,7 +28,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { getNegotiations, addNegotiation, type Negotiation, addFinancingProcess, completeSaleAndGenerateCommission, getProperties, type Property, updateNegotiation, getUsers, type User, archiveNegotiation } from "@/lib/data";
+import { getNegotiations, addNegotiation, type Negotiation, addFinancingProcess, completeSaleAndGenerateCommission, getProperties, type Property, updateNegotiation, getUsers, type User, archiveNegotiation, deleteNegotiation } from "@/lib/data";
 import { getClients, type Client } from "@/lib/crm-data";
 import { cn } from "@/lib/utils";
 import { ProfileContext } from "@/contexts/ProfileContext";
@@ -55,8 +66,9 @@ export default function NegotiationsPage() {
     const [availableProperties, setAvailableProperties] = useState<Property[]>([]);
     const [availableClients, setAvailableClients] = useState<Client[]>([]);
 
-    // Estados para o diálogo de atribuição
+    // Estados para o diálogo de atribuição e exclusão
     const [isAssignDialogOpen, setAssignDialogOpen] = useState(false);
+    const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [selectedNegotiation, setSelectedNegotiation] = useState<Negotiation | null>(null);
 
     useEffect(() => {
@@ -297,6 +309,25 @@ export default function NegotiationsPage() {
             toast({ variant: "destructive", title: "Erro", description: "Não foi possível arquivar a negociação." });
         }
     };
+
+    const handleOpenDeleteDialog = (negotiation: Negotiation) => {
+        setSelectedNegotiation(negotiation);
+        setDeleteDialogOpen(true);
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (!selectedNegotiation) return;
+        try {
+            await deleteNegotiation(selectedNegotiation.id);
+            await refreshData();
+            toast({ title: "Negociação Excluída", description: "A negociação foi removida permanentemente." });
+        } catch (error) {
+            toast({ variant: "destructive", title: "Erro", description: "Não foi possível excluir a negociação." });
+        } finally {
+            setDeleteDialogOpen(false);
+        }
+    };
+
 
     const handleAssignNegotiation = async (negotiationId: string, newSalespersonId: string) => {
         try {
@@ -603,6 +634,13 @@ export default function NegotiationsPage() {
                                                 >
                                                     Concluir Venda
                                                 </DropdownMenuItem>
+                                                 <DropdownMenuSeparator />
+                                                <DropdownMenuItem 
+                                                    className="text-destructive focus:text-destructive"
+                                                    onClick={(e) => { e.stopPropagation(); handleOpenDeleteDialog(neg); }}
+                                                >
+                                                    Excluir
+                                                </DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     </TableCell>
@@ -626,6 +664,28 @@ export default function NegotiationsPage() {
             users={allUsers}
             onAssign={handleAssignNegotiation}
         />
+        
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Esta ação não pode ser desfeita. Isso excluirá permanentemente a negociação
+                        para o imóvel "{selectedNegotiation?.property}".
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setDeleteDialogOpen(false)}>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction
+                        onClick={handleDeleteConfirm}
+                        className={cn(buttonVariants({ variant: "destructive" }))}
+                    >
+                        Excluir
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+
         </>
     );
 }

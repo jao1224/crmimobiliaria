@@ -1,4 +1,5 @@
 
+
 import { db } from './firebase';
 import { collection, getDocs, addDoc, doc, updateDoc, writeBatch, serverTimestamp, query, orderBy, limit, where, getDoc, setDoc, deleteDoc, runTransaction } from 'firebase/firestore';
 
@@ -286,6 +287,10 @@ export const addNegotiation = async (newNegotiation: Omit<Negotiation, 'id'>): P
 
 export const updateNegotiation = async (id: string, data: Partial<Negotiation>): Promise<void> => {
     await updateDoc(doc(db, 'negotiations', id), data);
+};
+
+export const deleteNegotiation = async (id: string): Promise<void> => {
+    await deleteDoc(doc(db, 'negotiations', id));
 };
 
 export const archiveNegotiation = async (id: string, archiveStatus: boolean): Promise<void> => {
