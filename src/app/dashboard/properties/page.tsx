@@ -95,23 +95,30 @@ export default function PropertiesPage() {
 
   const captadores = useMemo(() => {
     if (!properties || users.length === 0) return [];
-  
-    // 1. Pega todos os nomes únicos de 'capturedBy' dos imóveis
-    const uniqueCaptadorNames = [...new Set(properties.map(p => p.capturedBy).filter(Boolean))];
-  
-    // 2. Mapeia esses nomes para um objeto com nome e cargo
-    const captadorDetails = uniqueCaptadorNames.map(name => {
-      const user = users.find(u => u.name === name);
-      // Se encontrar um usuário, usa o cargo dele. Se não, trata o próprio nome como o cargo (ex: 'Admin')
-      const role = user ? user.role : name; 
-      return { name, role };
+
+    const captadorMap = new Map<string, { name: string; role: string }>();
+
+    properties.forEach(p => {
+        if (p.capturedBy) {
+            // Find the user whose name matches the `capturedBy` field.
+            const user = users.find(u => u.name === p.capturedBy);
+            if (user) {
+                // If user is found, use their details.
+                captadorMap.set(user.name, { name: user.name, role: user.role });
+            } else {
+                // If no user matches (e.g., legacy data like "Admin"), use the string as the name and role.
+                captadorMap.set(p.capturedBy, { name: p.capturedBy, role: p.capturedBy });
+            }
+        }
     });
-  
-    // 3. Ordena para consistência e adiciona a opção 'Todos'
+
+    const captadorDetails = Array.from(captadorMap.values());
     captadorDetails.sort((a, b) => a.name.localeCompare(b.name));
     
+    // Use 'all' as the value for the "all captadores" option.
     return [{ name: 'all', role: 'Todos' }, ...captadorDetails];
   }, [properties, users]);
+
 
 
   const filteredAndSortedProperties = useMemo(() => {
@@ -727,3 +734,5 @@ export default function PropertiesPage() {
     </div>
   );
 }
+
+    
