@@ -295,9 +295,10 @@ export const deleteNegotiation = async (id: string): Promise<void> => {
 
     if (negSnap.exists()) {
         const negotiation = negSnap.data() as Negotiation;
+        
         const codePart = negotiation.propertyDisplayCode ? `(${negotiation.propertyDisplayCode})` : '';
         const description = `Imóvel: ${negotiation.property} ${codePart}. Cliente: ${negotiation.client}.`;
-
+        
         await addNotification({
             title: "Negociação Excluída",
             description: description,

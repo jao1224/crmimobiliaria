@@ -28,7 +28,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { getNegotiations, addNegotiation, type Negotiation, addFinancingProcess, completeSaleAndGenerateCommission, getProperties, type Property, updateNegotiation, getUsers, type User, archiveNegotiation } from "@/lib/data";
+import { getNegotiations, addNegotiation, type Negotiation, addFinancingProcess, completeSaleAndGenerateCommission, getProperties, type Property, updateNegotiation, getUsers, type User, archiveNegotiation, deleteNegotiation } from "@/lib/data";
 import { getClients, type Client } from "@/lib/crm-data";
 import { cn } from "@/lib/utils";
 import { ProfileContext } from "@/contexts/ProfileContext";
@@ -319,12 +319,11 @@ export default function NegotiationsPage() {
     const handleDeleteConfirm = async () => {
         if (!selectedNegotiation) return;
         try {
-            // Alterado de deleteNegotiation para archiveNegotiation
-            await archiveNegotiation(selectedNegotiation.id, true);
+            await deleteNegotiation(selectedNegotiation.id);
             await refreshData();
-            toast({ title: "Negociação Enviada para o Arquivo", description: "A negociação foi movida para o histórico de arquivados." });
+            toast({ title: "Negociação Excluída", description: "A negociação foi removida permanentemente." });
         } catch (error) {
-            toast({ variant: "destructive", title: "Erro", description: "Não foi possível mover a negociação para o arquivo." });
+            toast({ variant: "destructive", title: "Erro", description: "Não foi possível excluir a negociação." });
         } finally {
             setDeleteDialogOpen(false);
         }
@@ -672,7 +671,7 @@ export default function NegotiationsPage() {
                 <AlertDialogHeader>
                     <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
                     <AlertDialogDescription>
-                        Esta ação não pode ser desfeita. Isso irá mover a negociação para o histórico de arquivados e removê-la da lista principal.
+                       Esta ação removerá permanentemente a negociação. Esta ação não pode ser desfeita, mas um registro da exclusão será mantido no Feed de Atividades.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -681,7 +680,7 @@ export default function NegotiationsPage() {
                         onClick={handleDeleteConfirm}
                         className={cn(buttonVariants({ variant: "destructive" }))}
                     >
-                        Excluir
+                        Excluir Permanentemente
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
@@ -690,4 +689,3 @@ export default function NegotiationsPage() {
         </>
     );
 }
-
