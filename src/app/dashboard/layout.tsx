@@ -50,9 +50,10 @@ import { Header } from "@/components/dashboard/header";
 import { useToast } from "@/hooks/use-toast";
 import { ProfileProvider } from "@/contexts/ProfileContext";
 import { type UserProfile, menuConfig, userProfiles } from "@/lib/permissions";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged, type User } from "firebase/auth";
 import { Skeleton } from "@/components/ui/skeleton";
+import { doc, getDoc } from "firebase/firestore";
 
 
 export default function DashboardLayout({
@@ -64,11 +65,31 @@ export default function DashboardLayout({
   const { toast } = useToast();
   const [activeProfile, setActiveProfile] = useState<UserProfile>('Admin');
   const [user, setUser] = useState<User | null>(null);
+  const [userRole, setUserRole] = useState<UserProfile | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+        // Buscar o cargo do usuário no Firestore
+        const userDocRef = doc(db, "users", currentUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+          const userData = userDocSnap.data();
+          const role = userData.role as UserProfile;
+          setUserRole(role);
+          // Define o perfil ativo inicial com base no cargo real do usuário
+          setActiveProfile(role);
+        } else {
+          // Fallback se não encontrar o documento
+          setUserRole('Corretor Autônomo');
+          setActiveProfile('Corretor Autônomo');
+        }
+      } else {
+        setUser(null);
+        setUserRole(null);
+      }
       setIsLoadingUser(false);
     });
     return () => unsubscribe();
@@ -180,11 +201,13 @@ export default function DashboardLayout({
                     <DropdownMenuContent side="right" align="start" className="w-56">
                       <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem>
-                        <UserCircle className="mr-2 h-4 w-4" />
-                        <span>Perfil</span>
+                      <DropdownMenuItem asChild>
+                         <Link href="/dashboard/settings">
+                            <UserCircle className="mr-2 h-4 w-4" />
+                            <span>Perfil</span>
+                        </Link>
                       </DropdownMenuItem>
-                      {activeProfile === 'Admin' && (
+                      {userRole === 'Admin' && (
                         <DropdownMenuSub>
                           <DropdownMenuSubTrigger>
                             <Eye className="mr-2 h-4 w-4" />
