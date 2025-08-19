@@ -1,3 +1,4 @@
+
 export type UserProfile = 'Admin' | 'Imobiliária' | 'Corretor Autônomo' | 'Investidor' | 'Construtora' | 'Financeiro';
 
 export const userProfiles: UserProfile[] = ['Admin', 'Imobiliária', 'Corretor Autônomo', 'Investidor', 'Construtora', 'Financeiro'];
@@ -8,7 +9,7 @@ export const menuConfig: Record<UserProfile, string[]> = {
     'Corretor Autônomo': ['/dashboard', '/dashboard/properties', '/dashboard/crm', '/dashboard/negotiations', '/dashboard/processes', '/dashboard/agenda', '/dashboard/reporting', '/dashboard/finance', '/dashboard/correspondent'],
     'Investidor': ['/dashboard', '/dashboard/properties', '/dashboard/finance', '/dashboard/negotiations', '/dashboard/agenda'],
     'Construtora': ['/dashboard', '/dashboard/properties', '/dashboard/negotiations', '/dashboard/finance', '/dashboard/agenda'],
-    'Financeiro': ['/dashboard', '/dashboard/finance', '/dashboard/reporting', '/dashboard/settings'],
+    'Financeiro': ['/dashboard', '/dashboard/finance', '/dashboard/reporting'],
 };
 
 export const allModules = [
