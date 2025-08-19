@@ -118,28 +118,23 @@ export default function DashboardLayout({
             </div>
           </SidebarHeader>
           <SidebarContent>
-            <div
-              className="flex-grow rounded-lg shadow-inner"
-              style={{ backgroundColor: "var(--sidebar-accent)"}}
-            >
-              <SidebarMenu>
-                {visibleMenuItems.map((item) => (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton
-                      href={item.href}
-                      isActive={pathname === item.href}
-                      tooltip={item.tooltip}
-                      asChild
-                    >
-                      <Link href={item.href}>
-                        <item.icon />
-                        <span>{item.label}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </div>
+            <SidebarMenu>
+              {visibleMenuItems.map((item) => (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton
+                    href={item.href}
+                    isActive={pathname === item.href}
+                    tooltip={item.tooltip}
+                    asChild
+                  >
+                    <Link href={item.href}>
+                      <item.icon />
+                      <span>{item.label}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
           </SidebarContent>
           <SidebarFooter>
             <SidebarMenu>
@@ -189,19 +184,21 @@ export default function DashboardLayout({
                         <UserCircle className="mr-2 h-4 w-4" />
                         <span>Perfil</span>
                       </DropdownMenuItem>
-                       <DropdownMenuSub>
-                        <DropdownMenuSubTrigger>
-                          <Eye className="mr-2 h-4 w-4" />
-                          <span>Visualizar como</span>
-                        </DropdownMenuSubTrigger>
-                        <DropdownMenuPortal>
-                          <DropdownMenuSubContent>
-                            {userProfiles.map(profile => (
-                                <DropdownMenuItem key={profile} onClick={() => handleProfileSwitch(profile)}>{profile}</DropdownMenuItem>
-                            ))}
-                          </DropdownMenuSubContent>
-                        </DropdownMenuPortal>
-                      </DropdownMenuSub>
+                      {activeProfile === 'Admin' && (
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger>
+                            <Eye className="mr-2 h-4 w-4" />
+                            <span>Visualizar como</span>
+                          </DropdownMenuSubTrigger>
+                          <DropdownMenuPortal>
+                            <DropdownMenuSubContent>
+                              {userProfiles.map(profile => (
+                                  <DropdownMenuItem key={profile} onClick={() => handleProfileSwitch(profile)}>{profile}</DropdownMenuItem>
+                              ))}
+                            </DropdownMenuSubContent>
+                          </DropdownMenuPortal>
+                        </DropdownMenuSub>
+                      )}
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
                         <Link href="/">
