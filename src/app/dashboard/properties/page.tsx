@@ -99,15 +99,25 @@ export default function PropertiesPage() {
     const captadorMap = new Map<string, { name: string; role: string }>();
 
     properties.forEach(p => {
-        if (p.capturedBy) {
-            // Find the user whose name matches the `capturedBy` field.
-            const user = users.find(u => u.name === p.capturedBy);
-            if (user) {
-                // If user is found, use their details.
-                captadorMap.set(user.name, { name: user.name, role: user.role });
-            } else {
-                // If no user matches (e.g., legacy data like "Admin"), use the string as the name and role.
-                captadorMap.set(p.capturedBy, { name: p.capturedBy, role: p.capturedBy });
+        if (!p.capturedBy) return;
+
+        let user: User | undefined;
+        // Se o captador for 'Admin', procure por um usuário com a função 'Admin'.
+        if (p.capturedBy === 'Admin') {
+            user = users.find(u => u.role === 'Admin');
+        } else {
+            // Caso contrário, procure pelo nome.
+            user = users.find(u => u.name === p.capturedBy);
+        }
+
+        if (user) {
+            // Usa o nome real do usuário encontrado.
+            captadorMap.set(user.name, { name: user.name, role: user.role });
+        } else {
+            // Fallback: se não encontrar um usuário, usa o valor do campo.
+            // Isso evita o 'Admin - Admin' se nenhum usuário com a função 'Admin' for encontrado.
+            if (!captadorMap.has(p.capturedBy)) {
+                 captadorMap.set(p.capturedBy, { name: p.capturedBy, role: 'N/A' });
             }
         }
     });
@@ -115,7 +125,7 @@ export default function PropertiesPage() {
     const captadorDetails = Array.from(captadorMap.values());
     captadorDetails.sort((a, b) => a.name.localeCompare(b.name));
     
-    // Use 'all' as the value for the "all captadores" option.
+    // Adiciona a opção "Todos"
     return [{ name: 'all', role: 'Todos' }, ...captadorDetails];
   }, [properties, users]);
 
