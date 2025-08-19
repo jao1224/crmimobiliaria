@@ -94,35 +94,24 @@ export default function PropertiesPage() {
 
 
   const captadores = useMemo(() => {
-    if (!properties || properties.length === 0 || users.length === 0) return [];
-
-    const captadorMap = new Map<string, string>();
-
-    properties.forEach(p => {
-        if (!p.capturedBy) return;
-
-        const user = users.find(u => u.name === p.capturedBy);
-        if (user) {
-            // Se encontrar um usuário correspondente, armazena o nome e o cargo
-            captadorMap.set(user.name, user.role);
-        } else {
-            // Se não encontrar (ex: "Admin" que não é um nome de usuário), 
-            // verifica se já não existe e adiciona com um cargo genérico ou o próprio nome.
-            if (!captadorMap.has(p.capturedBy)) {
-                 // Para o caso específico do 'Admin', o cargo é 'Admin'
-                const role = p.capturedBy === 'Admin' ? 'Admin' : 'N/A';
-                captadorMap.set(p.capturedBy, role);
-            }
-        }
+    if (!properties || users.length === 0) return [];
+  
+    // 1. Pega todos os nomes únicos de 'capturedBy' dos imóveis
+    const uniqueCaptadorNames = [...new Set(properties.map(p => p.capturedBy).filter(Boolean))];
+  
+    // 2. Mapeia esses nomes para um objeto com nome e cargo
+    const captadorDetails = uniqueCaptadorNames.map(name => {
+      const user = users.find(u => u.name === name);
+      // Se encontrar um usuário, usa o cargo dele. Se não, trata o próprio nome como o cargo (ex: 'Admin')
+      const role = user ? user.role : name; 
+      return { name, role };
     });
-
-    const captadorDetails = Array.from(captadorMap.entries()).map(([name, role]) => ({
-        name,
-        role,
-    }));
-
+  
+    // 3. Ordena para consistência e adiciona a opção 'Todos'
+    captadorDetails.sort((a, b) => a.name.localeCompare(b.name));
+    
     return [{ name: 'all', role: 'Todos' }, ...captadorDetails];
-}, [properties, users]);
+  }, [properties, users]);
 
 
   const filteredAndSortedProperties = useMemo(() => {
