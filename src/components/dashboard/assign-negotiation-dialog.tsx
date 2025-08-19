@@ -14,7 +14,7 @@ interface AssignNegotiationDialogProps {
     onOpenChange: (open: boolean) => void;
     negotiation: Negotiation | null;
     users: User[];
-    onAssign: (negotiationId: string, newSalesperson: string) => Promise<void>;
+    onAssign: (negotiationId: string, newSalespersonId: string) => Promise<void>;
 }
 
 export function AssignNegotiationDialog({
@@ -24,19 +24,18 @@ export function AssignNegotiationDialog({
     users,
     onAssign,
 }: AssignNegotiationDialogProps) {
-    const [selectedUser, setSelectedUser] = useState<string>("");
+    const [selectedUserId, setSelectedUserId] = useState<string>("");
     const [isSaving, setIsSaving] = useState(false);
     const { toast } = useToast();
 
     useEffect(() => {
-        // Preenche o valor inicial quando o diálogo é aberto com uma negociação
         if (negotiation) {
-            setSelectedUser(negotiation.salesperson);
+            setSelectedUserId(negotiation.salespersonId);
         }
     }, [negotiation]);
 
     const handleSubmit = async () => {
-        if (!negotiation || !selectedUser) {
+        if (!negotiation || !selectedUserId) {
             toast({
                 variant: "destructive",
                 title: "Erro",
@@ -46,7 +45,7 @@ export function AssignNegotiationDialog({
         }
 
         setIsSaving(true);
-        await onAssign(negotiation.id, selectedUser);
+        await onAssign(negotiation.id, selectedUserId);
         setIsSaving(false);
     };
 
@@ -66,14 +65,14 @@ export function AssignNegotiationDialog({
                         <p className="text-xs text-muted-foreground">ID: {negotiation?.id.toUpperCase()}</p>
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="realtor-select">Novo Responsável</Label>
-                        <Select value={selectedUser} onValueChange={setSelectedUser}>
+                        <Label htmlFor="realtor-select">Novo Responsável (Vendedor)</Label>
+                        <Select value={selectedUserId} onValueChange={setSelectedUserId}>
                             <SelectTrigger id="realtor-select">
                                 <SelectValue placeholder="Selecione um usuário" />
                             </SelectTrigger>
                             <SelectContent>
                                 {users.map((user) => (
-                                    <SelectItem key={user.id} value={user.name}>
+                                    <SelectItem key={user.id} value={user.id}>
                                         {user.name} - <span className="text-muted-foreground">{user.role}</span>
                                     </SelectItem>
                                 ))}
@@ -83,7 +82,7 @@ export function AssignNegotiationDialog({
                 </div>
                 <DialogFooter>
                     <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-                    <Button onClick={handleSubmit} disabled={isSaving || !selectedUser}>
+                    <Button onClick={handleSubmit} disabled={isSaving || !selectedUserId}>
                         {isSaving ? "Salvando..." : "Salvar Atribuição"}
                     </Button>
                 </DialogFooter>

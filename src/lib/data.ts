@@ -36,10 +36,11 @@ export type Property = {
   commission: number; // Armazenado como taxa percentual, ex: 2.5
   imageUrl: string;
   imageHint: string;
-  capturedBy: string; // Corretor que captou o imóvel
+  capturedBy: string; // Nome do corretor que captou
+  capturedById: string; // ID do corretor que captou
   description?: string;
   ownerInfo?: string;
-  team?: string; // CAMPO ADICIONADO PARA GESTÃO DE LOJAS/EQUIPES
+  team?: string; 
 };
 
 
@@ -54,11 +55,12 @@ export type Negotiation = {
     type: NegotiationType;
     value: number;
     salesperson: string;
+    salespersonId: string;
     realtor: string;
+    realtorId: string;
     contractStatus: ContractStatus;
-    completionDate: string | null; // Data de conclusão para relatórios
+    completionDate: string | null; 
     isFinanced?: boolean;
-    // Novos campos para a tabela de processos
     status: ProcessStatus;
     processStage: ProcessStage;
     negotiationType: string;
@@ -222,12 +224,16 @@ export const getPropertiesByRealtor = async (realtorName: string): Promise<Prope
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Property));
 };
 
-export const addProperty = async (newProperty: Omit<Property, 'id'>): Promise<string> => {
+export const addProperty = async (newProperty: Omit<Property, 'id' | 'capturedById'>, file?: File | null): Promise<string> => {
+    // Em um app real, aqui faríamos o upload da `file` para o Firebase Storage
+    // e pegaríamos a URL para salvar em `newProperty.imageUrl`.
+    // Por enquanto, a simulação continua.
     const docRef = await addDoc(collection(db, 'properties'), newProperty);
     return docRef.id;
 };
 
-export const updateProperty = async (id: string, data: Partial<Property>): Promise<void> => {
+export const updateProperty = async (id: string, data: Partial<Property>, file?: File | null): Promise<void> => {
+    // Lógica de upload similar a `addProperty` se uma nova `file` for fornecida.
     await updateDoc(doc(db, 'properties', id), data);
 };
 

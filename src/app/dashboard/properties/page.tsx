@@ -40,11 +40,11 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
-import type { Property, PropertyType } from "@/lib/data";
+import type { Property, PropertyType, User } from "@/lib/data";
 import { getProperties, addProperty, updateProperty, deleteProperty, propertyTypes, getUsers } from "@/lib/data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { auth } from "@/lib/firebase";
-import { onAuthStateChanged, type User } from "firebase/auth";
+import { onAuthStateChanged } from "firebase/auth";
 import { ProfileContext } from "@/contexts/ProfileContext";
 
 
@@ -74,7 +74,7 @@ export default function PropertiesPage() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-        setCurrentUser(user);
+        setCurrentUser(user as any); // Cast to any to access custom claims if needed later
     });
     return () => unsubscribe();
   }, []);
@@ -112,21 +112,14 @@ export default function PropertiesPage() {
 
     properties.forEach(p => {
         if (!p.capturedBy) return;
-
-        // Se o nome do captador já foi processado, pula.
         if (captadorMap.has(p.capturedBy)) return;
-
         let userFound = users.find(u => u.name === p.capturedBy);
-
-        // Caso especial para "Admin"
         if (p.capturedBy === 'Admin' && !userFound) {
             userFound = users.find(u => u.role === 'Admin');
         }
-
         if (userFound) {
             captadorMap.set(userFound.name, { name: userFound.name, role: userFound.role });
         } else {
-             // Se não encontrou usuário, adiciona o nome do captador como está mas sem cargo
              captadorMap.set(p.capturedBy, { name: p.capturedBy, role: 'N/A' });
         }
     });
@@ -134,7 +127,6 @@ export default function PropertiesPage() {
     const captadorDetails = Array.from(captadorMap.values());
     captadorDetails.sort((a, b) => a.name.localeCompare(b.name));
     
-    // O valor 'all' é para o select, não precisa de cargo.
     return [{ name: 'Todos os Captadores', role: 'all' }, ...captadorDetails];
 }, [properties, users]);
 
@@ -144,15 +136,12 @@ export default function PropertiesPage() {
     
     if (currentUser) {
         if (activeProfile === 'Corretor Autônomo' || activeProfile === 'Construtora') {
-            // Corretor e Construtora veem apenas os imóveis que eles mesmos capturaram.
-            filtered = filtered.filter(p => p.capturedBy === currentUser.displayName);
+            filtered = filtered.filter(p => p.capturedById === currentUser.uid);
         } else if (activeProfile === 'Investidor') {
-            // Investidor vê todos os disponíveis + os que ele mesmo capturou.
-            filtered = filtered.filter(p => p.status === 'Disponível' || p.capturedBy === currentUser.displayName);
+            filtered = filtered.filter(p => p.status === 'Disponível' || p.capturedById === currentUser.uid);
         }
     }
     
-    // Filtros de UI para perfis com visão mais ampla (Admin, Imobiliária)
     if (activeProfile === 'Admin' || activeProfile === 'Imobiliária') {
         if (statusFilter !== 'all') {
           filtered = filtered.filter(p => p.status === statusFilter);
@@ -212,6 +201,7 @@ export default function PropertiesPage() {
       imageUrl: "https://placehold.co/600x400.png",
       imageHint: "novo imovel",
       capturedBy: currentUser.displayName || "Usuário sem nome",
+      capturedById: currentUser.uid,
       description: formData.get("description") as string,
       ownerInfo: formData.get("owner") as string,
       type: formData.get("type") as PropertyType,
@@ -237,12 +227,15 @@ export default function PropertiesPage() {
 
     const formData = new FormData(event.currentTarget);
     
+    const selectedCaptador = users.find(u => u.id === formData.get("capturedById"));
+
     const updatedPropertyData: Partial<Property> = {
       name: formData.get("name") as string,
       address: formData.get("address") as string,
       price: Number(formData.get("price")),
       commission: Number(formData.get("commission")),
-      capturedBy: formData.get("capturedBy") as string,
+      capturedBy: selectedCaptador?.name || editingProperty.capturedBy,
+      capturedById: selectedCaptador?.id || editingProperty.capturedById,
       description: formData.get("description") as string,
       ownerInfo: formData.get("owner") as string,
       type: formData.get("type") as PropertyType,
@@ -698,11 +691,11 @@ export default function PropertiesPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="edit-capturedBy">Captado por</Label>
-                       <Select name="capturedBy" defaultValue={editingProperty.capturedBy} required>
+                      <Label htmlFor="edit-capturedById">Captado por</Label>
+                       <Select name="capturedById" defaultValue={editingProperty.capturedById} required>
                           <SelectTrigger><SelectValue/></SelectTrigger>
                           <SelectContent>
-                              {users.map(u => <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>)}
+                              {users.map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
                           </SelectContent>
                       </Select>
                     </div>

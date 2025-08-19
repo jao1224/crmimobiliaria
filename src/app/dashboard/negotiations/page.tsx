@@ -97,22 +97,14 @@ export default function NegotiationsPage() {
     const filteredNegotiations = useMemo(() => {
         let negotiations = [...allNegotiations];
 
-        // Filtro por perfil
-        if (currentUser) {
-            if (activeProfile === 'Corretor Autônomo' || activeProfile === 'Investidor') {
-                 negotiations = negotiations.filter(neg => 
-                    neg.realtor === currentUser.displayName || 
-                    neg.salesperson === currentUser.displayName || 
-                    neg.clientId === (currentUser as any).uid
-                );
-            } else if (activeProfile === 'Construtora') {
-                // Construtora vê negociações dos seus imóveis (onde ela é a captadora)
-                negotiations = negotiations.filter(neg => neg.realtor === currentUser.displayName);
-            }
+        if (currentUser && activeProfile !== 'Admin' && activeProfile !== 'Imobiliária') {
+            negotiations = negotiations.filter(neg => 
+                neg.realtorId === currentUser.id || 
+                neg.salespersonId === currentUser.id || 
+                neg.clientId === currentUser.id
+            );
         }
         
-
-        // Filtros da UI para Admin/Imobiliária
         if (activeProfile === 'Admin' || activeProfile === 'Imobiliária') {
             if (typeFilter !== 'all') {
                 negotiations = negotiations.filter(neg => neg.type.toLowerCase() === typeFilter);
@@ -121,12 +113,15 @@ export default function NegotiationsPage() {
                 negotiations = negotiations.filter(neg => neg.contractStatus.replace(/\s/g, '-').toLowerCase() === statusFilter);
             }
             if (realtorFilter !== 'all') {
-                negotiations = negotiations.filter(neg => neg.realtor === realtorFilter || neg.salesperson === realtorFilter);
+                const selectedUser = allUsers.find(u => u.id === realtorFilter);
+                if (selectedUser) {
+                    negotiations = negotiations.filter(neg => neg.realtorId === selectedUser.id || neg.salespersonId === selectedUser.id);
+                }
             }
         }
         
         return negotiations;
-    }, [allNegotiations, typeFilter, statusFilter, realtorFilter, activeProfile, currentUser]);
+    }, [allNegotiations, typeFilter, statusFilter, realtorFilter, activeProfile, currentUser, allUsers]);
 
 
     const handleSearch = async () => {
@@ -191,8 +186,8 @@ export default function NegotiationsPage() {
         }
         
         const formData = new FormData(event.currentTarget);
-        const responsibleSalesperson = formData.get('salesperson') as string || currentUser.displayName || "N/A";
-
+        const responsibleSalespersonId = formData.get('salespersonId') as string || currentUser.id;
+        const responsibleSalesperson = allUsers.find(u => u.id === responsibleSalespersonId);
 
         const newNegotiationData: Omit<Negotiation, 'id'> = {
             property: foundProperty.name,
@@ -204,8 +199,10 @@ export default function NegotiationsPage() {
             type: 'Venda',
             contractStatus: "Não Gerado",
             value: Number(proposalValue),
-            salesperson: responsibleSalesperson,
+            salesperson: responsibleSalesperson?.name || "N/A",
+            salespersonId: responsibleSalespersonId,
             realtor: foundProperty.capturedBy,
+            realtorId: foundProperty.capturedById,
             completionDate: null,
             isFinanced: isFinanced,
             status: 'Ativo',
@@ -288,9 +285,14 @@ export default function NegotiationsPage() {
         setAssignDialogOpen(true);
     };
 
-    const handleAssignNegotiation = async (negotiationId: string, newSalesperson: string) => {
+    const handleAssignNegotiation = async (negotiationId: string, newSalespersonId: string) => {
         try {
-            await updateNegotiation(negotiationId, { salesperson: newSalesperson });
+            const newSalesperson = allUsers.find(u => u.id === newSalespersonId);
+            if (!newSalesperson) {
+                toast({ variant: "destructive", title: "Erro", description: "Usuário selecionado não encontrado." });
+                return;
+            }
+            await updateNegotiation(negotiationId, { salesperson: newSalesperson.name, salespersonId: newSalesperson.id });
             await refreshData();
             toast({ title: "Sucesso!", description: "Negociação atribuída com sucesso." });
             setAssignDialogOpen(false);
@@ -409,14 +411,14 @@ export default function NegotiationsPage() {
                                     
                                      {(activeProfile === 'Admin' || activeProfile === 'Imobiliária') && (
                                         <div className="space-y-2">
-                                            <Label htmlFor="salesperson">Vendedor Responsável</Label>
-                                            <Select name="salesperson" defaultValue={currentUser?.displayName || ''}>
+                                            <Label htmlFor="salespersonId">Vendedor Responsável</Label>
+                                            <Select name="salespersonId" defaultValue={currentUser?.id || ''}>
                                                 <SelectTrigger className="w-full">
                                                     <SelectValue placeholder="Selecione um vendedor" />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    {allUsers.filter(u => u.role === 'Corretor Autônomo' || u.role === 'Admin' || u.role === 'Imobiliária').map(realtor => (
-                                                        <SelectItem key={realtor.id} value={realtor.name}>
+                                                    {allUsers.map(realtor => (
+                                                        <SelectItem key={realtor.id} value={realtor.id}>
                                                             {realtor.name}
                                                         </SelectItem>
                                                     ))}
@@ -476,7 +478,7 @@ export default function NegotiationsPage() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">Todos os Responsáveis</SelectItem>
-                                    {allUsers.map(r => <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>)}
+                                    {allUsers.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
                                 </SelectContent>
                             </Select>
                         </div>
