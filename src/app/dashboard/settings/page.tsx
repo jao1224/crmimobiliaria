@@ -564,7 +564,7 @@ export default function SettingsPage() {
                         <CardHeader>
                             <CardTitle>Gerenciador de Permissões por Perfil</CardTitle>
                             <CardDescription>
-                                Controle o acesso de cada perfil aos módulos do sistema. As alterações são salvas (simulado).
+                                Controle o acesso de cada perfil aos módulos do sistema.
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6">

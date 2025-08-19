@@ -22,6 +22,8 @@ import { getCommissions, type Commission, addCommission, getPayments, addPayment
 import { cn } from "@/lib/utils";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { auth } from "@/lib/firebase";
+import { onAuthStateChanged, type User } from "firebase/auth";
 
 
 const employees = ['Secretária Admin', 'Gerente de Vendas', 'Corretor A'];
@@ -39,6 +41,7 @@ const isExpenseOverdue = (expense: Expense) => {
 export default function FinancePage() {
     const { activeProfile } = useContext(ProfileContext);
     const hasPermission = financePermissions.includes(activeProfile);
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
 
     // Estados para Comissões
     const [commissions, setCommissions] = useState<Commission[]>([]);
@@ -58,16 +61,25 @@ export default function FinancePage() {
 
     const { toast } = useToast();
 
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            setCurrentUser(user);
+        });
+        return () => unsubscribe();
+    }, []);
+
     // Carrega dados iniciais
     useEffect(() => {
-        refreshFinanceData();
-        const fetchNegotiations = async () => {
-            const negs = await getNegotiations();
-            // Filtra para negociações que podem gerar comissão
-            setNegotiations(negs.filter(n => n.status === 'Finalizado' || n.stage === 'Venda Concluída'));
-        };
-        fetchNegotiations();
-    }, []);
+        if (currentUser !== undefined) { // Garante que a verificação do usuário já ocorreu
+            refreshFinanceData();
+            const fetchNegotiations = async () => {
+                const negs = await getNegotiations();
+                // Filtra para negociações que podem gerar comissão
+                setNegotiations(negs.filter(n => n.status === 'Finalizado' || n.stage === 'Venda Concluída'));
+            };
+            fetchNegotiations();
+        }
+    }, [currentUser]);
 
     const refreshFinanceData = async () => {
         setIsLoading(true);
@@ -88,11 +100,15 @@ export default function FinancePage() {
     };
 
     // Lógica de Comissões
-    const visibleCommissions = commissions.filter(c => {
-        if (hasPermission) return true;
-        if (activeProfile === 'Corretor Autônomo' && (c.realtorName === 'Carlos Pereira' || c.salespersonName === 'Carlos Pereira')) return true; 
-        return false;
-    });
+    const visibleCommissions = useMemo(() => {
+        if (!currentUser) return [];
+        return commissions.filter(c => {
+            if (hasPermission) return true;
+            if (activeProfile === 'Corretor Autônomo' && (c.realtorName === currentUser.displayName || c.salespersonName === currentUser.displayName)) return true;
+            return false;
+        });
+    }, [commissions, activeProfile, hasPermission, currentUser]);
+
     const totalCommission = visibleCommissions.reduce((sum, item) => sum + item.commissionValue, 0);
     const paidCommission = visibleCommissions.filter(c => c.status === 'Pago').reduce((sum, item) => sum + item.commissionValue, 0);
     const pendingCommission = totalCommission - paidCommission;

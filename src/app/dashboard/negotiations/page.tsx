@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useContext } from "react";
 import { useRouter } from "next/navigation";
 import { Badge, badgeVariants } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,12 +20,17 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { getNegotiations, addNegotiation, realtors, type Negotiation, addFinancingProcess, completeSaleAndGenerateCommission, getProperties, type Property, updateNegotiation } from "@/lib/data";
 import { getClients, type Client } from "@/lib/crm-data";
 import { cn } from "@/lib/utils";
+import { ProfileContext } from "@/contexts/ProfileContext";
+import { auth } from "@/lib/firebase";
+import { onAuthStateChanged, type User } from "firebase/auth";
 
 export default function NegotiationsPage() {
     const router = useRouter();
+    const { activeProfile } = useContext(ProfileContext);
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
+
     const [allNegotiations, setAllNegotiations] = useState<Negotiation[]>([]);
-    const [filteredNegotiations, setFilteredNegotiations] = useState<Negotiation[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
     const [isNewNegotiationOpen, setNewNegotiationOpen] = useState(false);
     const { toast } = useToast();
     
@@ -48,25 +53,32 @@ export default function NegotiationsPage() {
     const [availableClients, setAvailableClients] = useState<Client[]>([]);
 
     useEffect(() => {
-        // Apenas carrega os dados para os dropdowns, não a tabela principal
-        const fetchDropdownData = async () => {
-             const [props, clients] = await Promise.all([
-                getProperties(),
-                getClients()
-            ]);
-            setAvailableProperties(props.filter(p => p.status === 'Disponível'));
-            setAvailableClients(clients);
-        }
-        fetchDropdownData();
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            setCurrentUser(user);
+        });
+        return () => unsubscribe();
     }, []);
+
+    useEffect(() => {
+        if (currentUser !== undefined) {
+             const fetchDropdownData = async () => {
+                 const [props, clients] = await Promise.all([
+                    getProperties(),
+                    getClients()
+                ]);
+                setAvailableProperties(props.filter(p => p.status === 'Disponível'));
+                setAvailableClients(clients);
+            }
+            fetchDropdownData();
+            refreshData();
+        }
+    }, [currentUser]);
     
     const refreshData = async () => {
         setIsLoading(true);
         try {
             const data = await getNegotiations();
             setAllNegotiations(data);
-            // Inicialmente, a lista filtrada é a mesma da completa
-            setFilteredNegotiations(data);
         } catch (error) {
             toast({ variant: 'destructive', title: "Erro ao buscar negociações" });
         } finally {
@@ -74,32 +86,34 @@ export default function NegotiationsPage() {
         }
     };
     
+    const filteredNegotiations = useMemo(() => {
+        let negotiations = [...allNegotiations];
+
+        // Filtro por perfil de Corretor
+        if (activeProfile === 'Corretor Autônomo' && currentUser) {
+            negotiations = negotiations.filter(neg => 
+                neg.realtor === currentUser.displayName || neg.salesperson === currentUser.displayName
+            );
+        }
+
+        if (typeFilter !== 'all') {
+            negotiations = negotiations.filter(neg => neg.type.toLowerCase() === typeFilter);
+        }
+        if (statusFilter !== 'all') {
+             negotiations = negotiations.filter(neg => neg.contractStatus.replace(/\s/g, '-').toLowerCase() === statusFilter);
+        }
+        if (realtorFilter !== 'all') {
+             negotiations = negotiations.filter(neg => neg.realtor === realtorFilter);
+        }
+        return negotiations;
+    }, [allNegotiations, typeFilter, statusFilter, realtorFilter, activeProfile, currentUser]);
+
     // Função para aplicar os filtros manualmente
     const applyFilters = () => {
-        setIsLoading(true);
-        // Simula uma busca assíncrona
-        setTimeout(() => {
-            let negotiations = [...allNegotiations];
-            
-            if (typeFilter !== 'all') {
-                negotiations = negotiations.filter(neg => neg.type.toLowerCase() === typeFilter);
-            }
-            if (statusFilter !== 'all') {
-                 negotiations = negotiations.filter(neg => neg.contractStatus.replace(/\s/g, '-').toLowerCase() === statusFilter);
-            }
-            if (realtorFilter !== 'all') {
-                 negotiations = negotiations.filter(neg => neg.realtor === realtorFilter);
-            }
-            setFilteredNegotiations(negotiations);
-            setIsLoading(false);
-        }, 500);
+        // A filtragem agora é reativa com o `useMemo`, então este botão pode ser usado para forçar um refresh se necessário.
+        // Por enquanto, ele não precisa fazer nada.
+        toast({ title: "Filtros aplicados." });
     };
-
-    // Carrega os dados na primeira vez
-    useEffect(() => {
-        refreshData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
 
     const handleSearch = async () => {
         setIsSearching(true);
@@ -157,8 +171,8 @@ export default function NegotiationsPage() {
     const handleAddNegotiation = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
-        if (!foundProperty || !foundClient) {
-            toast({ variant: 'destructive', title: "Erro", description: "Busque e confirme os dados do imóvel e do cliente." });
+        if (!foundProperty || !foundClient || !currentUser) {
+            toast({ variant: 'destructive', title: "Erro", description: "Busque e confirme os dados do imóvel, do cliente e esteja logado." });
             return;
         }
 
@@ -172,7 +186,7 @@ export default function NegotiationsPage() {
             type: 'Venda',
             contractStatus: "Não Gerado",
             value: Number(proposalValue),
-            salesperson: "Joana Doe", // Simulado
+            salesperson: currentUser.displayName || "N/A",
             realtor: foundProperty.capturedBy,
             completionDate: null,
             isFinanced: isFinanced,
@@ -375,8 +389,9 @@ export default function NegotiationsPage() {
                     <CardTitle>Negociações em Andamento</CardTitle>
                     <div className="flex flex-wrap items-center justify-between gap-4">
                         <CardDescription>
-                           Selecione os filtros e clique em "Aplicar Filtros" para buscar as negociações.
+                           Selecione os filtros para buscar as negociações.
                         </CardDescription>
+                         {(activeProfile === 'Admin' || activeProfile === 'Imobiliária') && (
                         <div className="flex flex-wrap items-center gap-2">
                              <Select value={typeFilter} onValueChange={setTypeFilter}>
                                 <SelectTrigger className="w-full sm:w-[150px]">
@@ -409,11 +424,8 @@ export default function NegotiationsPage() {
                                     {realtors.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                                 </SelectContent>
                             </Select>
-                             <Button onClick={applyFilters} disabled={isLoading}>
-                                <Search className="mr-2 h-4 w-4" />
-                                {isLoading ? "Buscando..." : "Aplicar Filtros"}
-                            </Button>
                         </div>
+                        )}
                     </div>
                 </CardHeader>
                 <CardContent>

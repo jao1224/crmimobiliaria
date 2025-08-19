@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ProfileContext } from "@/contexts/ProfileContext";
+import { auth } from "@/lib/firebase";
+import { onAuthStateChanged, type User } from "firebase/auth";
 
 
 const getStatusVariant = (status: ProcessStatus) => {
@@ -37,6 +40,8 @@ const getStageVariant = (stage: ProcessStage) => {
 };
 
 export default function ProcessesPage() {
+    const { activeProfile } = useContext(ProfileContext);
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [processes, setProcesses] = useState<Negotiation[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [selectedProcess, setSelectedProcess] = useState<Negotiation | null>(null);
@@ -47,8 +52,17 @@ export default function ProcessesPage() {
     const { toast } = useToast();
 
     useEffect(() => {
-        refreshProcesses();
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            setCurrentUser(user);
+        });
+        return () => unsubscribe();
     }, []);
+
+    useEffect(() => {
+        if (currentUser !== undefined) {
+            refreshProcesses();
+        }
+    }, [currentUser]);
 
     const refreshProcesses = async () => {
         setIsLoading(true);
@@ -61,6 +75,18 @@ export default function ProcessesPage() {
             setIsLoading(false);
         }
     };
+    
+    const filteredProcesses = useMemo(() => {
+        if (activeProfile === 'Admin' || activeProfile === 'Imobiliária') {
+            return processes;
+        }
+        if (currentUser) {
+            return processes.filter(p => 
+                p.realtor === currentUser.displayName || p.salesperson === currentUser.displayName
+            );
+        }
+        return [];
+    }, [processes, activeProfile, currentUser]);
 
     const handleOpenPendencyModal = (process: Negotiation) => {
         setSelectedProcess(process);
@@ -141,8 +167,8 @@ export default function ProcessesPage() {
                                         <TableCell colSpan={11}><Skeleton className="h-8 w-full" /></TableCell>
                                     </TableRow>
                                 ))
-                            ) : processes.length > 0 ? (
-                                processes.map(process => (
+                            ) : filteredProcesses.length > 0 ? (
+                                filteredProcesses.map(process => (
                                     <TableRow key={process.id} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
                                         <TableCell><Badge variant={getStatusVariant(process.status)}>{process.status}</Badge></TableCell>
                                         <TableCell className="font-mono text-xs">{process.id.toUpperCase()}</TableCell>

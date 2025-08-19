@@ -29,14 +29,14 @@ const agendaTabs: { id: EventType, label: string }[] = [
 
 const agendaPermissions: Record<EventType, UserProfile[]> = {
     'personal': ['Admin', 'Imobiliária', 'Corretor Autônomo', 'Investidor', 'Construtora', 'Financeiro'], // Todos têm agenda pessoal
-    'company': ['Admin', 'Imobiliária'], // Apenas Admin/Imobiliária podem editar, mas todos podem ver
-    'team_visit': ['Admin', 'Imobiliária', 'Corretor Autônomo', 'Construtora'] // Perfis que participam de visitas
+    'company': ['Admin', 'Imobiliária', 'Corretor Autônomo', 'Investidor', 'Construtora', 'Financeiro'], // Todos podem ver
+    'team_visit': ['Admin', 'Imobiliária', 'Construtora'] // Apenas perfis de equipe
 };
 
 const editPermissions: Record<EventType, UserProfile[]> = {
     'personal': ['Admin', 'Imobiliária', 'Corretor Autônomo', 'Investidor', 'Construtora', 'Financeiro'], // Cada um edita a sua
     'company': ['Admin', 'Imobiliária'], // Apenas Admin/Imobiliária editam a agenda geral
-    'team_visit': ['Admin', 'Imobiliária', 'Corretor Autônomo'] // Corretores e Admins podem marcar visitas
+    'team_visit': ['Admin', 'Imobiliária'] // Apenas Admins podem marcar visitas em equipe
 };
 
 
@@ -44,12 +44,7 @@ export default function AgendaPage() {
     const { activeProfile } = useContext(ProfileContext);
 
     const visibleTabs = useMemo(() => {
-        return agendaTabs.filter(tab => {
-            // Todos podem ver a agenda da imobiliária
-            if (tab.id === 'company') return true;
-            // Para outras agendas, verificar permissão
-            return agendaPermissions[tab.id].includes(activeProfile);
-        });
+        return agendaTabs.filter(tab => agendaPermissions[tab.id].includes(activeProfile));
     }, [activeProfile]);
     
     const [events, setEvents] = useState<Event[]>([]);

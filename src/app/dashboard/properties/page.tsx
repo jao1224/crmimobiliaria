@@ -21,7 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { PropertyMatcher } from "@/components/dashboard/property-matcher";
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useContext } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -45,11 +45,13 @@ import { getProperties, addProperty, realtors, updateProperty, deleteProperty, p
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, type User } from "firebase/auth";
+import { ProfileContext } from "@/contexts/ProfileContext";
 
 
 export default function PropertiesPage() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const { activeProfile } = useContext(ProfileContext);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -71,12 +73,16 @@ export default function PropertiesPage() {
   const [sortOrder, setSortOrder] = useState('default'); // 'price-asc', 'price-desc'
 
   useEffect(() => {
-    refreshProperties();
     const unsubscribe = onAuthStateChanged(auth, (user) => {
         setCurrentUser(user);
     });
+    
+    // Este useEffect agora depende do estado do currentUser
+    if (currentUser !== undefined) {
+        refreshProperties();
+    }
     return () => unsubscribe();
-  }, []);
+  }, [currentUser]);
 
   const refreshProperties = async () => {
     setIsLoading(true);
@@ -101,50 +107,53 @@ export default function PropertiesPage() {
 
 
   const captadores = useMemo(() => {
-    if (!properties || users.length === 0) return [{ name: 'all', role: 'Todos' }];
-  
     const captadorMap = new Map<string, { name: string; role: string }>();
-  
+
     properties.forEach(p => {
-      if (!p.capturedBy) return;
-  
-      // Encontra o usuário que corresponde ao nome do captador
-      const user = users.find(u => u.name === p.capturedBy);
-  
-      if (user) {
-        // Se o usuário for encontrado, usa seu nome e cargo
-        captadorMap.set(user.name, { name: user.name, role: user.role });
-      } else {
-        // Fallback: Se não encontrar um usuário (ex: 'Admin' literal ou um nome antigo),
-        // procura se algum usuário tem o cargo de Admin para usar o nome dele.
-        const adminUser = users.find(u => u.role === 'Admin');
-        if (p.capturedBy === 'Admin' && adminUser) {
-          captadorMap.set(adminUser.name, { name: adminUser.name, role: adminUser.role });
-        } else if (!captadorMap.has(p.capturedBy)) {
-          // Se não for 'Admin' e não houver usuário, adiciona com cargo N/A
-          captadorMap.set(p.capturedBy, { name: p.capturedBy, role: 'N/A' });
+        if (!p.capturedBy) return;
+
+        // Se o nome do captador já foi processado, pula.
+        if (captadorMap.has(p.capturedBy)) return;
+
+        const user = users.find(u => u.name === p.capturedBy);
+        if (user) {
+            captadorMap.set(user.name, { name: user.name, role: user.role });
+        } else {
+             // Caso especial para "Admin": encontrar o usuário com a role de Admin
+             if (p.capturedBy === 'Admin') {
+                const adminUser = users.find(u => u.role === 'Admin');
+                if (adminUser && !captadorMap.has(adminUser.name)) {
+                     captadorMap.set(adminUser.name, { name: adminUser.name, role: adminUser.role });
+                }
+             } else {
+                captadorMap.set(p.capturedBy, { name: p.capturedBy, role: 'N/A' });
+             }
         }
-      }
     });
-  
+
     const captadorDetails = Array.from(captadorMap.values());
     captadorDetails.sort((a, b) => a.name.localeCompare(b.name));
     
     return [{ name: 'all', role: 'Todos' }, ...captadorDetails];
-  }, [properties, users]);
+}, [properties, users]);
 
 
 
   const filteredAndSortedProperties = useMemo(() => {
-    if (!properties) return [];
     let filtered = [...properties];
+    
+    // Aplicar filtro por perfil
+    if (activeProfile === 'Corretor Autônomo' && currentUser) {
+        filtered = filtered.filter(p => p.capturedBy === currentUser.displayName);
+    } else {
+        // Aplicar filtros de UI apenas para outros perfis
+        if (statusFilter !== 'all') {
+          filtered = filtered.filter(p => p.status === statusFilter);
+        }
 
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(p => p.status === statusFilter);
-    }
-
-    if (captadorFilter !== 'all') {
-      filtered = filtered.filter(p => p.capturedBy === captadorFilter);
+        if (captadorFilter !== 'all') {
+          filtered = filtered.filter(p => p.capturedBy === captadorFilter);
+        }
     }
     
     if (sortOrder === 'price-asc') {
@@ -154,7 +163,7 @@ export default function PropertiesPage() {
     }
 
     return filtered;
-  }, [properties, statusFilter, captadorFilter, sortOrder]);
+  }, [properties, statusFilter, captadorFilter, sortOrder, activeProfile, currentUser]);
 
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -419,6 +428,7 @@ export default function PropertiesPage() {
              <CardDescription>
                 Uma lista de todos os imóveis em seu portfólio.
              </CardDescription>
+              {activeProfile !== 'Corretor Autônomo' && (
               <div className="flex flex-wrap items-center gap-2">
                  <Select value={statusFilter} onValueChange={setStatusFilter}>
                     <SelectTrigger className="w-full sm:w-auto min-w-[150px]">
@@ -454,6 +464,7 @@ export default function PropertiesPage() {
                     </SelectContent>
                 </Select>
               </div>
+              )}
           </div>
         </CardHeader>
         <CardContent>
