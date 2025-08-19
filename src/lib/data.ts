@@ -295,7 +295,8 @@ export const archiveNegotiation = async (id: string, archiveStatus: boolean): Pr
         const negotiation = negSnap.data() as Negotiation;
         await updateDoc(negRef, { isArchived: archiveStatus });
 
-        const description = `Imóvel: ${negotiation.property} (${negotiation.propertyDisplayCode}). Vendedor: ${negotiation.salesperson}, Captador: ${negotiation.realtor}.`;
+        const codePart = negotiation.propertyDisplayCode ? `(${negotiation.propertyDisplayCode})` : '';
+        const description = `Imóvel: ${negotiation.property} ${codePart}. Vendedor: ${negotiation.salesperson}, Captador: ${negotiation.realtor}.`;
 
         if (archiveStatus) {
             await addNotification({

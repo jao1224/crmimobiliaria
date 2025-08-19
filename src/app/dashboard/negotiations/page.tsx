@@ -385,7 +385,7 @@ export default function NegotiationsPage() {
                                                 <SelectContent>
                                                     {availableClients.map(cli => (
                                                         <SelectItem key={cli.id} value={cli.id}>
-                                                            {cli.name} ({cli.id.toUpperCase()})
+                                                            {cli.name}
                                                         </SelectItem>
                                                     ))}
                                                 </SelectContent>
