@@ -82,7 +82,9 @@ export default function ProcessesPage() {
         }
         if (currentUser) {
             return processes.filter(p => 
-                p.realtor === currentUser.displayName || p.salesperson === currentUser.displayName || p.client === currentUser.displayName
+                p.realtor === currentUser.displayName || 
+                p.salesperson === currentUser.displayName ||
+                p.client === currentUser.displayName
             );
         }
         return [];

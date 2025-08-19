@@ -95,19 +95,27 @@ export default function NegotiationsPage() {
         // Filtro por perfil
         if ((activeProfile === 'Corretor Autônomo' || activeProfile === 'Investidor') && currentUser) {
             negotiations = negotiations.filter(neg => 
-                neg.realtor === currentUser.displayName || neg.salesperson === currentUser.displayName || neg.client === currentUser.displayName
+                neg.realtor === currentUser.displayName || 
+                neg.salesperson === currentUser.displayName || 
+                neg.client === currentUser.displayName
             );
-        } else {
-             if (typeFilter !== 'all') {
-                negotiations = negotiations.filter(neg => neg.type.toLowerCase() === typeFilter);
-            }
-            if (statusFilter !== 'all') {
-                negotiations = negotiations.filter(neg => neg.contractStatus.replace(/\s/g, '-').toLowerCase() === statusFilter);
-            }
-            if (realtorFilter !== 'all') {
-                negotiations = negotiations.filter(neg => neg.realtor === realtorFilter || neg.salesperson === realtorFilter);
-            }
+        } else if (activeProfile !== 'Admin' && activeProfile !== 'Imobiliária') {
+             // Por segurança, se não for admin/imobiliária e não tiver currentUser, não mostra nada
+             if (!currentUser) return [];
         }
+
+
+        // Filtros da UI para Admin/Imobiliária
+        if (typeFilter !== 'all') {
+            negotiations = negotiations.filter(neg => neg.type.toLowerCase() === typeFilter);
+        }
+        if (statusFilter !== 'all') {
+            negotiations = negotiations.filter(neg => neg.contractStatus.replace(/\s/g, '-').toLowerCase() === statusFilter);
+        }
+        if (realtorFilter !== 'all') {
+            negotiations = negotiations.filter(neg => neg.realtor === realtorFilter || neg.salesperson === realtorFilter);
+        }
+        
         return negotiations;
     }, [allNegotiations, typeFilter, statusFilter, realtorFilter, activeProfile, currentUser]);
 
