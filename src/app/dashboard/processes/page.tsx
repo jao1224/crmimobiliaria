@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -82,7 +82,7 @@ export default function ProcessesPage() {
         }
         if (currentUser) {
             return processes.filter(p => 
-                p.realtor === currentUser.displayName || p.salesperson === currentUser.displayName
+                p.realtor === currentUser.displayName || p.salesperson === currentUser.displayName || p.client === currentUser.displayName
             );
         }
         return [];

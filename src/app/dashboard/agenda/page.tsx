@@ -44,6 +44,9 @@ export default function AgendaPage() {
     const { activeProfile } = useContext(ProfileContext);
 
     const visibleTabs = useMemo(() => {
+        if (activeProfile === 'Investidor' || activeProfile === 'Corretor Autônomo') {
+            return agendaTabs.filter(tab => tab.id === 'personal' || tab.id === 'company');
+        }
         return agendaTabs.filter(tab => agendaPermissions[tab.id].includes(activeProfile));
     }, [activeProfile]);
     

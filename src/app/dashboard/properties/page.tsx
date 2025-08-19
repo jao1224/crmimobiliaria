@@ -41,7 +41,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 import type { Property, PropertyType } from "@/lib/data";
-import { getProperties, addProperty, realtors, updateProperty, deleteProperty, propertyTypes, getUsers } from "@/lib/data";
+import { getProperties, addProperty, updateProperty, deleteProperty, propertyTypes, getUsers } from "@/lib/data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, type User } from "firebase/auth";
@@ -76,12 +76,13 @@ export default function PropertiesPage() {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
         setCurrentUser(user);
     });
-    
-    // Este useEffect agora depende do estado do currentUser
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
     if (currentUser !== undefined) {
         refreshProperties();
     }
-    return () => unsubscribe();
   }, [currentUser]);
 
   const refreshProperties = async () => {
@@ -115,28 +116,27 @@ export default function PropertiesPage() {
         // Se o nome do captador já foi processado, pula.
         if (captadorMap.has(p.capturedBy)) return;
 
-        const user = users.find(u => u.name === p.capturedBy);
-        if (user) {
-            captadorMap.set(user.name, { name: user.name, role: user.role });
+        let userFound = users.find(u => u.name === p.capturedBy);
+
+        // Caso especial para "Admin"
+        if (p.capturedBy === 'Admin' && !userFound) {
+            userFound = users.find(u => u.role === 'Admin');
+        }
+
+        if (userFound) {
+            captadorMap.set(userFound.name, { name: userFound.name, role: userFound.role });
         } else {
-             // Caso especial para "Admin": encontrar o usuário com a role de Admin
-             if (p.capturedBy === 'Admin') {
-                const adminUser = users.find(u => u.role === 'Admin');
-                if (adminUser && !captadorMap.has(adminUser.name)) {
-                     captadorMap.set(adminUser.name, { name: adminUser.name, role: adminUser.role });
-                }
-             } else {
-                captadorMap.set(p.capturedBy, { name: p.capturedBy, role: 'N/A' });
-             }
+             // Se não encontrou usuário, adiciona o nome do captador como está mas sem cargo
+             captadorMap.set(p.capturedBy, { name: p.capturedBy, role: 'N/A' });
         }
     });
 
     const captadorDetails = Array.from(captadorMap.values());
     captadorDetails.sort((a, b) => a.name.localeCompare(b.name));
     
-    return [{ name: 'all', role: 'Todos' }, ...captadorDetails];
+    // O valor 'all' é para o select, não precisa de cargo.
+    return [{ name: 'Todos os Captadores', role: 'all' }, ...captadorDetails];
 }, [properties, users]);
-
 
 
   const filteredAndSortedProperties = useMemo(() => {
@@ -145,13 +145,15 @@ export default function PropertiesPage() {
     // Aplicar filtro por perfil
     if (activeProfile === 'Corretor Autônomo' && currentUser) {
         filtered = filtered.filter(p => p.capturedBy === currentUser.displayName);
+    } else if (activeProfile === 'Investidor' && currentUser) {
+        // Investidor vê todos os disponíveis + os que ele mesmo capturou
+        filtered = filtered.filter(p => p.status === 'Disponível' || p.capturedBy === currentUser.displayName);
     } else {
-        // Aplicar filtros de UI apenas para outros perfis
+        // Filtros de UI para perfis com visão mais ampla (Admin, Imobiliária)
         if (statusFilter !== 'all') {
           filtered = filtered.filter(p => p.status === statusFilter);
         }
-
-        if (captadorFilter !== 'all') {
+        if (captadorFilter !== 'all' && captadorFilter !== 'Todos os Captadores') {
           filtered = filtered.filter(p => p.capturedBy === captadorFilter);
         }
     }
@@ -428,7 +430,7 @@ export default function PropertiesPage() {
              <CardDescription>
                 Uma lista de todos os imóveis em seu portfólio.
              </CardDescription>
-              {activeProfile !== 'Corretor Autônomo' && (
+              {(activeProfile !== 'Corretor Autônomo' && activeProfile !== 'Investidor') && (
               <div className="flex flex-wrap items-center gap-2">
                  <Select value={statusFilter} onValueChange={setStatusFilter}>
                     <SelectTrigger className="w-full sm:w-auto min-w-[150px]">
@@ -447,8 +449,8 @@ export default function PropertiesPage() {
                     </SelectTrigger>
                     <SelectContent>
                         {captadores.map(c => 
-                            <SelectItem key={c.name} value={c.name}>
-                                {c.name === 'all' ? 'Todos os Captadores' : `${c.name} - ${c.role}`}
+                            <SelectItem key={c.name} value={c.name === 'Todos os Captadores' ? 'all' : c.name}>
+                                {c.role === 'all' ? c.name : `${c.name} - ${c.role}`}
                             </SelectItem>
                         )}
                     </SelectContent>
@@ -697,7 +699,7 @@ export default function PropertiesPage() {
                        <Select name="capturedBy" defaultValue={editingProperty.capturedBy} required>
                           <SelectTrigger><SelectValue/></SelectTrigger>
                           <SelectContent>
-                              {realtors.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                              {users.map(u => <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>)}
                           </SelectContent>
                       </Select>
                     </div>
@@ -706,11 +708,9 @@ export default function PropertiesPage() {
                         <Select name="type" defaultValue={editingProperty.type}>
                             <SelectTrigger><SelectValue /></SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="Lançamento">Lançamento</SelectItem>
-                                <SelectItem value="Revenda">Revenda</SelectItem>
-                                <SelectItem value="Terreno">Terreno</SelectItem>
-                                <SelectItem value="Casa">Casa</SelectItem>
-                                <SelectItem value="Apartamento">Apartamento</SelectItem>
+                                {propertyTypes.map(type => (
+                                  <SelectItem key={type} value={type}>{type}</SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
                     </div>

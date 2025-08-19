@@ -17,17 +17,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { getNegotiations, addNegotiation, realtors, type Negotiation, addFinancingProcess, completeSaleAndGenerateCommission, getProperties, type Property, updateNegotiation } from "@/lib/data";
+import { getNegotiations, addNegotiation, type Negotiation, addFinancingProcess, completeSaleAndGenerateCommission, getProperties, type Property, updateNegotiation, getUsers, type User } from "@/lib/data";
 import { getClients, type Client } from "@/lib/crm-data";
 import { cn } from "@/lib/utils";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import { auth } from "@/lib/firebase";
-import { onAuthStateChanged, type User } from "firebase/auth";
+import { onAuthStateChanged } from "firebase/auth";
 
 export default function NegotiationsPage() {
     const router = useRouter();
     const { activeProfile } = useContext(ProfileContext);
-    const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const [currentUser, setCurrentUser] = useState<any | null>(null);
 
     const [allNegotiations, setAllNegotiations] = useState<Negotiation[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -38,6 +38,7 @@ export default function NegotiationsPage() {
     const [typeFilter, setTypeFilter] = useState('all');
     const [statusFilter, setStatusFilter] = useState('all');
     const [realtorFilter, setRealtorFilter] = useState('all');
+    const [realtors, setRealtors] = useState<User[]>([]);
 
     const [propertyCode, setPropertyCode] = useState("");
     const [clientCode, setClientCode] = useState("");
@@ -62,12 +63,14 @@ export default function NegotiationsPage() {
     useEffect(() => {
         if (currentUser !== undefined) {
              const fetchDropdownData = async () => {
-                 const [props, clients] = await Promise.all([
+                 const [props, clients, users] = await Promise.all([
                     getProperties(),
-                    getClients()
+                    getClients(),
+                    getUsers()
                 ]);
                 setAvailableProperties(props.filter(p => p.status === 'Disponível'));
                 setAvailableClients(clients);
+                setRealtors(users.filter(u => u.role === 'Corretor Autônomo' || u.role === 'Admin' || u.role === 'Imobiliária'));
             }
             fetchDropdownData();
             refreshData();
@@ -89,21 +92,21 @@ export default function NegotiationsPage() {
     const filteredNegotiations = useMemo(() => {
         let negotiations = [...allNegotiations];
 
-        // Filtro por perfil de Corretor
-        if (activeProfile === 'Corretor Autônomo' && currentUser) {
+        // Filtro por perfil
+        if ((activeProfile === 'Corretor Autônomo' || activeProfile === 'Investidor') && currentUser) {
             negotiations = negotiations.filter(neg => 
-                neg.realtor === currentUser.displayName || neg.salesperson === currentUser.displayName
+                neg.realtor === currentUser.displayName || neg.salesperson === currentUser.displayName || neg.client === currentUser.displayName
             );
-        }
-
-        if (typeFilter !== 'all') {
-            negotiations = negotiations.filter(neg => neg.type.toLowerCase() === typeFilter);
-        }
-        if (statusFilter !== 'all') {
-             negotiations = negotiations.filter(neg => neg.contractStatus.replace(/\s/g, '-').toLowerCase() === statusFilter);
-        }
-        if (realtorFilter !== 'all') {
-             negotiations = negotiations.filter(neg => neg.realtor === realtorFilter);
+        } else {
+             if (typeFilter !== 'all') {
+                negotiations = negotiations.filter(neg => neg.type.toLowerCase() === typeFilter);
+            }
+            if (statusFilter !== 'all') {
+                negotiations = negotiations.filter(neg => neg.contractStatus.replace(/\s/g, '-').toLowerCase() === statusFilter);
+            }
+            if (realtorFilter !== 'all') {
+                negotiations = negotiations.filter(neg => neg.realtor === realtorFilter || neg.salesperson === realtorFilter);
+            }
         }
         return negotiations;
     }, [allNegotiations, typeFilter, statusFilter, realtorFilter, activeProfile, currentUser]);
@@ -421,7 +424,7 @@ export default function NegotiationsPage() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">Todos os Responsáveis</SelectItem>
-                                    {realtors.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                                    {realtors.map(r => <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>)}
                                 </SelectContent>
                             </Select>
                         </div>

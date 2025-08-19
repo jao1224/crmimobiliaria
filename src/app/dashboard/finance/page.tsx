@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -40,7 +40,6 @@ const isExpenseOverdue = (expense: Expense) => {
 
 export default function FinancePage() {
     const { activeProfile } = useContext(ProfileContext);
-    const hasPermission = financePermissions.includes(activeProfile);
     const [currentUser, setCurrentUser] = useState<User | null>(null);
 
     // Estados para Comissões
@@ -60,6 +59,10 @@ export default function FinancePage() {
     const [isLoading, setIsLoading] = useState(true);
 
     const { toast } = useToast();
+    
+    const hasPermission = useMemo(() => {
+        return financePermissions.includes(activeProfile);
+    }, [activeProfile]);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -102,9 +105,16 @@ export default function FinancePage() {
     // Lógica de Comissões
     const visibleCommissions = useMemo(() => {
         if (!currentUser) return [];
+        if (hasPermission) return commissions;
+
         return commissions.filter(c => {
-            if (hasPermission) return true;
-            if (activeProfile === 'Corretor Autônomo' && (c.realtorName === currentUser.displayName || c.salespersonName === currentUser.displayName)) return true;
+            const isSalesperson = c.salespersonName === currentUser.displayName;
+            const isRealtor = c.realtorName === currentUser.displayName;
+            const isClient = c.clientName === currentUser.displayName; // Para o investidor que é o cliente
+
+            if (activeProfile === 'Corretor Autônomo') return isSalesperson || isRealtor;
+            if (activeProfile === 'Investidor') return isClient; // Investidor vê comissões/custos de seus negócios
+
             return false;
         });
     }, [commissions, activeProfile, hasPermission, currentUser]);
