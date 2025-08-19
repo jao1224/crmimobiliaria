@@ -129,16 +129,7 @@ export default function DashboardLayout({
       { href: "/dashboard/activity-feed", icon: Activity, label: "Feed de Atividades", tooltip: "Feed de Atividades" },
       { href: "/dashboard/properties", icon: Building2, label: "Imóveis", tooltip: "Imóveis" },
       { href: "/dashboard/crm", icon: Users, label: "CRM", tooltip: "CRM" },
-      { 
-        id: 'negotiations',
-        icon: Handshake, 
-        label: "Negociações", 
-        subItems: [
-          { href: "/dashboard/negotiations", label: "Ativas" },
-          { href: "/dashboard/negotiations/archived", label: "Arquivadas" },
-          { href: "/dashboard/negotiations/deleted", label: "Histórico de Exclusão" },
-        ]
-      },
+      { href: "/dashboard/negotiations", icon: Handshake, label: "Negociações", tooltip: "Negociações" },
       { href: "/dashboard/processes", icon: FileText, label: "Processos Admin", tooltip: "Processos Administrativos" },
       { href: "/dashboard/finance", icon: CircleDollarSign, label: "Financeiro", tooltip: "Financeiro" },
       { href: "/dashboard/agenda", icon: Calendar, label: "Agenda", tooltip: "Agenda" },
@@ -153,7 +144,6 @@ export default function DashboardLayout({
   
   const visibleMenuItems = menuItems.filter(item => {
     if (item.href) return checkPermission(item.href);
-    if (item.subItems) return item.subItems.some(sub => checkPermission(sub.href));
     return false;
   });
 
@@ -170,42 +160,10 @@ export default function DashboardLayout({
           <SidebarContent>
             <SidebarMenu>
                {visibleMenuItems.map((item) => (
-                item.subItems ? (
-                  <Collapsible key={item.id} defaultOpen={isNegotiationsActive}>
-                    <SidebarMenuItem>
-                       <CollapsibleTrigger asChild>
-                           <SidebarMenuButton
-                              variant="default"
-                              className="w-full justify-start"
-                              isActive={isNegotiationsActive}
-                              tooltip={item.label}
-                            >
-                                <item.icon />
-                                <span>{item.label}</span>
-                            </SidebarMenuButton>
-                       </CollapsibleTrigger>
-                    </SidebarMenuItem>
-                    <CollapsibleContent>
-                        <SidebarMenuSub>
-                           {item.subItems.map(subItem => (
-                               <SidebarMenuSubItem key={subItem.href}>
-                                    <SidebarMenuSubButton
-                                        href={subItem.href}
-                                        isActive={pathname === subItem.href}
-                                        asChild
-                                    >
-                                        <Link href={subItem.href}>{subItem.label}</Link>
-                                    </SidebarMenuSubButton>
-                                </SidebarMenuSubItem>
-                           ))}
-                        </SidebarMenuSub>
-                    </CollapsibleContent>
-                  </Collapsible>
-                ) : (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton
                       href={item.href}
-                      isActive={pathname === item.href}
+                      isActive={item.href === '/dashboard/negotiations' ? isNegotiationsActive : pathname === item.href}
                       tooltip={item.label}
                       asChild
                     >
@@ -216,7 +174,7 @@ export default function DashboardLayout({
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 )
-              ))}
+              )}
             </SidebarMenu>
           </SidebarContent>
           <SidebarFooter>

@@ -36,6 +36,9 @@ import { onAuthStateChanged } from "firebase/auth";
 import { AssignNegotiationDialog } from "@/components/dashboard/assign-negotiation-dialog";
 import Link from "next/link";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import ArchivedNegotiationsPage from "./archived/page";
+import DeletedNegotiationsPage from "./deleted/page";
+
 
 export default function NegotiationsPage() {
     const router = useRouter();
@@ -375,7 +378,7 @@ export default function NegotiationsPage() {
             <div className="flex items-start justify-between">
                 <div>
                     <h1 className="text-2xl font-bold">Processos de Negociação</h1>
-                    <p className="text-muted-foreground">Acompanhe e gerencie todas as suas negociações ativas.</p>
+                    <p className="text-muted-foreground">Acompanhe e gerencie todas as suas negociações.</p>
                 </div>
                  <Dialog open={isNewNegotiationOpen} onOpenChange={setNewNegotiationOpen}>
                     <DialogTrigger asChild>
@@ -658,10 +661,10 @@ export default function NegotiationsPage() {
                     </Card>
                  </TabsContent>
                  <TabsContent value="archived">
-                     <p>Página de Arquivados. Conteúdo a ser implementado.</p>
+                     <ArchivedNegotiationsPage />
                  </TabsContent>
                  <TabsContent value="deleted">
-                      <p>Página de Histórico de Exclusão. Conteúdo a ser implementado.</p>
+                      <DeletedNegotiationsPage />
                  </TabsContent>
              </Tabs>
         </div>
@@ -697,5 +700,3 @@ export default function NegotiationsPage() {
         </>
     );
 }
-
-    
