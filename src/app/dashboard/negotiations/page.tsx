@@ -190,7 +190,7 @@ export default function NegotiationsPage() {
         const responsibleSalespersonId = formData.get('salespersonId') as string || currentUser.id;
         const responsibleSalesperson = allUsers.find(u => u.id === responsibleSalespersonId);
 
-        const newNegotiationData: Omit<Negotiation, 'id'> = {
+        const newNegotiationData: Omit<Negotiation, 'id' | 'createdAt'> = {
             property: foundProperty.name,
             propertyId: foundProperty.id,
             propertyDisplayCode: foundProperty.displayCode,
@@ -215,7 +215,7 @@ export default function NegotiationsPage() {
             isArchived: false,
         };
         
-        const newNegotiationId = await addNegotiation(newNegotiationData);
+        const newNegotiationId = await addNegotiation({ ...newNegotiationData, createdAt: new Date().toISOString() });
         
         if (isFinanced) {
              const newFinancingProcess: Omit<any, 'id'> = {
@@ -513,7 +513,7 @@ export default function NegotiationsPage() {
                                 <TableHead>Cód.</TableHead>
                                 <TableHead>Imóvel</TableHead>
                                 <TableHead>Cliente</TableHead>
-                                <TableHead className="hidden md:table-cell">Tipo</TableHead>
+                                <TableHead className="hidden md:table-cell">Data Criação</TableHead>
                                 <TableHead>Valor</TableHead>
                                 <TableHead>Fase</TableHead>
                                 <TableHead>Contrato</TableHead>
@@ -545,7 +545,9 @@ export default function NegotiationsPage() {
                                         {neg.property}
                                     </TableCell>
                                     <TableCell>{neg.client}</TableCell>
-                                    <TableCell className="hidden md:table-cell">{neg.type}</TableCell>
+                                    <TableCell className="hidden md:table-cell">
+                                        {neg.createdAt ? new Date(neg.createdAt).toLocaleDateString('pt-BR') : 'N/A'}
+                                    </TableCell>
                                     <TableCell>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(neg.value)}</TableCell>
                                     <TableCell>
                                         <Badge

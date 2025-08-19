@@ -61,7 +61,8 @@ export type Negotiation = {
     realtor: string;
     realtorId: string;
     contractStatus: ContractStatus;
-    completionDate: string | null; 
+    completionDate: string | null;
+    createdAt: string;
     isFinanced?: boolean;
     status: ProcessStatus;
     processStage: ProcessStage;
