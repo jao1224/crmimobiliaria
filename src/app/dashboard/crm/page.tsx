@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -18,8 +18,14 @@ import { getFinancingProcesses, getNegotiations, type FinancingProcess, type Neg
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
+import { ProfileContext } from "@/contexts/ProfileContext";
+import { auth } from "@/lib/firebase";
+import { onAuthStateChanged, type User } from "firebase/auth";
 
 export default function CrmPage() {
+    const { activeProfile } = useContext(ProfileContext);
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
+
     const [leads, setLeads] = useState<Lead[]>([]);
     const [deals, setDeals] = useState<Deal[]>([]);
     const [clients, setClients] = useState<Client[]>([]);
@@ -34,11 +40,20 @@ export default function CrmPage() {
     const [selectedClient, setSelectedClient] = useState<Client | null>(null);
     const [clientHistory, setClientHistory] = useState<{ negotiations: Negotiation[], financings: FinancingProcess[] }>({ negotiations: [], financings: [] });
     const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+    
+     useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            setCurrentUser(user);
+        });
+        return () => unsubscribe();
+    }, []);
 
     // Carrega os dados iniciais
     useEffect(() => {
-        refreshData();
-    }, []);
+        if (currentUser !== undefined) {
+             refreshData();
+        }
+    }, [currentUser, activeProfile]);
 
     const refreshData = async () => {
         setIsLoading(true);
@@ -48,9 +63,25 @@ export default function CrmPage() {
                 getDeals(),
                 getClients(),
             ]);
-            setLeads(leadsData);
-            setDeals(dealsData);
-            setClients(clientsData);
+
+            const canSeeAll = activeProfile === 'Admin' || activeProfile === 'Imobiliária';
+            
+            if (canSeeAll || !currentUser) {
+                setLeads(leadsData);
+                setDeals(dealsData);
+                setClients(clientsData);
+            } else {
+                // Filtra para mostrar apenas os itens atribuídos ao usuário logado
+                const myLeads = leadsData.filter(lead => lead.assignedTo === currentUser.displayName);
+                const myClients = clientsData.filter(client => client.assignedTo === currentUser.displayName);
+                // Para negócios, a lógica pode ser mais complexa. Por enquanto, mantemos todos visíveis ou filtramos por cliente.
+                const myDeals = dealsData.filter(deal => myClients.some(c => c.name === deal.client));
+
+                setLeads(myLeads);
+                setDeals(myDeals);
+                setClients(myClients);
+            }
+
         } catch (error) {
             console.error("Failed to fetch CRM data:", error);
             toast({
@@ -87,12 +118,14 @@ export default function CrmPage() {
     // Simula a adição de um novo lead
     const handleAddLead = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
+        if (!currentUser) return;
+
         const formData = new FormData(event.currentTarget);
         const newLeadData = {
             name: formData.get("name") as string,
             source: formData.get("source") as string,
             status: "Novo",
-            assignedTo: formData.get("assignedTo") as string,
+            assignedTo: currentUser.displayName || 'N/A', // Atribui ao usuário logado
         };
         
         try {
@@ -108,11 +141,12 @@ export default function CrmPage() {
 
     const handleAddClient = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
+         if (!currentUser) return;
         const formData = new FormData(event.currentTarget);
         const newClientData = {
             name: formData.get("name") as string,
             source: formData.get("source") as string,
-            assignedTo: formData.get("assignedTo") as string,
+            assignedTo: currentUser.displayName || 'N/A', // Atribui ao usuário logado
             document: formData.get("document") as string,
             address: formData.get("address") as string,
         };
@@ -197,10 +231,6 @@ export default function CrmPage() {
                                         <Label htmlFor="source-lead" className="text-right">Fonte</Label>
                                         <Input id="source-lead" name="source" className="col-span-3" required />
                                     </div>
-                                    <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="assignedTo-lead" className="text-right">Atribuído a</Label>
-                                        <Input id="assignedTo-lead" name="assignedTo" className="col-span-3" required />
-                                    </div>
                                 </div>
                                 <DialogFooter>
                                     <Button type="submit">Salvar Lead</Button>
@@ -226,10 +256,6 @@ export default function CrmPage() {
                                     <div className="grid grid-cols-4 items-center gap-4">
                                         <Label htmlFor="source-client" className="text-right">Fonte</Label>
                                         <Input id="source-client" name="source" className="col-span-3" required />
-                                    </div>
-                                    <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="assignedTo-client" className="text-right">Atribuído a</Label>
-                                        <Input id="assignedTo-client" name="assignedTo" className="col-span-3" required />
                                     </div>
                                     <div className="grid grid-cols-4 items-center gap-4">
                                         <Label htmlFor="document-client" className="text-right">Documento</Label>
