@@ -373,26 +373,6 @@ export default function SettingsPage() {
                             </Button>
                         </CardFooter>
                     </Card>
-                    <Card className="transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
-                        <CardHeader>
-                            <CardTitle>Meu Plano</CardTitle>
-                            <CardDescription>Visualize e gerencie seu plano de assinatura.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="rounded-lg border bg-muted/30 p-4">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <h3 className="font-semibold">Plano Atual: <Badge variant="success">Anual</Badge></h3>
-                                        <p className="text-sm text-muted-foreground">Sua próxima cobrança de R$ 999,00 será em 15 de Julho de 2025.</p>
-                                    </div>
-                                    <Button variant="outline" disabled>Alterar Plano</Button>
-                                </div>
-                            </div>
-                        </CardContent>
-                        <CardFooter>
-                           <Button variant="secondary" disabled>Ver Histórico de Faturamento</Button>
-                        </CardFooter>
-                    </Card>
                 </TabsContent>
                 <TabsContent value="team">
                     <Card>
@@ -673,3 +653,5 @@ export default function SettingsPage() {
         </div>
     );
 }
+
+    
