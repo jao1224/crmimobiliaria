@@ -27,26 +27,26 @@ const agendaTabs: { id: EventType, label: string }[] = [
     { id: 'team_visit', label: 'Visitas da Equipe' }
 ];
 
+// Permissões de VISUALIZAÇÃO
 const agendaPermissions: Record<EventType, UserProfile[]> = {
-    'personal': ['Admin', 'Imobiliária', 'Corretor Autônomo', 'Investidor', 'Construtora', 'Financeiro'], // Todos têm agenda pessoal
-    'company': ['Admin', 'Imobiliária', 'Corretor Autônomo', 'Investidor', 'Construtora', 'Financeiro'], // Todos podem ver
-    'team_visit': ['Admin', 'Imobiliária', 'Construtora'] // Apenas perfis de equipe
+    'personal': ['Admin', 'Imobiliária', 'Corretor Autônomo', 'Investidor', 'Construtora', 'Financeiro'], // Todos podem ter agenda pessoal
+    'company': ['Admin', 'Imobiliária', 'Corretor Autônomo', 'Investidor', 'Construtora', 'Financeiro'],  // Todos podem ver
+    'team_visit': ['Admin', 'Imobiliária', 'Construtora'] // Apenas perfis de gestão de equipe
 };
 
+// Permissões de EDIÇÃO
 const editPermissions: Record<EventType, UserProfile[]> = {
     'personal': ['Admin', 'Imobiliária', 'Corretor Autônomo', 'Investidor', 'Construtora', 'Financeiro'], // Cada um edita a sua
     'company': ['Admin', 'Imobiliária'], // Apenas Admin/Imobiliária editam a agenda geral
-    'team_visit': ['Admin', 'Imobiliária'] // Apenas Admins podem marcar visitas em equipe
+    'team_visit': ['Admin', 'Imobiliária', 'Construtora'] // Admins e Construtoras podem marcar visitas de suas equipes
 };
 
 
 export default function AgendaPage() {
     const { activeProfile } = useContext(ProfileContext);
 
+    // Ajusta as abas visíveis com base no perfil ativo
     const visibleTabs = useMemo(() => {
-        if (activeProfile === 'Investidor' || activeProfile === 'Corretor Autônomo') {
-            return agendaTabs.filter(tab => tab.id === 'personal' || tab.id === 'company');
-        }
         return agendaTabs.filter(tab => agendaPermissions[tab.id].includes(activeProfile));
     }, [activeProfile]);
     
@@ -57,7 +57,7 @@ export default function AgendaPage() {
     const [isEventDialogOpen, setEventDialogOpen] = useState(false);
     const { toast } = useToast();
 
-    // Carrega os eventos iniciais e atualiza quando a aba muda
+    // Carrega os eventos iniciais
     useEffect(() => {
         refreshEvents();
     }, []);
@@ -81,7 +81,8 @@ export default function AgendaPage() {
             setActiveTab(visibleTabs[0]?.id || 'personal');
         }
     }, [visibleTabs, activeTab]);
-
+    
+    // Determina se o perfil ativo pode editar a aba atual
     const canEditCurrentTab = useMemo(() => {
         return editPermissions[activeTab].includes(activeProfile);
     }, [activeTab, activeProfile]);

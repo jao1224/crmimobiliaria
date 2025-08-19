@@ -17,17 +17,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { getNegotiations, addNegotiation, type Negotiation, addFinancingProcess, completeSaleAndGenerateCommission, getProperties, type Property, updateNegotiation, getUsers, type User } from "@/lib/data";
+import { getNegotiations, addNegotiation, type Negotiation, addFinancingProcess, completeSaleAndGenerateCommission, getProperties, type Property, updateNegotiation, getUsers } from "@/lib/data";
 import { getClients, type Client } from "@/lib/crm-data";
 import { cn } from "@/lib/utils";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import { auth } from "@/lib/firebase";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, type User } from "firebase/auth";
 
 export default function NegotiationsPage() {
     const router = useRouter();
     const { activeProfile } = useContext(ProfileContext);
-    const [currentUser, setCurrentUser] = useState<any | null>(null);
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
 
     const [allNegotiations, setAllNegotiations] = useState<Negotiation[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -93,34 +93,36 @@ export default function NegotiationsPage() {
         let negotiations = [...allNegotiations];
 
         // Filtro por perfil
-        if (activeProfile !== 'Admin' && activeProfile !== 'Imobiliária' && currentUser) {
-            negotiations = negotiations.filter(neg => 
-                neg.realtor === currentUser.displayName || 
-                neg.salesperson === currentUser.displayName || 
-                neg.client === currentUser.displayName
-            );
+        if (currentUser) {
+            if (activeProfile === 'Corretor Autônomo' || activeProfile === 'Investidor') {
+                 negotiations = negotiations.filter(neg => 
+                    neg.realtor === currentUser.displayName || 
+                    neg.salesperson === currentUser.displayName || 
+                    neg.client === currentUser.displayName
+                );
+            } else if (activeProfile === 'Construtora') {
+                // Construtora vê negociações dos seus imóveis (onde ela é a captadora)
+                negotiations = negotiations.filter(neg => neg.realtor === currentUser.displayName);
+            }
         }
+        
 
         // Filtros da UI para Admin/Imobiliária
-        if (typeFilter !== 'all') {
-            negotiations = negotiations.filter(neg => neg.type.toLowerCase() === typeFilter);
-        }
-        if (statusFilter !== 'all') {
-            negotiations = negotiations.filter(neg => neg.contractStatus.replace(/\s/g, '-').toLowerCase() === statusFilter);
-        }
-        if (realtorFilter !== 'all') {
-            negotiations = negotiations.filter(neg => neg.realtor === realtorFilter || neg.salesperson === realtorFilter);
+        if (activeProfile === 'Admin' || activeProfile === 'Imobiliária') {
+            if (typeFilter !== 'all') {
+                negotiations = negotiations.filter(neg => neg.type.toLowerCase() === typeFilter);
+            }
+            if (statusFilter !== 'all') {
+                negotiations = negotiations.filter(neg => neg.contractStatus.replace(/\s/g, '-').toLowerCase() === statusFilter);
+            }
+            if (realtorFilter !== 'all') {
+                negotiations = negotiations.filter(neg => neg.realtor === realtorFilter || neg.salesperson === realtorFilter);
+            }
         }
         
         return negotiations;
     }, [allNegotiations, typeFilter, statusFilter, realtorFilter, activeProfile, currentUser]);
 
-    // Função para aplicar os filtros manualmente
-    const applyFilters = () => {
-        // A filtragem agora é reativa com o `useMemo`, então este botão pode ser usado para forçar um refresh se necessário.
-        // Por enquanto, ele não precisa fazer nada.
-        toast({ title: "Filtros aplicados." });
-    };
 
     const handleSearch = async () => {
         setIsSearching(true);
@@ -509,7 +511,7 @@ export default function NegotiationsPage() {
                                     </TableCell>
                                      <TableCell>
                                         <Badge variant={getContractStatusVariant(neg.contractStatus)} className="whitespace-nowrap">{neg.contractStatus}</Badge>
-                                    </TableCell>
+                                     </TableCell>
                                     <TableCell className="hidden lg:table-cell">{neg.salesperson}</TableCell>
                                     <TableCell className="hidden lg:table-cell">{neg.realtor}</TableCell>
                                     <TableCell>
@@ -562,5 +564,3 @@ export default function NegotiationsPage() {
         </div>
     );
 }
-
-    

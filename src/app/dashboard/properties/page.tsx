@@ -142,14 +142,18 @@ export default function PropertiesPage() {
   const filteredAndSortedProperties = useMemo(() => {
     let filtered = [...properties];
     
-    // Aplicar filtro por perfil
-    if (activeProfile === 'Corretor Autônomo' && currentUser) {
-        filtered = filtered.filter(p => p.capturedBy === currentUser.displayName);
-    } else if (activeProfile === 'Investidor' && currentUser) {
-        // Investidor vê todos os disponíveis + os que ele mesmo capturou
-        filtered = filtered.filter(p => p.status === 'Disponível' || p.capturedBy === currentUser.displayName);
-    } else {
-        // Filtros de UI para perfis com visão mais ampla (Admin, Imobiliária)
+    if (currentUser) {
+        if (activeProfile === 'Corretor Autônomo' || activeProfile === 'Construtora') {
+            // Corretor e Construtora veem apenas os imóveis que eles mesmos capturaram.
+            filtered = filtered.filter(p => p.capturedBy === currentUser.displayName);
+        } else if (activeProfile === 'Investidor') {
+            // Investidor vê todos os disponíveis + os que ele mesmo capturou.
+            filtered = filtered.filter(p => p.status === 'Disponível' || p.capturedBy === currentUser.displayName);
+        }
+    }
+    
+    // Filtros de UI para perfis com visão mais ampla (Admin, Imobiliária)
+    if (activeProfile === 'Admin' || activeProfile === 'Imobiliária') {
         if (statusFilter !== 'all') {
           filtered = filtered.filter(p => p.status === statusFilter);
         }
@@ -214,7 +218,7 @@ export default function PropertiesPage() {
     };
 
     try {
-      await addProperty(newPropertyData);
+      await addProperty(newPropertyData, selectedFile);
       await refreshProperties();
       toast({ title: "Sucesso!", description: "Imóvel adicionado com sucesso." });
       setPropertyDialogOpen(false);
@@ -238,7 +242,6 @@ export default function PropertiesPage() {
       address: formData.get("address") as string,
       price: Number(formData.get("price")),
       commission: Number(formData.get("commission")),
-      imageUrl: imagePreview || editingProperty.imageUrl,
       capturedBy: formData.get("capturedBy") as string,
       description: formData.get("description") as string,
       ownerInfo: formData.get("owner") as string,
@@ -247,7 +250,7 @@ export default function PropertiesPage() {
     };
     
     try {
-      await updateProperty(editingProperty.id, updatedPropertyData);
+      await updateProperty(editingProperty.id, updatedPropertyData, selectedFile);
       await refreshProperties();
       toast({ title: "Sucesso!", description: "Imóvel atualizado com sucesso." });
       setEditDialogOpen(false);
@@ -430,7 +433,7 @@ export default function PropertiesPage() {
              <CardDescription>
                 Uma lista de todos os imóveis em seu portfólio.
              </CardDescription>
-              {(activeProfile !== 'Corretor Autônomo' && activeProfile !== 'Investidor') && (
+              {(activeProfile === 'Admin' || activeProfile === 'Imobiliária') && (
               <div className="flex flex-wrap items-center gap-2">
                  <Select value={statusFilter} onValueChange={setStatusFilter}>
                     <SelectTrigger className="w-full sm:w-auto min-w-[150px]">

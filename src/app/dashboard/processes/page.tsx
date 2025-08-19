@@ -81,6 +81,11 @@ export default function ProcessesPage() {
             return processes;
         }
         if (currentUser) {
+            if (activeProfile === 'Construtora') {
+                 // Construtora vê processos dos seus imóveis (onde ela é a captadora)
+                 return processes.filter(p => p.realtor === currentUser.displayName);
+            }
+             // Outros perfis (Corretor, Investidor) veem processos em que são parte
             return processes.filter(p => 
                 p.realtor === currentUser.displayName || 
                 p.salesperson === currentUser.displayName ||
