@@ -38,7 +38,7 @@ type Team = {
 
 type PermissionsState = Record<UserProfile, string[]>;
 
-const roles = userProfiles.filter(p => ['Admin', 'Imobiliária', 'Financeiro', 'Corretor Autônomo', 'Investidor', 'Construtora'].includes(p));
+const roles = userProfiles.filter(p => ['Admin', 'Imobiliária', 'Vendedor', 'Financeiro', 'Corretor Autônomo', 'Investidor', 'Construtora'].includes(p));
 
 
 export default function SettingsPage() {
