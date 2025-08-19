@@ -40,14 +40,17 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
-import type { Property, PropertyType, User } from "@/lib/data";
+import type { Property, PropertyType } from "@/lib/data";
 import { getProperties, addProperty, realtors, updateProperty, deleteProperty, propertyTypes, getUsers } from "@/lib/data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { auth } from "@/lib/firebase";
+import { onAuthStateChanged, type User } from "firebase/auth";
 
 
 export default function PropertiesPage() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
@@ -69,6 +72,10 @@ export default function PropertiesPage() {
 
   useEffect(() => {
     refreshProperties();
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+        setCurrentUser(user);
+    });
+    return () => unsubscribe();
   }, []);
 
   const refreshProperties = async () => {
@@ -94,38 +101,35 @@ export default function PropertiesPage() {
 
 
   const captadores = useMemo(() => {
-    if (!properties || users.length === 0) return [];
-
+    if (!properties || users.length === 0) return [{ name: 'all', role: 'Todos' }];
+  
     const captadorMap = new Map<string, { name: string; role: string }>();
-
+  
     properties.forEach(p => {
-        if (!p.capturedBy) return;
-
-        let user: User | undefined;
-        // Se o captador for 'Admin', procure por um usuário com a função 'Admin'.
-        if (p.capturedBy === 'Admin') {
-            user = users.find(u => u.role === 'Admin');
-        } else {
-            // Caso contrário, procure pelo nome.
-            user = users.find(u => u.name === p.capturedBy);
+      if (!p.capturedBy) return;
+  
+      // Encontra o usuário que corresponde ao nome do captador
+      const user = users.find(u => u.name === p.capturedBy);
+  
+      if (user) {
+        // Se o usuário for encontrado, usa seu nome e cargo
+        captadorMap.set(user.name, { name: user.name, role: user.role });
+      } else {
+        // Fallback: Se não encontrar um usuário (ex: 'Admin' literal ou um nome antigo),
+        // procura se algum usuário tem o cargo de Admin para usar o nome dele.
+        const adminUser = users.find(u => u.role === 'Admin');
+        if (p.capturedBy === 'Admin' && adminUser) {
+          captadorMap.set(adminUser.name, { name: adminUser.name, role: adminUser.role });
+        } else if (!captadorMap.has(p.capturedBy)) {
+          // Se não for 'Admin' e não houver usuário, adiciona com cargo N/A
+          captadorMap.set(p.capturedBy, { name: p.capturedBy, role: 'N/A' });
         }
-
-        if (user) {
-            // Usa o nome real do usuário encontrado.
-            captadorMap.set(user.name, { name: user.name, role: user.role });
-        } else {
-            // Fallback: se não encontrar um usuário, usa o valor do campo.
-            // Isso evita o 'Admin - Admin' se nenhum usuário com a função 'Admin' for encontrado.
-            if (!captadorMap.has(p.capturedBy)) {
-                 captadorMap.set(p.capturedBy, { name: p.capturedBy, role: 'N/A' });
-            }
-        }
+      }
     });
-
+  
     const captadorDetails = Array.from(captadorMap.values());
     captadorDetails.sort((a, b) => a.name.localeCompare(b.name));
     
-    // Adiciona a opção "Todos"
     return [{ name: 'all', role: 'Todos' }, ...captadorDetails];
   }, [properties, users]);
 
@@ -177,6 +181,10 @@ export default function PropertiesPage() {
 
   const handleAddProperty = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!currentUser) {
+        toast({ variant: "destructive", title: "Erro", description: "Você precisa estar logado para adicionar um imóvel." });
+        return;
+    }
     setIsSaving(true);
 
     const formData = new FormData(event.currentTarget);
@@ -188,7 +196,7 @@ export default function PropertiesPage() {
       commission: Number(formData.get("commission")),
       imageUrl: "https://placehold.co/600x400.png",
       imageHint: "novo imovel",
-      capturedBy: "Admin", // Simulado
+      capturedBy: currentUser.displayName || "Usuário sem nome",
       description: formData.get("description") as string,
       ownerInfo: formData.get("owner") as string,
       type: formData.get("type") as PropertyType,
@@ -744,5 +752,3 @@ export default function PropertiesPage() {
     </div>
   );
 }
-
-    
