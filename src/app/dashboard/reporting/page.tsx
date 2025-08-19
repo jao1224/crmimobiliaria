@@ -129,7 +129,7 @@ export default function ReportingPage() {
             setCurrentUser(user);
         });
         const loadData = async () => {
-             const [negs, props, teamsSnapshot, usersSnapshot] = await Promise.all([
+             const [negs, props, teamsSnapshot, usersData] = await Promise.all([
                 getNegotiations(), 
                 getProperties(),
                 getDocs(collection(db, "teams")),
@@ -138,7 +138,7 @@ export default function ReportingPage() {
             setNegotiations(negs);
             setProperties(props);
             setTeams(teamsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team)));
-            setUsers(usersSnapshot.map(doc => ({ id: doc.id, ...doc.data() } as User)));
+            setUsers(usersData);
         };
         loadData();
         return () => unsubscribe();
@@ -429,3 +429,5 @@ export default function ReportingPage() {
         </div>
     )
 }
+
+    
