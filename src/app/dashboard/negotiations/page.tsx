@@ -93,17 +93,13 @@ export default function NegotiationsPage() {
         let negotiations = [...allNegotiations];
 
         // Filtro por perfil
-        if ((activeProfile === 'Corretor Autônomo' || activeProfile === 'Investidor') && currentUser) {
+        if (activeProfile !== 'Admin' && activeProfile !== 'Imobiliária' && currentUser) {
             negotiations = negotiations.filter(neg => 
                 neg.realtor === currentUser.displayName || 
                 neg.salesperson === currentUser.displayName || 
                 neg.client === currentUser.displayName
             );
-        } else if (activeProfile !== 'Admin' && activeProfile !== 'Imobiliária') {
-             // Por segurança, se não for admin/imobiliária e não tiver currentUser, não mostra nada
-             if (!currentUser) return [];
         }
-
 
         // Filtros da UI para Admin/Imobiliária
         if (typeFilter !== 'all') {
@@ -186,6 +182,10 @@ export default function NegotiationsPage() {
             toast({ variant: 'destructive', title: "Erro", description: "Busque e confirme os dados do imóvel, do cliente e esteja logado." });
             return;
         }
+        
+        const formData = new FormData(event.currentTarget);
+        const responsibleSalesperson = formData.get('salesperson') as string || currentUser.displayName || "N/A";
+
 
         const newNegotiationData: Omit<Negotiation, 'id'> = {
             property: foundProperty.name,
@@ -197,7 +197,7 @@ export default function NegotiationsPage() {
             type: 'Venda',
             contractStatus: "Não Gerado",
             value: Number(proposalValue),
-            salesperson: currentUser.displayName || "N/A",
+            salesperson: responsibleSalesperson,
             realtor: foundProperty.capturedBy,
             completionDate: null,
             isFinanced: isFinanced,
@@ -381,6 +381,25 @@ export default function NegotiationsPage() {
                                             <Input id="date" name="date" type="date" required value={proposalDate} onChange={e => setProposalDate(e.target.value)} disabled={!foundProperty || !foundClient} />
                                         </div>
                                     </div>
+                                    
+                                     {(activeProfile === 'Admin' || activeProfile === 'Imobiliária') && (
+                                        <div className="space-y-2">
+                                            <Label htmlFor="salesperson">Vendedor Responsável</Label>
+                                            <Select name="salesperson" defaultValue={currentUser?.displayName || ''}>
+                                                <SelectTrigger className="w-full">
+                                                    <SelectValue placeholder="Selecione um vendedor" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {realtors.map(realtor => (
+                                                        <SelectItem key={realtor.id} value={realtor.name}>
+                                                            {realtor.name}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    )}
+
                                     <div className="flex items-center space-x-2">
                                         <Checkbox id="financed" checked={isFinanced} onCheckedChange={(checked) => setIsFinanced(checked as boolean)} disabled={!foundProperty || !foundClient} />
                                         <Label htmlFor="financed">É financiado?</Label>
@@ -543,3 +562,5 @@ export default function NegotiationsPage() {
         </div>
     );
 }
+
+    
