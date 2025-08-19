@@ -192,6 +192,12 @@ export type Activity = {
     relatedId: string; // ID original do Firestore (propriedade ou negociação)
 };
 
+export type User = {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+};
 
 
 // --- Dados estáticos ---
@@ -199,6 +205,11 @@ export const realtors = ['Carlos Pereira', 'Sofia Lima', 'Joana Doe', 'Admin'];
 export const propertyTypes: PropertyType[] = ['Lançamento', 'Revenda', 'Terreno', 'Casa', 'Apartamento'];
 
 // --- FUNÇÕES DE MANIPULAÇÃO DE DADOS (FIRESTORE) ---
+
+export const getUsers = async (): Promise<User[]> => {
+    const snapshot = await getDocs(collection(db, 'users'));
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
+};
 
 export const getProperties = async (): Promise<Property[]> => {
     const snapshot = await getDocs(collection(db, 'properties'));

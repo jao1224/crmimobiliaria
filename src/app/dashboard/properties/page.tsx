@@ -40,13 +40,14 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
-import type { Property, PropertyType } from "@/lib/data";
-import { getProperties, addProperty, realtors, updateProperty, deleteProperty, propertyTypes } from "@/lib/data";
+import type { Property, PropertyType, User } from "@/lib/data";
+import { getProperties, addProperty, realtors, updateProperty, deleteProperty, propertyTypes, getUsers } from "@/lib/data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 
 export default function PropertiesPage() {
   const [properties, setProperties] = useState<Property[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
@@ -73,14 +74,18 @@ export default function PropertiesPage() {
   const refreshProperties = async () => {
     setIsLoading(true);
     try {
-      const fetchedProperties = await getProperties();
+      const [fetchedProperties, fetchedUsers] = await Promise.all([
+        getProperties(),
+        getUsers()
+      ]);
       setProperties(fetchedProperties);
+      setUsers(fetchedUsers);
     } catch (error) {
       console.error("Failed to fetch properties:", error);
       toast({
         variant: "destructive",
-        title: "Erro ao Carregar Imóveis",
-        description: "Não foi possível buscar os imóveis do banco de dados.",
+        title: "Erro ao Carregar Dados",
+        description: "Não foi possível buscar os imóveis ou usuários.",
       });
     } finally {
       setIsLoading(false);
@@ -89,10 +94,19 @@ export default function PropertiesPage() {
 
 
   const captadores = useMemo(() => {
-    if (!properties || properties.length === 0) return [];
-    const captadorSet = new Set(properties.map(p => p.capturedBy));
-    return ['all', ...Array.from(captadorSet)];
-  }, [properties]);
+    if (!properties || properties.length === 0 || users.length === 0) return [];
+    const captadorNames = new Set(properties.map(p => p.capturedBy));
+    
+    const captadorDetails = Array.from(captadorNames).map(name => {
+        const user = users.find(u => u.name === name);
+        return {
+            name,
+            role: user?.role || 'N/A'
+        };
+    });
+
+    return [{ name: 'all', role: 'Todos' }, ...captadorDetails];
+  }, [properties, users]);
 
   const filteredAndSortedProperties = useMemo(() => {
     if (!properties) return [];
@@ -387,11 +401,15 @@ export default function PropertiesPage() {
                     </SelectContent>
                 </Select>
                  <Select value={captadorFilter} onValueChange={setCaptadorFilter}>
-                    <SelectTrigger className="w-full sm:w-auto min-w-[180px]">
+                    <SelectTrigger className="w-full sm:w-auto min-w-[220px]">
                         <SelectValue placeholder="Filtrar por Captador" />
                     </SelectTrigger>
                     <SelectContent>
-                        {captadores.map(c => <SelectItem key={c} value={c}>{c === 'all' ? 'Todos os Captadores' : c}</SelectItem>)}
+                        {captadores.map(c => 
+                            <SelectItem key={c.name} value={c.name}>
+                                {c.name === 'all' ? 'Todos os Captadores' : `${c.name} - ${c.role}`}
+                            </SelectItem>
+                        )}
                     </SelectContent>
                 </Select>
                  <Select value={sortOrder} onValueChange={setSortOrder}>
