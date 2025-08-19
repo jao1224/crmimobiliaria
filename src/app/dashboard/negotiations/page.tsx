@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, type User } from "firebase/auth";
+import { AssignNegotiationDialog } from "@/components/dashboard/assign-negotiation-dialog";
 
 export default function NegotiationsPage() {
     const router = useRouter();
@@ -52,6 +53,10 @@ export default function NegotiationsPage() {
     // Dados para os selects, carregados uma vez
     const [availableProperties, setAvailableProperties] = useState<Property[]>([]);
     const [availableClients, setAvailableClients] = useState<Client[]>([]);
+
+    // Estados para o diálogo de atribuição
+    const [isAssignDialogOpen, setAssignDialogOpen] = useState(false);
+    const [selectedNegotiation, setSelectedNegotiation] = useState<Negotiation | null>(null);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -98,7 +103,7 @@ export default function NegotiationsPage() {
                  negotiations = negotiations.filter(neg => 
                     neg.realtor === currentUser.displayName || 
                     neg.salesperson === currentUser.displayName || 
-                    neg.client === currentUser.displayName
+                    neg.clientId === currentUser.uid // Verificação de ID para cliente investidor
                 );
             } else if (activeProfile === 'Construtora') {
                 // Construtora vê negociações dos seus imóveis (onde ela é a captadora)
@@ -278,6 +283,23 @@ export default function NegotiationsPage() {
         }
     };
 
+    const handleOpenAssignDialog = (negotiation: Negotiation) => {
+        setSelectedNegotiation(negotiation);
+        setAssignDialogOpen(true);
+    };
+
+    const handleAssignNegotiation = async (negotiationId: string, newSalesperson: string) => {
+        try {
+            await updateNegotiation(negotiationId, { salesperson: newSalesperson });
+            await refreshData();
+            toast({ title: "Sucesso!", description: "Negociação atribuída com sucesso." });
+            setAssignDialogOpen(false);
+        } catch (error) {
+            toast({ variant: "destructive", title: "Erro", description: "Não foi possível atribuir a negociação." });
+        }
+    };
+
+
     const getStageVariant = (stage: Negotiation['stage']): VariantProps<typeof badgeVariants>['variant'] => {
         switch (stage) {
             case 'Proposta Enviada': return 'status-blue';
@@ -300,6 +322,7 @@ export default function NegotiationsPage() {
     }
 
     return (
+        <>
         <div className="flex flex-col gap-6">
             <div className="flex items-start justify-between">
                 <div>
@@ -539,6 +562,11 @@ export default function NegotiationsPage() {
                                                         Ver/Editar Contrato
                                                     </DropdownMenuItem>
                                                 )}
+                                                {(activeProfile === 'Admin' || activeProfile === 'Imobiliária') && (
+                                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenAssignDialog(neg); }}>
+                                                        Enviar/Atribuir
+                                                    </DropdownMenuItem>
+                                                )}
                                                  <DropdownMenuSeparator />
                                                 <DropdownMenuItem 
                                                     onClick={(e) => { e.stopPropagation(); handleCompleteSale(neg); }}
@@ -562,5 +590,15 @@ export default function NegotiationsPage() {
                 </CardContent>
             </Card>
         </div>
+
+        <AssignNegotiationDialog
+            isOpen={isAssignDialogOpen}
+            onOpenChange={setAssignDialogOpen}
+            negotiation={selectedNegotiation}
+            realtors={realtors}
+            onAssign={handleAssignNegotiation}
+        />
+        </>
     );
 }
+
