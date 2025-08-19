@@ -87,13 +87,13 @@ export default function ActivityFeedPage() {
                             
                             <div className="space-y-8">
                                 {notifications.map(notification => (
-                                     <div key={notification.id} className="relative flex items-start gap-4">
+                                     <div key={notification.id} className="relative flex items-start">
                                         {/* Ponto na timeline */}
                                         <div className="absolute left-0 top-1 h-6 w-6 -translate-x-1/2 rounded-full bg-background border-2 border-primary flex items-center justify-center">
                                            <div className="h-2 w-2 rounded-full bg-primary"></div>
                                         </div>
 
-                                        <div className="flex-1 pt-1">
+                                        <div className="flex-1 pt-1 ml-6">
                                             <p className="font-semibold text-sm">{notification.title}</p>
                                             <p className="text-sm text-muted-foreground">{notification.description}</p>
                                             <p className="text-xs text-muted-foreground/80 mt-1">
