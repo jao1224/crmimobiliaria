@@ -193,6 +193,7 @@ export default function NegotiationsPage() {
         const newNegotiationData: Omit<Negotiation, 'id'> = {
             property: foundProperty.name,
             propertyId: foundProperty.id,
+            propertyDisplayCode: foundProperty.displayCode,
             propertyType: foundProperty.type,
             client: foundClient.name,
             clientId: foundClient.id,
@@ -371,7 +372,7 @@ export default function NegotiationsPage() {
                                                 <SelectContent>
                                                     {availableProperties.map(prop => (
                                                         <SelectItem key={prop.id} value={prop.id}>
-                                                            {prop.name} ({prop.id.toUpperCase()})
+                                                            {prop.name} ({prop.displayCode})
                                                         </SelectItem>
                                                     ))}
                                                 </SelectContent>
@@ -539,7 +540,7 @@ export default function NegotiationsPage() {
                                         "transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1"
                                     )}
                                 >
-                                    <TableCell className="font-mono text-xs text-muted-foreground">{neg.id.toUpperCase()}</TableCell>
+                                    <TableCell className="font-mono text-xs text-muted-foreground">{neg.propertyDisplayCode}</TableCell>
                                     <TableCell className="font-medium">
                                         {neg.property}
                                     </TableCell>

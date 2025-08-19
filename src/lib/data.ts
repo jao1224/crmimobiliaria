@@ -1,6 +1,6 @@
 
 import { db } from './firebase';
-import { collection, getDocs, addDoc, doc, updateDoc, writeBatch, serverTimestamp, query, orderBy, limit, where, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, updateDoc, writeBatch, serverTimestamp, query, orderBy, limit, where, getDoc, setDoc, deleteDoc, runTransaction } from 'firebase/firestore';
 
 // Tipos para os dados de CRM
 export type Lead = {
@@ -28,6 +28,7 @@ export type PropertyType = 'Lançamento' | 'Revenda' | 'Terreno' | 'Casa' | 'Apa
 // Define o tipo para um imóvel
 export type Property = {
   id: string;
+  displayCode: string; // IMB-1001
   name: string;
   address: string;
   status: string;
@@ -48,6 +49,7 @@ export type Negotiation = {
     id: string;
     property: string;
     propertyId: string;
+    propertyDisplayCode: string;
     propertyType: PropertyType;
     client: string;
     clientId: string;
@@ -225,12 +227,35 @@ export const getPropertiesByRealtor = async (realtorName: string): Promise<Prope
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Property));
 };
 
-export const addProperty = async (newProperty: Omit<Property, 'id' | 'capturedById'>, file?: File | null): Promise<string> => {
-    // Em um app real, aqui faríamos o upload da `file` para o Firebase Storage
-    // e pegaríamos a URL para salvar em `newProperty.imageUrl`.
-    // Por enquanto, a simulação continua.
-    const docRef = await addDoc(collection(db, 'properties'), newProperty);
-    return docRef.id;
+export const addProperty = async (newPropertyData: Omit<Property, 'id' | 'displayCode'>, file?: File | null): Promise<string> => {
+    const counterRef = doc(db, 'counters', 'propertyCounter');
+    const propertyCollection = collection(db, 'properties');
+
+    let newId = '';
+    await runTransaction(db, async (transaction) => {
+        const counterDoc = await transaction.get(counterRef);
+        
+        let nextNumber = 1001; // Inicia em 1001 se o contador não existir
+        if (counterDoc.exists()) {
+            nextNumber = counterDoc.data().lastNumber + 1;
+        }
+
+        const displayCode = `IMB-${nextNumber}`;
+        
+        const newProperty: Omit<Property, 'id'> = {
+            ...newPropertyData,
+            displayCode: displayCode,
+        };
+
+        const newPropertyRef = doc(propertyCollection); // Gera um novo ID automático
+        transaction.set(newPropertyRef, newProperty);
+        newId = newPropertyRef.id;
+
+        // Atualiza o contador
+        transaction.set(counterRef, { lastNumber: nextNumber }, { merge: true });
+    });
+
+    return newId;
 };
 
 export const updateProperty = async (id: string, data: Partial<Property>, file?: File | null): Promise<void> => {
@@ -270,16 +295,17 @@ export const archiveNegotiation = async (id: string, archiveStatus: boolean): Pr
         const negotiation = negSnap.data() as Negotiation;
         await updateDoc(negRef, { isArchived: archiveStatus });
 
-        // Adiciona notificação com base no status de arquivamento
+        const description = `Imóvel: ${negotiation.property} (${negotiation.propertyDisplayCode}). Vendedor: ${negotiation.salesperson}, Captador: ${negotiation.realtor}.`;
+
         if (archiveStatus) {
             await addNotification({
                 title: "Negociação Arquivada",
-                description: `A negociação para '${negotiation.property}' foi arquivada.`,
+                description: description,
             });
         } else {
              await addNotification({
                 title: "Negociação Restaurada",
-                description: `A negociação para '${negotiation.property}' foi restaurada.`,
+                description: description,
             });
         }
     }
