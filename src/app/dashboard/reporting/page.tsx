@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useContext } from "react";
 import { useRouter } from "next/navigation";
 import { SalesReport } from "@/components/dashboard/sales-report";
 import { Button } from "@/components/ui/button";
@@ -10,19 +10,27 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Download, Building, Users } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { getNegotiations, realtors, propertyTypes, type Negotiation, getProperties, type Property } from "@/lib/data";
+import { getNegotiations, realtors, propertyTypes, type Negotiation, getProperties, type Property, getUsers } from "@/lib/data";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { collection, getDocs } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db, auth } from "@/lib/firebase";
+import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
+import { ProfileContext } from "@/contexts/ProfileContext";
 
 
 type Team = {
     id: string;
     name: string;
-    members: string[];
+    members: string[]; // member IDs
+};
+
+type User = {
+    id: string;
+    name: string;
+    role: string;
 };
 
 
@@ -70,18 +78,16 @@ const processCaptureData = (properties: Property[]) => {
     };
 };
 
-const processTeamPerformanceData = (negotiations: Negotiation[], teamsData: Team[]) => {
+const processTeamPerformanceData = (negotiations: Negotiation[], teamsData: Team[], users: User[]) => {
     const performanceData: { [key: string]: { revenue: number, deals: number } } = {};
 
-    // Inicializa o objeto de performance com as equipes reais do banco de dados
     teamsData.forEach(team => {
         performanceData[team.name] = { revenue: 0, deals: 0 };
     });
 
-    // Itera sobre as negociações para calcular a performance
     negotiations.forEach(neg => {
         if (neg.stage === 'Venda Concluída') {
-            const team = teamsData.find(t => t.members.includes(neg.salesperson));
+            const team = teamsData.find(t => t.members.includes(neg.salespersonId));
             if (team) {
                 performanceData[team.name].revenue += neg.value;
                 performanceData[team.name].deals += 1;
@@ -100,12 +106,17 @@ const processTeamPerformanceData = (negotiations: Negotiation[], teamsData: Team
 export default function ReportingPage() {
     const router = useRouter();
     const { toast } = useToast();
+    const { activeProfile } = useContext(ProfileContext);
+
+    // Dados do Firebase
     const [negotiations, setNegotiations] = useState<Negotiation[]>([]);
     const [properties, setProperties] = useState<Property[]>([]);
     const [teams, setTeams] = useState<Team[]>([]);
-    const [activeTab, setActiveTab] = useState("sales");
+    const [users, setUsers] = useState<User[]>([]);
 
-    // Estados dos filtros
+    // Estados de UI e Filtros
+    const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
+    const [activeTab, setActiveTab] = useState("sales");
     const [realtorFilter, setRealtorFilter] = useState('all');
     const [teamFilter, setTeamFilter] = useState('all');
     const [propertyTypeFilter, setPropertyTypeFilter] = useState('all');
@@ -114,17 +125,23 @@ export default function ReportingPage() {
     const [endDate, setEndDate] = useState('');
     
     useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            setCurrentUser(user);
+        });
         const loadData = async () => {
-             const [negs, props, teamsSnapshot] = await Promise.all([
+             const [negs, props, teamsSnapshot, usersSnapshot] = await Promise.all([
                 getNegotiations(), 
                 getProperties(),
-                getDocs(collection(db, "teams"))
+                getDocs(collection(db, "teams")),
+                getUsers()
             ]);
             setNegotiations(negs);
             setProperties(props);
             setTeams(teamsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team)));
+            setUsers(usersSnapshot.map(doc => ({ id: doc.id, ...doc.data() } as User)));
         };
         loadData();
+        return () => unsubscribe();
     }, []);
     
     const handleRealtorClick = (realtorName: string) => {
@@ -134,12 +151,9 @@ export default function ReportingPage() {
 
     const filteredNegotiations = useMemo(() => {
         return negotiations.filter(neg => {
-            const realtorMatch = realtorFilter === 'all' || neg.realtor === realtorFilter || neg.salesperson === realtorFilter;
-            const teamMatch = teamFilter === 'all' || teams.find(t => t.id === teamFilter)?.members.includes(neg.salesperson);
+            const realtorMatch = realtorFilter === 'all' || neg.realtorId === realtorFilter || neg.salespersonId === realtorFilter;
+            const teamMatch = teamFilter === 'all' || teams.find(t => t.id === teamFilter)?.members.includes(neg.salespersonId);
             const propertyTypeMatch = propertyTypeFilter === 'all' || neg.propertyType === propertyTypeFilter;
-
-            // O filtro de operação é mais complexo, pois "Captação" vem dos imóveis, e "Venda" das negociações.
-            // Por simplicidade na simulação, vamos filtrar por tipo de negociação por enquanto.
             const operationTypeMatch = operationTypeFilter === 'all' || (operationTypeFilter === 'venda' && neg.type === 'Venda');
 
             const dateMatch = !startDate || !endDate || !neg.completionDate || (
@@ -151,23 +165,19 @@ export default function ReportingPage() {
         });
     }, [negotiations, realtorFilter, teamFilter, propertyTypeFilter, startDate, endDate, operationTypeFilter, teams]);
     
-    // Simulação de filtragem de captações
     const filteredCaptures = useMemo(() => {
         return properties.filter(prop => {
-            const realtorMatch = realtorFilter === 'all' || prop.capturedBy === realtorFilter;
+            const realtorMatch = realtorFilter === 'all' || prop.capturedById === realtorFilter;
             const propertyTypeMatch = propertyTypeFilter === 'all' || prop.type === propertyTypeFilter;
-            // Para captações, não filtramos por data de conclusão de venda
             return realtorMatch && propertyTypeMatch;
         });
     }, [properties, realtorFilter, propertyTypeFilter]);
 
     const chartData = useMemo(() => processSalesData(filteredNegotiations), [filteredNegotiations]);
     
-    // Dados para os relatórios de captação usam os imóveis filtrados
     const { realtorCaptures, propertyTypeCaptures } = useMemo(() => processCaptureData(operationTypeFilter === 'venda' ? [] : filteredCaptures), [filteredCaptures, operationTypeFilter]);
     
-    // Dados de desempenho de equipe usam as negociações filtradas e as equipes reais
-    const teamPerformanceData = useMemo(() => processTeamPerformanceData(filteredNegotiations, teams), [filteredNegotiations, teams]);
+    const teamPerformanceData = useMemo(() => processTeamPerformanceData(filteredNegotiations, teams, users), [filteredNegotiations, teams, users]);
 
     const handleExport = () => {
         if (activeTab !== 'sales' || filteredNegotiations.length === 0) {
@@ -179,9 +189,8 @@ export default function ReportingPage() {
             return;
         }
 
-        // Prepara os dados para o CSV
         const dataToExport = filteredNegotiations.map(neg => {
-            const team = teams.find(t => t.members.includes(neg.salesperson));
+            const team = teams.find(t => t.members.includes(neg.salespersonId));
             return {
                 "ID Negociacao": neg.id,
                 "Imovel": neg.property,
@@ -197,7 +206,6 @@ export default function ReportingPage() {
         });
         
         const headers = Object.keys(dataToExport[0]);
-        // Escapa valores que contêm vírgulas ou aspas
         const escapeCsvCell = (cell: any) => {
             const cellStr = String(cell ?? '');
             if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
@@ -226,6 +234,8 @@ export default function ReportingPage() {
         toast({ title: "Exportação Concluída", description: `O arquivo ${filename} foi baixado.` });
     };
 
+    const userCanSeeAll = activeProfile === 'Admin' || activeProfile === 'Imobiliária';
+
     return (
         <div className="flex flex-col gap-6">
             <div className="flex items-start justify-between">
@@ -243,7 +253,7 @@ export default function ReportingPage() {
                 <TabsList>
                     <TabsTrigger value="sales">Vendas</TabsTrigger>
                     <TabsTrigger value="captures">Captações</TabsTrigger>
-                    <TabsTrigger value="performance">Desempenho</TabsTrigger>
+                    {userCanSeeAll && <TabsTrigger value="performance">Desempenho</TabsTrigger>}
                 </TabsList>
                 
                 <TabsContent value="sales">
@@ -261,7 +271,7 @@ export default function ReportingPage() {
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="all">Todos os Corretores</SelectItem>
-                                            {realtors.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                                            {users.map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
                                      <Select value={teamFilter} onValueChange={setTeamFilter}>
