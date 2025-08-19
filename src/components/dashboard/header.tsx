@@ -10,6 +10,7 @@ import { Notifications } from "./notifications"
 
 const pathTranslations: { [key: string]: string } = {
     dashboard: 'Painel',
+    'activity-feed': 'Feed de Atividades',
     properties: 'Imóveis',
     crm: 'CRM',
     negotiations: 'Negociações',

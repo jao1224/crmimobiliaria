@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
 import {
+  Activity,
   BarChart3,
   Building2,
   CircleDollarSign,
@@ -115,6 +116,7 @@ export default function DashboardLayout({
 
   const menuItems = [
       { href: "/dashboard", icon: LayoutDashboard, label: "Painel", tooltip: "Painel" },
+      { href: "/dashboard/activity-feed", icon: Activity, label: "Feed de Atividades", tooltip: "Feed de Atividades" },
       { href: "/dashboard/properties", icon: Building2, label: "Imóveis", tooltip: "Imóveis" },
       { href: "/dashboard/crm", icon: Users, label: "CRM", tooltip: "CRM" },
       { href: "/dashboard/negotiations", icon: Handshake, label: "Negociações", tooltip: "Negociações" },
