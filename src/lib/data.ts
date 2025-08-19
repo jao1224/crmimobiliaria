@@ -67,6 +67,7 @@ export type Negotiation = {
     category: string;
     team: string;
     observations?: string;
+    isArchived?: boolean;
 };
 
 // --- TIPOS PARA GESTÃO DE PROCESSOS ---
@@ -259,6 +260,10 @@ export const addNegotiation = async (newNegotiation: Omit<Negotiation, 'id'>): P
 
 export const updateNegotiation = async (id: string, data: Partial<Negotiation>): Promise<void> => {
     await updateDoc(doc(db, 'negotiations', id), data);
+};
+
+export const archiveNegotiation = async (id: string, archiveStatus: boolean): Promise<void> => {
+    await updateDoc(doc(db, "negotiations", id), { isArchived: archiveStatus });
 };
 
 export const getCommissions = async (): Promise<Commission[]> => {
