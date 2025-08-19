@@ -95,18 +95,35 @@ export default function PropertiesPage() {
 
   const captadores = useMemo(() => {
     if (!properties || properties.length === 0 || users.length === 0) return [];
-    const captadorNames = new Set(properties.map(p => p.capturedBy));
-    
-    const captadorDetails = Array.from(captadorNames).map(name => {
-        const user = users.find(u => u.name === name);
-        return {
-            name,
-            role: user?.role || 'N/A'
-        };
+
+    const captadorMap = new Map<string, string>();
+
+    properties.forEach(p => {
+        if (!p.capturedBy) return;
+
+        const user = users.find(u => u.name === p.capturedBy);
+        if (user) {
+            // Se encontrar um usuário correspondente, armazena o nome e o cargo
+            captadorMap.set(user.name, user.role);
+        } else {
+            // Se não encontrar (ex: "Admin" que não é um nome de usuário), 
+            // verifica se já não existe e adiciona com um cargo genérico ou o próprio nome.
+            if (!captadorMap.has(p.capturedBy)) {
+                 // Para o caso específico do 'Admin', o cargo é 'Admin'
+                const role = p.capturedBy === 'Admin' ? 'Admin' : 'N/A';
+                captadorMap.set(p.capturedBy, role);
+            }
+        }
     });
 
+    const captadorDetails = Array.from(captadorMap.entries()).map(([name, role]) => ({
+        name,
+        role,
+    }));
+
     return [{ name: 'all', role: 'Todos' }, ...captadorDetails];
-  }, [properties, users]);
+}, [properties, users]);
+
 
   const filteredAndSortedProperties = useMemo(() => {
     if (!properties) return [];
@@ -721,5 +738,3 @@ export default function PropertiesPage() {
     </div>
   );
 }
-
-    
