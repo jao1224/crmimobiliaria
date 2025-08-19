@@ -13,7 +13,7 @@ interface AssignNegotiationDialogProps {
     isOpen: boolean;
     onOpenChange: (open: boolean) => void;
     negotiation: Negotiation | null;
-    realtors: User[];
+    users: User[];
     onAssign: (negotiationId: string, newSalesperson: string) => Promise<void>;
 }
 
@@ -21,22 +21,22 @@ export function AssignNegotiationDialog({
     isOpen,
     onOpenChange,
     negotiation,
-    realtors,
+    users,
     onAssign,
 }: AssignNegotiationDialogProps) {
-    const [selectedRealtor, setSelectedRealtor] = useState<string>("");
+    const [selectedUser, setSelectedUser] = useState<string>("");
     const [isSaving, setIsSaving] = useState(false);
     const { toast } = useToast();
 
     useEffect(() => {
         // Preenche o valor inicial quando o diálogo é aberto com uma negociação
         if (negotiation) {
-            setSelectedRealtor(negotiation.salesperson);
+            setSelectedUser(negotiation.salesperson);
         }
     }, [negotiation]);
 
     const handleSubmit = async () => {
-        if (!negotiation || !selectedRealtor) {
+        if (!negotiation || !selectedUser) {
             toast({
                 variant: "destructive",
                 title: "Erro",
@@ -46,7 +46,7 @@ export function AssignNegotiationDialog({
         }
 
         setIsSaving(true);
-        await onAssign(negotiation.id, selectedRealtor);
+        await onAssign(negotiation.id, selectedUser);
         setIsSaving(false);
     };
 
@@ -56,7 +56,7 @@ export function AssignNegotiationDialog({
                 <DialogHeader>
                     <DialogTitle>Atribuir Negociação</DialogTitle>
                     <DialogDescription>
-                        Envie esta negociação para outro corretor. O novo responsável terá acesso a ela em sua lista.
+                        Envie esta negociação para outro usuário. O novo responsável terá acesso a ela em sua lista.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="py-4 space-y-4">
@@ -66,15 +66,15 @@ export function AssignNegotiationDialog({
                         <p className="text-xs text-muted-foreground">ID: {negotiation?.id.toUpperCase()}</p>
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="realtor-select">Novo Vendedor Responsável</Label>
-                        <Select value={selectedRealtor} onValueChange={setSelectedRealtor}>
+                        <Label htmlFor="realtor-select">Novo Responsável</Label>
+                        <Select value={selectedUser} onValueChange={setSelectedUser}>
                             <SelectTrigger id="realtor-select">
-                                <SelectValue placeholder="Selecione um corretor" />
+                                <SelectValue placeholder="Selecione um usuário" />
                             </SelectTrigger>
                             <SelectContent>
-                                {realtors.map((realtor) => (
-                                    <SelectItem key={realtor.id} value={realtor.name}>
-                                        {realtor.name}
+                                {users.map((user) => (
+                                    <SelectItem key={user.id} value={user.name}>
+                                        {user.name} - <span className="text-muted-foreground">{user.role}</span>
                                     </SelectItem>
                                 ))}
                             </SelectContent>
@@ -83,7 +83,7 @@ export function AssignNegotiationDialog({
                 </div>
                 <DialogFooter>
                     <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-                    <Button onClick={handleSubmit} disabled={isSaving || !selectedRealtor}>
+                    <Button onClick={handleSubmit} disabled={isSaving || !selectedUser}>
                         {isSaving ? "Salvando..." : "Salvar Atribuição"}
                     </Button>
                 </DialogFooter>
@@ -91,4 +91,3 @@ export function AssignNegotiationDialog({
         </Dialog>
     );
 }
-

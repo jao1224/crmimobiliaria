@@ -17,12 +17,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { getNegotiations, addNegotiation, type Negotiation, addFinancingProcess, completeSaleAndGenerateCommission, getProperties, type Property, updateNegotiation, getUsers } from "@/lib/data";
+import { getNegotiations, addNegotiation, type Negotiation, addFinancingProcess, completeSaleAndGenerateCommission, getProperties, type Property, updateNegotiation, getUsers, type User } from "@/lib/data";
 import { getClients, type Client } from "@/lib/crm-data";
 import { cn } from "@/lib/utils";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import { auth } from "@/lib/firebase";
-import { onAuthStateChanged, type User } from "firebase/auth";
+import { onAuthStateChanged } from "firebase/auth";
 import { AssignNegotiationDialog } from "@/components/dashboard/assign-negotiation-dialog";
 
 export default function NegotiationsPage() {
@@ -39,7 +39,7 @@ export default function NegotiationsPage() {
     const [typeFilter, setTypeFilter] = useState('all');
     const [statusFilter, setStatusFilter] = useState('all');
     const [realtorFilter, setRealtorFilter] = useState('all');
-    const [realtors, setRealtors] = useState<User[]>([]);
+    const [allUsers, setAllUsers] = useState<User[]>([]); // Para os filtros e diálogos
 
     const [propertyCode, setPropertyCode] = useState("");
     const [clientCode, setClientCode] = useState("");
@@ -60,7 +60,7 @@ export default function NegotiationsPage() {
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (user) => {
-            setCurrentUser(user);
+            setCurrentUser(user as any);
         });
         return () => unsubscribe();
     }, []);
@@ -75,7 +75,7 @@ export default function NegotiationsPage() {
                 ]);
                 setAvailableProperties(props.filter(p => p.status === 'Disponível'));
                 setAvailableClients(clients);
-                setRealtors(users.filter(u => u.role === 'Corretor Autônomo' || u.role === 'Admin' || u.role === 'Imobiliária'));
+                setAllUsers(users); // Armazena todos os usuários
             }
             fetchDropdownData();
             refreshData();
@@ -103,7 +103,7 @@ export default function NegotiationsPage() {
                  negotiations = negotiations.filter(neg => 
                     neg.realtor === currentUser.displayName || 
                     neg.salesperson === currentUser.displayName || 
-                    neg.clientId === currentUser.uid // Verificação de ID para cliente investidor
+                    neg.clientId === (currentUser as any).uid
                 );
             } else if (activeProfile === 'Construtora') {
                 // Construtora vê negociações dos seus imóveis (onde ela é a captadora)
@@ -415,7 +415,7 @@ export default function NegotiationsPage() {
                                                     <SelectValue placeholder="Selecione um vendedor" />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    {realtors.map(realtor => (
+                                                    {allUsers.filter(u => u.role === 'Corretor Autônomo' || u.role === 'Admin' || u.role === 'Imobiliária').map(realtor => (
                                                         <SelectItem key={realtor.id} value={realtor.name}>
                                                             {realtor.name}
                                                         </SelectItem>
@@ -476,7 +476,7 @@ export default function NegotiationsPage() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">Todos os Responsáveis</SelectItem>
-                                    {realtors.map(r => <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>)}
+                                    {allUsers.map(r => <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>)}
                                 </SelectContent>
                             </Select>
                         </div>
@@ -595,10 +595,9 @@ export default function NegotiationsPage() {
             isOpen={isAssignDialogOpen}
             onOpenChange={setAssignDialogOpen}
             negotiation={selectedNegotiation}
-            realtors={realtors}
+            users={allUsers}
             onAssign={handleAssignNegotiation}
         />
         </>
     );
 }
-
