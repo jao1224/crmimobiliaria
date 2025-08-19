@@ -135,7 +135,7 @@ export default function PropertiesPage() {
     let filtered = [...properties];
     
     if (currentUser) {
-        if (activeProfile === 'Corretor Autônomo' || activeProfile === 'Construtora') {
+        if (activeProfile === 'Corretor Autônomo' || activeProfile === 'Construtora' || activeProfile === 'Vendedor') {
             filtered = filtered.filter(p => p.capturedById === currentUser.uid);
         } else if (activeProfile === 'Investidor') {
             filtered = filtered.filter(p => p.status === 'Disponível' || p.capturedById === currentUser.uid);
