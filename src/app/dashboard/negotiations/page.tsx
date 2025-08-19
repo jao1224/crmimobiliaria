@@ -5,7 +5,7 @@
 import { useState, useEffect, useMemo, useContext } from "react";
 import { useRouter } from "next/navigation";
 import { Badge, badgeVariants } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import {
@@ -202,7 +202,7 @@ export default function NegotiationsPage() {
         const responsibleSalespersonId = formData.get('salespersonId') as string || currentUser.id;
         const responsibleSalesperson = allUsers.find(u => u.id === responsibleSalespersonId);
 
-        const newNegotiationData: Omit<Negotiation, 'id' | 'createdAt'> = {
+        const newNegotiationData: Omit<Negotiation, 'id'> = {
             property: foundProperty.name,
             propertyId: foundProperty.id,
             propertyDisplayCode: foundProperty.displayCode,
@@ -218,6 +218,7 @@ export default function NegotiationsPage() {
             realtor: foundProperty.capturedBy,
             realtorId: foundProperty.capturedById,
             completionDate: null,
+            createdAt: new Date().toISOString(),
             isFinanced: isFinanced,
             status: 'Ativo',
             processStage: 'Em andamento',
@@ -227,7 +228,7 @@ export default function NegotiationsPage() {
             isArchived: false,
         };
         
-        const newNegotiationId = await addNegotiation({ ...newNegotiationData, createdAt: new Date().toISOString() });
+        const newNegotiationId = await addNegotiation(newNegotiationData);
         
         if (isFinanced) {
              const newFinancingProcess: Omit<any, 'id'> = {
