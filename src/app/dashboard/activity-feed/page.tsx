@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { getNotifications, type Notification } from "@/lib/data";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle, ArrowDown, ArrowUp, Briefcase, FileText, Handshake, Landmark, PlusCircle, UserPlus, Wand2, Archive, ArchiveRestore } from "lucide-react";
+import { AlertCircle, ArrowDown, ArrowUp, Briefcase, FileText, Handshake, Landmark, PlusCircle, UserPlus, Wand2, Archive, ArchiveRestore, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -22,6 +22,7 @@ const iconMap: { [key: string]: React.ElementType } = {
     "Status de Comissão Alterado": ArrowUp,
     "Negociação Arquivada": Archive,
     "Negociação Restaurada": ArchiveRestore,
+    "Negociação Excluída": Trash2,
     "default": AlertCircle
 };
 
