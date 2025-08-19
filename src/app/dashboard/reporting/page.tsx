@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Download, Building, Users } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { getNegotiations, realtors, propertyTypes, type Negotiation, getProperties, type Property, getUsers } from "@/lib/data";
+import { getNegotiations, propertyTypes, type Negotiation, getProperties, type Property, getUsers } from "@/lib/data";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -109,8 +109,8 @@ export default function ReportingPage() {
     const { activeProfile } = useContext(ProfileContext);
 
     // Dados do Firebase
-    const [negotiations, setNegotiations] = useState<Negotiation[]>([]);
-    const [properties, setProperties] = useState<Property[]>([]);
+    const [allNegotiations, setAllNegotiations] = useState<Negotiation[]>([]);
+    const [allProperties, setAllProperties] = useState<Property[]>([]);
     const [teams, setTeams] = useState<Team[]>([]);
     const [users, setUsers] = useState<User[]>([]);
 
@@ -128,21 +128,24 @@ export default function ReportingPage() {
         const unsubscribe = onAuthStateChanged(auth, (user) => {
             setCurrentUser(user);
         });
+
         const loadData = async () => {
-             const [negs, props, teamsSnapshot, usersData] = await Promise.all([
+            const [negs, props, teamsSnapshot, usersData] = await Promise.all([
                 getNegotiations(), 
                 getProperties(),
                 getDocs(collection(db, "teams")),
                 getUsers()
             ]);
-            setNegotiations(negs);
-            setProperties(props);
+            setAllNegotiations(negs);
+            setAllProperties(props);
             setTeams(teamsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team)));
             setUsers(usersData);
         };
         loadData();
         return () => unsubscribe();
     }, []);
+
+    const userCanSeeAll = activeProfile === 'Admin' || activeProfile === 'Imobiliária';
     
     const handleRealtorClick = (realtorName: string) => {
         const urlFriendlyName = realtorName.toLowerCase().replace(/\s+/g, '-');
@@ -150,6 +153,13 @@ export default function ReportingPage() {
     };
 
     const filteredNegotiations = useMemo(() => {
+        let negotiations = [...allNegotiations];
+
+        // Regra de visibilidade primária
+        if (!userCanSeeAll && currentUser) {
+            negotiations = negotiations.filter(neg => neg.salespersonId === currentUser.uid || neg.realtorId === currentUser.uid);
+        }
+
         return negotiations.filter(neg => {
             const realtorMatch = realtorFilter === 'all' || neg.realtorId === realtorFilter || neg.salespersonId === realtorFilter;
             const teamMatch = teamFilter === 'all' || teams.find(t => t.id === teamFilter)?.members.includes(neg.salespersonId);
@@ -163,15 +173,22 @@ export default function ReportingPage() {
 
             return realtorMatch && teamMatch && propertyTypeMatch && dateMatch && operationTypeMatch;
         });
-    }, [negotiations, realtorFilter, teamFilter, propertyTypeFilter, startDate, endDate, operationTypeFilter, teams]);
+    }, [allNegotiations, realtorFilter, teamFilter, propertyTypeFilter, startDate, endDate, operationTypeFilter, teams, userCanSeeAll, currentUser]);
     
     const filteredCaptures = useMemo(() => {
+         let properties = [...allProperties];
+
+        // Regra de visibilidade primária
+        if (!userCanSeeAll && currentUser) {
+            properties = properties.filter(prop => prop.capturedById === currentUser.uid);
+        }
+
         return properties.filter(prop => {
             const realtorMatch = realtorFilter === 'all' || prop.capturedById === realtorFilter;
             const propertyTypeMatch = propertyTypeFilter === 'all' || prop.type === propertyTypeFilter;
             return realtorMatch && propertyTypeMatch;
         });
-    }, [properties, realtorFilter, propertyTypeFilter]);
+    }, [allProperties, realtorFilter, propertyTypeFilter, userCanSeeAll, currentUser]);
 
     const chartData = useMemo(() => processSalesData(filteredNegotiations), [filteredNegotiations]);
     
@@ -234,8 +251,6 @@ export default function ReportingPage() {
         toast({ title: "Exportação Concluída", description: `O arquivo ${filename} foi baixado.` });
     };
 
-    const userCanSeeAll = activeProfile === 'Admin' || activeProfile === 'Imobiliária';
-
     return (
         <div className="flex flex-col gap-6">
             <div className="flex items-start justify-between">
@@ -264,6 +279,7 @@ export default function ReportingPage() {
                                     <CardTitle>Desempenho de Vendas</CardTitle>
                                     <CardDescription>Visualize dados de vendas com filtros personalizados.</CardDescription>
                                 </div>
+                                {userCanSeeAll && (
                                 <div className="flex flex-nowrap items-end gap-2 overflow-x-auto pb-2">
                                      <Select value={realtorFilter} onValueChange={setRealtorFilter}>
                                         <SelectTrigger className="w-full sm:w-auto min-w-[180px]">
@@ -311,6 +327,7 @@ export default function ReportingPage() {
                                         <Input type="date" id="end-date" value={endDate} onChange={e => setEndDate(e.target.value)} />
                                     </div>
                                 </div>
+                                )}
                             </div>
                         </CardHeader>
                         <CardContent className="pt-6">
