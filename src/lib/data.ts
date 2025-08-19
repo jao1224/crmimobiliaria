@@ -263,7 +263,26 @@ export const updateNegotiation = async (id: string, data: Partial<Negotiation>):
 };
 
 export const archiveNegotiation = async (id: string, archiveStatus: boolean): Promise<void> => {
-    await updateDoc(doc(db, "negotiations", id), { isArchived: archiveStatus });
+    const negRef = doc(db, "negotiations", id);
+    const negSnap = await getDoc(negRef);
+
+    if (negSnap.exists()) {
+        const negotiation = negSnap.data() as Negotiation;
+        await updateDoc(negRef, { isArchived: archiveStatus });
+
+        // Adiciona notificação com base no status de arquivamento
+        if (archiveStatus) {
+            await addNotification({
+                title: "Negociação Arquivada",
+                description: `A negociação para '${negotiation.property}' foi arquivada.`,
+            });
+        } else {
+             await addNotification({
+                title: "Negociação Restaurada",
+                description: `A negociação para '${negotiation.property}' foi restaurada.`,
+            });
+        }
+    }
 };
 
 export const getCommissions = async (): Promise<Commission[]> => {
