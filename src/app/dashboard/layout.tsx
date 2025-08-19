@@ -46,6 +46,9 @@ import {
   SidebarMenuButton,
   SidebarProvider,
   SidebarFooter,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/dashboard/header";
@@ -304,5 +307,3 @@ export default function DashboardLayout({
     </ProfileProvider>
   );
 }
-
-    
