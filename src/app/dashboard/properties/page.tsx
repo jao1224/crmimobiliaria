@@ -41,8 +41,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
-import type { Property, PropertyType, User } from "@/lib/data";
-import { getProperties, addProperty, updateProperty, deleteProperty, propertyTypes, getUsers } from "@/lib/data";
+import { getProperties, addProperty, updateProperty, deleteProperty, propertyTypes, getUsers, type User, type Property, type PropertyType } from "@/lib/data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { auth, storage } from "@/lib/firebase";
 import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
@@ -193,35 +192,42 @@ export default function PropertiesPage() {
   const handleAddProperty = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsSaving(true);
-    
+
     if (!currentUser) {
-        toast({ variant: "destructive", title: "Erro", description: "Você precisa estar logado para adicionar um imóvel." });
-        setIsSaving(false);
-        return;
+      toast({
+        variant: 'destructive',
+        title: 'Erro',
+        description: 'Você precisa estar logado para adicionar um imóvel.',
+      });
+      setIsSaving(false);
+      return;
     }
-    
+
     const formData = new FormData(event.currentTarget);
-    const newPropertyData: Omit<Property, 'id' | 'displayCode' | 'capturedById' | 'imageUrl'> = {
-      name: formData.get("name") as string,
-      address: formData.get("address") as string,
-      status: "Disponível",
-      price: Number(formData.get("price")),
-      commission: Number(formData.get("commission")),
-      imageHint: "novo imovel",
-      capturedBy: currentUser.displayName || 'N/A', // Captura o nome do usuário logado
-      description: formData.get("description") as string,
-      ownerInfo: formData.get("owner") as string,
-      type: formData.get("type") as PropertyType,
+    const newPropertyData = {
+      name: formData.get('name') as string,
+      address: formData.get('address') as string,
+      status: 'Disponível',
+      price: Number(formData.get('price')),
+      commission: Number(formData.get('commission')),
+      imageHint: 'novo imovel',
+      description: formData.get('description') as string,
+      ownerInfo: formData.get('owner') as string,
+      type: formData.get('type') as PropertyType,
     };
 
     try {
       await addProperty(newPropertyData, selectedFile, currentUser);
       await refreshProperties();
-      toast({ title: "Sucesso!", description: "Imóvel adicionado com sucesso." });
+      toast({title: 'Sucesso!', description: 'Imóvel adicionado com sucesso.'});
       setPropertyDialogOpen(false);
     } catch (error) {
-      console.error("Error adding property:", error);
-      toast({ variant: "destructive", title: "Erro", description: "Não foi possível adicionar o imóvel." });
+      console.error('Error adding property:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Erro',
+        description: 'Não foi possível adicionar o imóvel.',
+      });
     } finally {
       setIsSaving(false);
     }
@@ -783,4 +789,3 @@ export default function PropertiesPage() {
     </div>
   );
 }
-

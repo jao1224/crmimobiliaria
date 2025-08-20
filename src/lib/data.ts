@@ -319,28 +319,31 @@ export const getPropertiesByRealtor = async (realtorName: string): Promise<Prope
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Property));
 };
 
-export const addProperty = async (newProperty: Omit<Property, 'id' | 'displayCode' | 'capturedById' | 'imageUrl'>, file: File | null, user: FirebaseUser): Promise<string> => {
-    
-    let imageUrl = "https://placehold.co/600x400.png";
-    if (file) {
-        const storageRef = ref(storage, `properties/${Date.now()}_${file.name}`);
-        await uploadBytes(storageRef, file);
-        imageUrl = await getDownloadURL(storageRef);
-    }
-    
-    const timestamp = Date.now();
-    const displayCode = `ID-${String(timestamp).slice(-6)}`;
+export const addProperty = async (
+  propertyData: Omit<Property, 'id' | 'imageUrl' | 'displayCode' | 'capturedById' | 'capturedBy'>,
+  file: File | null,
+  user: FirebaseUser
+): Promise<string> => {
+  let imageUrl = 'https://placehold.co/600x400.png';
+  if (file) {
+    const storageRef = ref(storage, `properties/${Date.now()}_${file.name}`);
+    await uploadBytes(storageRef, file);
+    imageUrl = await getDownloadURL(storageRef);
+  }
 
-    const propertyToSave: Omit<Property, 'id'> = {
-        ...newProperty,
-        imageUrl,
-        displayCode,
-        capturedById: user.uid,
-        capturedBy: user.displayName || 'N/A',
-    }
+  const timestamp = Date.now();
+  const displayCode = `ID-${String(timestamp).slice(-6)}`;
 
-    const docRef = await addDoc(collection(db, 'imoveis'), propertyToSave);
-    return docRef.id;
+  const finalPropertyData: Omit<Property, 'id'> = {
+    ...propertyData,
+    imageUrl,
+    displayCode,
+    capturedById: user.uid,
+    capturedBy: user.displayName || 'N/A',
+  };
+
+  const docRef = await addDoc(collection(db, 'imoveis'), finalPropertyData);
+  return docRef.id;
 };
 
 export const updateProperty = async (id: string, data: Partial<Property>, file?: File | null): Promise<void> => {
@@ -901,6 +904,7 @@ export const updateActivityStatus = async (activityId: string, newStatus: Activi
     
 
     
+
 
 
 
