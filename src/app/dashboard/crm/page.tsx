@@ -259,76 +259,74 @@ export default function CrmPage() {
                         <DialogTrigger asChild>
                             <Button variant="outline">Adicionar Cliente</Button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-2xl flex flex-col max-h-[90vh]">
+                         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
                             <DialogHeader>
                                 <DialogTitle>Adicionar Novo Cliente</DialogTitle>
                                 <DialogDescription>Preencha os detalhes abaixo para criar um novo cliente diretamente.</DialogDescription>
                             </DialogHeader>
-                            <form id="addClientForm" onSubmit={handleAddClient} className="flex-1 overflow-hidden flex flex-col gap-4">
-                                <ScrollArea className="flex-1 -mx-6 px-6">
-                                    <div className="space-y-6 py-4 pr-1">
-                                        {/* Informações Pessoais */}
-                                        <div className="space-y-4 rounded-lg border p-4">
-                                            <h3 className="text-lg font-medium">Informações Pessoais</h3>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="name-client">Nome Completo</Label>
-                                                    <Input id="name-client" name="name" required />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="document-client">CPF / CNPJ</Label>
-                                                    <Input id="document-client" name="document" />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="birthDate-client">Data de Nascimento</Label>
-                                                    <Input id="birthDate-client" name="birthDate" type="date" />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="civilStatus-client">Estado Civil</Label>
-                                                    <Select name="civilStatus">
-                                                        <SelectTrigger id="civilStatus-client"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                                                        <SelectContent>
-                                                            <SelectItem value="Solteiro(a)">Solteiro(a)</SelectItem>
-                                                            <SelectItem value="Casado(a)">Casado(a)</SelectItem>
-                                                            <SelectItem value="Divorciado(a)">Divorciado(a)</SelectItem>
-                                                            <SelectItem value="Viúvo(a)">Viúvo(a)</SelectItem>
-                                                            <SelectItem value="União Estável">União Estável</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Informações de Contato */}
-                                        <div className="space-y-4 rounded-lg border p-4">
-                                            <h3 className="text-lg font-medium">Contato e Endereço</h3>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="email-client">E-mail</Label>
-                                                    <Input id="email-client" name="email" type="email" required/>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="phone-client">Telefone / WhatsApp</Label>
-                                                    <Input id="phone-client" name="phone" required/>
-                                                </div>
+                            <form id="addClientForm" onSubmit={handleAddClient}>
+                                <div className="space-y-6 py-4">
+                                    {/* Informações Pessoais */}
+                                    <div className="space-y-4 rounded-lg border p-4">
+                                        <h3 className="text-lg font-medium">Informações Pessoais</h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <Label htmlFor="name-client">Nome Completo</Label>
+                                                <Input id="name-client" name="name" required />
                                             </div>
                                             <div className="space-y-2">
-                                                <Label htmlFor="address-client">Endereço Completo</Label>
-                                                <Input id="address-client" name="address" placeholder="Rua, número, bairro, cidade, CEP" />
+                                                <Label htmlFor="document-client">CPF / CNPJ</Label>
+                                                <Input id="document-client" name="document" />
                                             </div>
-                                        </div>
-                                        
-                                        {/* Informações Financeiras */}
-                                        <div className="space-y-4 rounded-lg border p-4">
-                                            <h3 className="text-lg font-medium">Informações Financeiras</h3>
-                                             <div className="space-y-2">
-                                                <Label htmlFor="monthlyIncome-client">Renda Mensal Comprovada (R$)</Label>
-                                                <Input id="monthlyIncome-client" name="monthlyIncome" type="number" step="0.01" placeholder="5000.00" />
+                                            <div className="space-y-2">
+                                                <Label htmlFor="birthDate-client">Data de Nascimento</Label>
+                                                <Input id="birthDate-client" name="birthDate" type="date" />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="civilStatus-client">Estado Civil</Label>
+                                                <Select name="civilStatus">
+                                                    <SelectTrigger id="civilStatus-client"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="Solteiro(a)">Solteiro(a)</SelectItem>
+                                                        <SelectItem value="Casado(a)">Casado(a)</SelectItem>
+                                                        <SelectItem value="Divorciado(a)">Divorciado(a)</SelectItem>
+                                                        <SelectItem value="Viúvo(a)">Viúvo(a)</SelectItem>
+                                                        <SelectItem value="União Estável">União Estável</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
                                             </div>
                                         </div>
                                     </div>
-                                </ScrollArea>
-                                <DialogFooter className="mt-auto shrink-0">
+
+                                    {/* Informações de Contato */}
+                                    <div className="space-y-4 rounded-lg border p-4">
+                                        <h3 className="text-lg font-medium">Contato e Endereço</h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <Label htmlFor="email-client">E-mail</Label>
+                                                <Input id="email-client" name="email" type="email" required/>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="phone-client">Telefone / WhatsApp</Label>
+                                                <Input id="phone-client" name="phone" required/>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="address-client">Endereço Completo</Label>
+                                            <Input id="address-client" name="address" placeholder="Rua, número, bairro, cidade, CEP" />
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Informações Financeiras */}
+                                    <div className="space-y-4 rounded-lg border p-4">
+                                        <h3 className="text-lg font-medium">Informações Financeiras</h3>
+                                         <div className="space-y-2">
+                                            <Label htmlFor="monthlyIncome-client">Renda Mensal Comprovada (R$)</Label>
+                                            <Input id="monthlyIncome-client" name="monthlyIncome" type="number" step="0.01" placeholder="5000.00" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <DialogFooter>
                                     <Button type="submit" form="addClientForm">Salvar Cliente</Button>
                                 </DialogFooter>
                             </form>
@@ -605,3 +603,5 @@ export default function CrmPage() {
         </>
     )
 }
+
+    
