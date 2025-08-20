@@ -189,7 +189,10 @@ export default function ProcessesPage() {
                                         </TableCell>
                                         <TableCell>{process.negotiationType}</TableCell>
                                         <TableCell>{process.category}</TableCell>
-                                        <TableCell className="font-medium">{process.property}</TableCell>
+                                        <TableCell className="font-medium">
+                                            {process.property}
+                                            <div className="text-xs text-muted-foreground font-mono">{process.propertyDisplayCode}</div>
+                                        </TableCell>
                                         <TableCell>{process.salesperson}</TableCell>
                                         <TableCell>{process.realtor}</TableCell>
                                         <TableCell>{process.team}</TableCell>
