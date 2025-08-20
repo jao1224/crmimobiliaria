@@ -318,7 +318,7 @@ export const getPropertiesByRealtor = async (realtorName: string): Promise<Prope
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Property));
 };
 
-export const addProperty = async (newProperty: Omit<Property, 'id' | 'displayCode' | 'capturedById'>, file: File | null, userId: string): Promise<string> => {
+export const addProperty = async (newProperty: Omit<Property, 'id' | 'displayCode' | 'capturedById' | 'imageUrl'>, file: File | null, userId: string): Promise<string> => {
     
     let imageUrl = "https://placehold.co/600x400.png";
     if (file) {
@@ -899,6 +899,7 @@ export const updateActivityStatus = async (activityId: string, newStatus: Activi
     
 
     
+
 
 
 
