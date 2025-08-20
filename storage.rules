@@ -1,0 +1,19 @@
+
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Permite leitura de todos os arquivos por qualquer usuário
+    match /{allPaths=**} {
+      allow read;
+    }
+
+    // Permite escrita (upload/delete) na pasta 'properties'
+    // apenas para usuários autenticados.
+    match /properties/{allPaths=**} {
+      allow write: if request.auth != null;
+    }
+  }
+}
+
+    

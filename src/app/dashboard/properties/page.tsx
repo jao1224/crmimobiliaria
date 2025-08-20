@@ -191,32 +191,32 @@ export default function PropertiesPage() {
 
   const handleAddProperty = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setIsSaving(true);
-
+    
     if (!currentUser) {
       toast({
         variant: 'destructive',
-        title: 'Erro',
+        title: 'Erro de Autenticação',
         description: 'Você precisa estar logado para adicionar um imóvel.',
       });
-      setIsSaving(false);
       return;
     }
-
-    const formData = new FormData(event.currentTarget);
-    const newPropertyData = {
-      name: formData.get('name') as string,
-      address: formData.get('address') as string,
-      status: 'Disponível',
-      price: Number(formData.get('price')),
-      commission: Number(formData.get('commission')),
-      imageHint: 'novo imovel',
-      description: formData.get('description') as string,
-      ownerInfo: formData.get('owner') as string,
-      type: formData.get('type') as PropertyType,
-    };
-
+    
+    setIsSaving(true);
+    
     try {
+      const formData = new FormData(event.currentTarget);
+      const newPropertyData = {
+        name: formData.get('name') as string,
+        address: formData.get('address') as string,
+        status: 'Disponível',
+        price: Number(formData.get('price')),
+        commission: Number(formData.get('commission')),
+        imageHint: 'novo imovel',
+        description: formData.get('description') as string,
+        ownerInfo: formData.get('owner') as string,
+        type: formData.get('type') as PropertyType,
+      };
+
       await addProperty(newPropertyData, selectedFile, currentUser);
       await refreshProperties();
       toast({title: 'Sucesso!', description: 'Imóvel adicionado com sucesso.'});
@@ -225,8 +225,8 @@ export default function PropertiesPage() {
       console.error('Error adding property:', error);
       toast({
         variant: 'destructive',
-        title: 'Erro',
-        description: 'Não foi possível adicionar o imóvel.',
+        title: 'Erro ao Salvar',
+        description: 'Não foi possível adicionar o imóvel. Verifique o console para mais detalhes.',
       });
     } finally {
       setIsSaving(false);
@@ -236,37 +236,40 @@ export default function PropertiesPage() {
   const handleUpdateProperty = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!editingProperty || !currentUser) return;
+    
     setIsSaving(true);
     
-    const formData = new FormData(event.currentTarget);
-    const capturedById = formData.get("capturedBy") as string;
-    const selectedCaptador = users.find(u => u.id === capturedById);
-
-    const updatedPropertyData: Partial<Property> = {
-      name: formData.get("name") as string,
-      address: formData.get("address") as string,
-      price: Number(formData.get("price")),
-      commission: Number(formData.get("commission")),
-      capturedById: capturedById,
-      capturedBy: selectedCaptador?.name || editingProperty.capturedBy,
-      description: formData.get("description") as string,
-      ownerInfo: formData.get("owner") as string,
-      type: (editType || editingProperty.type) as PropertyType,
-      status: (editStatus || editingProperty.status) as Property['status'],
-    };
-    
     try {
-      await updateProperty(editingProperty.id, updatedPropertyData, selectedFile);
-      await refreshProperties();
-      toast({ title: "Sucesso!", description: "Imóvel atualizado com sucesso." });
-      setEditDialogOpen(false);
-      setEditingProperty(null);
+        const formData = new FormData(event.currentTarget);
+        const capturedById = formData.get("capturedBy") as string;
+        const selectedCaptador = users.find(u => u.id === capturedById);
+
+        const updatedPropertyData: Partial<Property> = {
+          name: formData.get("name") as string,
+          address: formData.get("address") as string,
+          price: Number(formData.get("price")),
+          commission: Number(formData.get("commission")),
+          capturedById: capturedById,
+          capturedBy: selectedCaptador?.name || editingProperty.capturedBy,
+          description: formData.get("description") as string,
+          ownerInfo: formData.get("owner") as string,
+          type: (editType || editingProperty.type) as PropertyType,
+          status: (editStatus || editingProperty.status) as Property['status'],
+        };
+        
+        await updateProperty(editingProperty.id, updatedPropertyData, selectedFile);
+        await refreshProperties();
+        toast({ title: "Sucesso!", description: "Imóvel atualizado com sucesso." });
+        setEditDialogOpen(false);
+        setEditingProperty(null);
     } catch (error) {
-      toast({ variant: "destructive", title: "Erro", description: "Não foi possível atualizar o imóvel." });
+        console.error('Error updating property:', error);
+        toast({ variant: "destructive", title: "Erro ao Atualizar", description: "Não foi possível atualizar o imóvel. Verifique o console." });
     } finally {
-      setIsSaving(false);
+        setIsSaving(false);
     }
   };
+
 
   const handleCardClick = (property: Property) => {
     setSelectedProperty(property);
@@ -789,3 +792,5 @@ export default function PropertiesPage() {
     </div>
   );
 }
+
+    
