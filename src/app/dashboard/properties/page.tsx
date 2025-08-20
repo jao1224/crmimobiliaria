@@ -190,11 +190,13 @@ export default function PropertiesPage() {
 
   const handleAddProperty = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setIsSaving(true);
+    
     if (!currentUser) {
         toast({ variant: "destructive", title: "Erro", description: "Você precisa estar logado para adicionar um imóvel." });
+        setIsSaving(false);
         return;
     }
-    setIsSaving(true);
     
     const formData = new FormData(event.currentTarget);
     const newPropertyData: Omit<Property, 'id' | 'displayCode' | 'capturedById'> = {
