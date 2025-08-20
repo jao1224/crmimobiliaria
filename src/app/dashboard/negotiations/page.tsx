@@ -213,11 +213,6 @@ export default function NegotiationsPage() {
             completionDate: null,
             createdAt: new Date().toISOString(),
             isFinanced: isFinanced,
-            status: 'Ativo',
-            processStage: 'Em andamento',
-            negotiationType: 'Novo',
-            category: 'Novo',
-            team: 'Equipe A', // Simulado
             isArchived: false,
         };
         
@@ -600,13 +595,13 @@ export default function NegotiationsPage() {
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                                                <DropdownMenuItem onClick={() => router.push(`/dashboard/processes`)}>Ver Processo</DropdownMenuItem>
+                                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/processes`)}}>Ver Processo</DropdownMenuItem>
                                                 {neg.contractStatus === 'Não Gerado' ? (
                                                     <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleGenerateContract(neg); }}>
                                                         Gerar Contrato
                                                     </DropdownMenuItem>
                                                 ) : (
-                                                    <DropdownMenuItem onClick={() => router.push(`/dashboard/negotiations/${neg.id}/contract`)}>
+                                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/negotiations/${neg.id}/contract`)}}>
                                                         Ver/Editar Contrato
                                                     </DropdownMenuItem>
                                                 )}

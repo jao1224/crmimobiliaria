@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useContext } from "react";
@@ -15,32 +16,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import type { UserProfile } from "@/app/dashboard/layout";
-import { getNegotiations, getProperties, type Property, type Negotiation } from "@/lib/data";
+import { getNegotiations, getProperties, type Property, type Negotiation, type ContractDetails, type Contrato, createOrUpdateContrato, getContrato } from "@/lib/data";
 import { getClients, type Client } from "@/lib/crm-data";
 import { doc, getDoc } from "firebase/firestore";
-import { db, auth } from "@/lib/firebase";
+import { db, auth, storage } from "@/lib/firebase";
 import { getFunctions, httpsCallable } from "firebase/functions";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
-
-// Tipos para os dados simulados
-type ContractFile = { content: ArrayBuffer; type: string; name: string; };
-type ExtendedNegotiation = Negotiation & { contractFile?: ContractFile | null };
-
-
-type ContractDetails = {
-    sellerName: string;
-    sellerDoc: string;
-    sellerAddress: string;
-    propertyArea: string;
-    propertyRegistration: string;
-    propertyRegistryOffice: string;
-    paymentTerms: string;
-    commissionClause: string;
-    generalClauses: string;
-    additionalClauses: string;
-    city: string;
-    date: string;
-};
 
 const contractEditPermissions: UserProfile[] = ['Admin', 'Imobiliária'];
 
@@ -54,7 +36,7 @@ export default function ContractPage() {
     const { activeProfile } = useContext(ProfileContext);
     const canEdit = contractEditPermissions.includes(activeProfile);
 
-    const [negotiation, setNegotiation] = useState<ExtendedNegotiation | null>(null);
+    const [negotiation, setNegotiation] = useState<Negotiation | null>(null);
     const [property, setProperty] = useState<Property | null>(null);
     const [client, setClient] = useState<Client | null>(null);
     const [realtor, setRealtor] = useState<{name: string, creci: string} | null>(null);
@@ -63,8 +45,8 @@ export default function ContractPage() {
     const [isUploading, setIsUploading] = useState(false);
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
-    const [contractUrl, setContractUrl] = useState<string | null>(null);
-
+    
+    const [contrato, setContrato] = useState<Contrato | null>(null);
     const [contractData, setContractData] = useState<ContractDetails>({
         sellerName: "Ana Vendedora",
         sellerDoc: "987.654.321-00",
@@ -80,7 +62,7 @@ export default function ContractPage() {
         date: new Date().toISOString().split('T')[0],
     });
     
-    // Carrega os dados da negociação, imóvel e cliente com base no ID da URL
+    // Carrega os dados da negociação e do contrato associado
     useEffect(() => {
         const fetchData = async () => {
             if (!negotiationId) return;
@@ -95,7 +77,7 @@ export default function ContractPage() {
                     setNegotiation(foundNegotiation);
 
                     // Buscar imóvel, cliente e corretor
-                    const propDocRef = doc(db, 'propriedades', foundNegotiation.propertyId);
+                    const propDocRef = doc(db, 'imoveis', foundNegotiation.propertyId);
                     const clientDocRef = doc(db, 'clientes', foundNegotiation.clientId);
                     
                     const [propDocSnap, clientDocSnap] = await Promise.all([
@@ -110,7 +92,16 @@ export default function ContractPage() {
                     setClient(foundClient);
                     setRealtor({ name: foundNegotiation.realtor, creci: "N/A" }); // Simulado
 
-                    if (foundProperty) {
+                    // Buscar ou inicializar o contrato
+                    if (foundNegotiation.contratoId) {
+                        const existingContrato = await getContrato(foundNegotiation.contratoId);
+                        if (existingContrato) {
+                            setContrato(existingContrato);
+                            setContractData(existingContrato.details);
+                        }
+                    }
+
+                    if (foundProperty && !foundNegotiation.contratoId) { // Só preenche se for um contrato novo
                         const commissionRate = foundProperty.commission || 5;
                         const commissionValue = foundNegotiation.value * (commissionRate / 100);
                         const defaultCommissionClause = `Os honorários devidos pela intermediação desta negociação, no montante de ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(commissionValue)}, correspondentes a ${commissionRate}% do valor da venda, são de responsabilidade do VENDEDOR(ES), a serem pagos à INTERVENIENTE ANUENTE na data da compensação do sinal.`;
@@ -129,18 +120,6 @@ export default function ContractPage() {
         fetchData();
     }, [negotiationId, toast]);
     
-    
-    useEffect(() => {
-        if (negotiation?.contractFile?.content) {
-            const blob = new Blob([negotiation.contractFile.content], { type: negotiation.contractFile.type });
-            const url = URL.createObjectURL(blob);
-            setContractUrl(url);
-
-            return () => {
-                URL.revokeObjectURL(url);
-            };
-        }
-    }, [negotiation?.contractFile]);
     
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { id, value } = e.target;
@@ -222,7 +201,6 @@ export default function ContractPage() {
             const result = await generateContractPdf(fullContractData) as any;
             const pdfBase64 = result.data.pdfBase64;
 
-            // Decodificar e iniciar o download
             const byteCharacters = atob(pdfBase64);
             const byteNumbers = new Array(byteCharacters.length);
             for (let i = 0; i < byteCharacters.length; i++) {
@@ -251,11 +229,14 @@ export default function ContractPage() {
     
     const handleSave = async () => {
         setIsSaving(true);
-        // Simula salvamento
-        setTimeout(() => {
-             toast({ title: "Contrato Salvo!", description: "As informações do editor foram salvas com sucesso (simulado)."});
+        try {
+            await createOrUpdateContrato(negotiationId, { details: contractData });
+            toast({ title: "Contrato Salvo!", description: "As informações do editor foram salvas com sucesso."});
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível salvar o contrato.' });
+        } finally {
              setIsSaving(false);
-        }, 1000);
+        }
     }
     
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -284,27 +265,30 @@ export default function ContractPage() {
         }
         setIsUploading(true);
         
-        const reader = new FileReader();
-        reader.onload = (loadEvent) => {
-            const buffer = loadEvent.target?.result as ArrayBuffer;
-            if (buffer) {
-                 setNegotiation(prev => prev ? { ...prev, contractFile: { content: buffer, type: selectedFile.type, name: selectedFile.name } } : null);
-                 toast({ title: "Sucesso!", description: "Arquivo do contrato enviado." });
-            } else {
-                 toast({ variant: "destructive", title: "Erro", description: "Não foi possível ler o arquivo." });
-            }
+        try {
+            const storageRef = ref(storage, `contracts/${negotiationId}/${selectedFile.name}`);
+            await uploadBytes(storageRef, selectedFile);
+            const downloadUrl = await getDownloadURL(storageRef);
+
+            const contratoId = await createOrUpdateContrato(negotiationId, {
+                fileUrl: downloadUrl,
+                fileName: selectedFile.name,
+                fileType: selectedFile.type,
+            });
+
+            const updatedContrato = await getContrato(contratoId);
+            setContrato(updatedContrato);
+
+            toast({ title: "Sucesso!", description: "Arquivo do contrato enviado." });
+
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Erro de Upload', description: 'Não foi possível enviar o arquivo.' });
+        } finally {
             setIsUploading(false);
             setSelectedFile(null); 
-            // Reset the input field
             const inputFile = document.getElementById('contract-file') as HTMLInputElement;
             if(inputFile) inputFile.value = "";
-        };
-        reader.onerror = () => {
-             toast({ variant: "destructive", title: "Erro", description: "Falha ao ler o arquivo." });
-             setIsUploading(false);
         }
-        
-        reader.readAsArrayBuffer(selectedFile);
     };
 
 
@@ -353,12 +337,12 @@ export default function ContractPage() {
                             {isUploading ? "Enviando..." : "Enviar"}
                         </Button>
                     </div>
-                     {contractUrl && (
+                     {contrato?.fileUrl && (
                         <div className="mt-4 flex items-center gap-2 text-sm text-emerald-600 border border-emerald-200 bg-emerald-50 rounded-md p-3">
                             <FileText className="h-5 w-5" />
                             <span className="font-medium">Contrato Anexado:</span>
-                             <a href={contractUrl} target="_blank" rel="noopener noreferrer" className="underline hover:text-emerald-800">
-                                {negotiation?.contractFile?.name || 'Visualizar Contrato'} <LinkIcon className="h-4 w-4 inline-block ml-1" />
+                             <a href={contrato.fileUrl} target="_blank" rel="noopener noreferrer" className="underline hover:text-emerald-800">
+                                {contrato.fileName || 'Visualizar Contrato'} <LinkIcon className="h-4 w-4 inline-block ml-1" />
                             </a>
                         </div>
                     )}

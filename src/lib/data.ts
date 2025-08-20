@@ -1,7 +1,8 @@
 
 
-import { db } from './firebase';
+import { db, storage } from './firebase';
 import { collection, getDocs, addDoc, doc, updateDoc, writeBatch, serverTimestamp, query, orderBy, limit, where, getDoc, setDoc, deleteDoc, runTransaction } from 'firebase/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 // Tipos para os dados de CRM
 export type Lead = {
@@ -29,7 +30,7 @@ export type PropertyType = 'Lançamento' | 'Revenda' | 'Terreno' | 'Casa' | 'Apa
 // Define o tipo para um imóvel
 export type Property = {
   id: string;
-  displayCode: string; // IMB-1001
+  displayCode: string;
   name: string;
   address: string;
   status: string;
@@ -65,12 +66,8 @@ export type Negotiation = {
     completionDate: string | null;
     createdAt: string;
     isFinanced?: boolean;
-    status: ProcessStatus;
-    processStage: ProcessStage;
-    negotiationType: string;
-    category: string;
-    team: string;
-    observations?: string;
+    processoId?: string; // Link para o processo
+    contratoId?: string; // Link para o contrato
     isArchived?: boolean;
     isDeleted?: boolean;
 };
@@ -78,6 +75,46 @@ export type Negotiation = {
 // --- TIPOS PARA GESTÃO DE PROCESSOS ---
 export type ProcessStatus = 'Ativo' | 'Suspenso' | 'Cancelado' | 'Finalizado';
 export type ProcessStage = 'Em andamento' | 'Pendência' | 'Finalizado';
+
+export type Processo = {
+    id: string;
+    negotiationId: string;
+    propertyDisplayCode: string;
+    propertyName: string;
+    clientName: string;
+    salespersonName: string;
+    realtorName: string;
+    team: string;
+    status: ProcessStatus;
+    stage: ProcessStage;
+    observations?: string;
+};
+
+// --- TIPO PARA CONTRATO ---
+export type ContractDetails = {
+    sellerName: string;
+    sellerDoc: string;
+    sellerAddress: string;
+    propertyArea: string;
+    propertyRegistration: string;
+    propertyRegistryOffice: string;
+    paymentTerms: string;
+    commissionClause: string;
+    generalClauses: string;
+    additionalClauses: string;
+    city: string;
+    date: string;
+};
+
+export type Contrato = {
+    id: string;
+    negotiationId: string;
+    details: ContractDetails;
+    fileUrl?: string;
+    fileName?: string;
+    fileType?: string;
+};
+
 
 
 export type Commission = {
@@ -220,38 +257,45 @@ export const getUsers = async (): Promise<User[]> => {
 };
 
 export const getProperties = async (): Promise<Property[]> => {
-    const snapshot = await getDocs(collection(db, 'propriedades'));
+    const snapshot = await getDocs(collection(db, 'imoveis'));
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Property));
 };
 
 export const getPropertiesByRealtor = async (realtorName: string): Promise<Property[]> => {
-    const q = query(collection(db, 'propriedades'), where('capturedBy', '==', realtorName));
+    const q = query(collection(db, 'imoveis'), where('capturedBy', '==', realtorName));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Property));
 };
 
 export const addProperty = async (newPropertyData: Omit<Property, 'id' | 'displayCode'>, file?: File | null): Promise<string> => {
-    const counterRef = doc(db, 'contadores', 'propertyCounter');
-    const propertyCollection = collection(db, 'propriedades');
+    const propertyCollection = collection(db, 'imoveis');
+    
+    let newImageUrl = "https://placehold.co/600x400.png";
+    if (file) {
+        const storageRef = ref(storage, `properties/${Date.now()}_${file.name}`);
+        await uploadBytes(storageRef, file);
+        newImageUrl = await getDownloadURL(storageRef);
+    }
+    
+    console.log("Objeto completo a ser salvo:", newPropertyData);
 
     let newId = '';
     await runTransaction(db, async (transaction) => {
-        const counterDoc = await transaction.get(counterRef);
-        
-        let nextNumber = 1000; // Alterado para 1000 para começar em 1001
+        // Obter o último número do contador de imóveis
+        let nextNumber = 1001; // Começa em 1001
         
         const propertiesSnapshot = await getDocs(query(propertyCollection, orderBy('displayCode', 'desc'), limit(1)));
         if (!propertiesSnapshot.empty) {
             const lastProperty = propertiesSnapshot.docs[0].data() as Property;
             const lastNumberStr = lastProperty.displayCode.split('-').pop();
-            const lastNumber = lastNumberStr ? parseInt(lastNumberStr, 10) : 1000;
-            if (!isNaN(lastNumber)) {
-                nextNumber = lastNumber;
+            if (lastNumberStr) {
+                const lastNumber = parseInt(lastNumberStr, 10);
+                if (!isNaN(lastNumber)) {
+                    nextNumber = lastNumber + 1;
+                }
             }
         }
         
-        nextNumber++; // Incrementa para o próximo número
-
         const propertyNamePrefix = newPropertyData.name.substring(0, 3).toUpperCase();
         const realtorNamePrefix = newPropertyData.capturedBy.substring(0, 3).toUpperCase();
         const displayCode = `${propertyNamePrefix}-${realtorNamePrefix}-${nextNumber}`;
@@ -259,26 +303,34 @@ export const addProperty = async (newPropertyData: Omit<Property, 'id' | 'displa
         const newProperty: Omit<Property, 'id'> = {
             ...newPropertyData,
             displayCode: displayCode,
+            imageUrl: newImageUrl,
         };
 
         const newPropertyRef = doc(propertyCollection);
         transaction.set(newPropertyRef, newProperty);
         newId = newPropertyRef.id;
-
-        // Atualiza o contador com o último número usado
-        transaction.set(counterRef, { lastNumber: nextNumber }, { merge: true });
     });
 
     return newId;
 };
 
+
 export const updateProperty = async (id: string, data: Partial<Property>, file?: File | null): Promise<void> => {
-    // Lógica de upload similar a `addProperty` se uma nova `file` for fornecida.
-    await updateDoc(doc(db, 'propriedades', id), data);
+    const propertyRef = doc(db, 'imoveis', id);
+    let updatedData = { ...data };
+
+    if (file) {
+        const storageRef = ref(storage, `properties/${Date.now()}_${file.name}`);
+        await uploadBytes(storageRef, file);
+        const newImageUrl = await getDownloadURL(storageRef);
+        updatedData.imageUrl = newImageUrl;
+    }
+
+    await updateDoc(propertyRef, updatedData);
 };
 
 export const deleteProperty = async (id: string): Promise<void> => {
-    await deleteDoc(doc(db, 'propriedades', id));
+    await deleteDoc(doc(db, 'imoveis', id));
 };
 
 export const getNegotiations = async (): Promise<Negotiation[]> => {
@@ -293,8 +345,35 @@ export const getNegotiationsByRealtor = async (realtorName: string): Promise<Neg
 };
 
 export const addNegotiation = async (newNegotiation: Omit<Negotiation, 'id'>): Promise<string> => {
-    const docRef = await addDoc(collection(db, 'negociacoes'), newNegotiation);
-    return docRef.id;
+    const batch = writeBatch(db);
+
+    // 1. Cria a negociação
+    const negotiationRef = doc(collection(db, 'negociacoes'));
+    batch.set(negotiationRef, newNegotiation);
+
+    // 2. Cria o processo administrativo correspondente
+    const processoRef = doc(collection(db, 'processos'));
+    const newProcesso: Omit<Processo, 'id'> = {
+        negotiationId: negotiationRef.id,
+        propertyDisplayCode: newNegotiation.propertyDisplayCode,
+        propertyName: newNegotiation.property,
+        clientName: newNegotiation.client,
+        salespersonName: newNegotiation.salesperson,
+        realtorName: newNegotiation.realtor,
+        team: 'Equipe A', // Simulado, pode ser melhorado
+        status: 'Ativo',
+        stage: 'Em andamento',
+        observations: 'Processo iniciado automaticamente com a negociação.'
+    };
+    batch.set(processoRef, newProcesso);
+
+    // 3. Atualiza a negociação com o ID do processo
+    batch.update(negotiationRef, { processoId: processoRef.id });
+
+    // Executa as operações
+    await batch.commit();
+
+    return negotiationRef.id;
 };
 
 export const updateNegotiation = async (id: string, data: Partial<Negotiation>): Promise<void> => {
@@ -305,13 +384,11 @@ export const deleteNegotiation = async (negotiation: Negotiation): Promise<void>
     const codePart = negotiation.propertyDisplayCode ? `(${negotiation.propertyDisplayCode})` : '';
     const description = `Imóvel: ${negotiation.property} ${codePart}. Cliente: ${negotiation.client}. Vendedor: ${negotiation.salesperson}.`;
     
-    // Primeiro, cria a notificação para garantir o registro do histórico
     await addNotification({
         title: "Negociação Excluída",
         description: description,
     });
 
-    // Depois, apaga o documento
     await deleteDoc(doc(db, "negociacoes", negotiation.id));
 };
 
@@ -364,6 +441,50 @@ export const archiveNegotiation = async (id: string, archiveStatus: boolean = tr
         }
     }
 };
+
+// --- NOVAS FUNÇÕES PARA PROCESSOS ---
+export const getProcessos = async (): Promise<Processo[]> => {
+    const snapshot = await getDocs(collection(db, 'processos'));
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Processo));
+};
+
+export const updateProcesso = async (id: string, data: Partial<Processo>): Promise<void> => {
+    await updateDoc(doc(db, 'processos', id), data);
+};
+
+// --- NOVAS FUNÇÕES PARA CONTRATOS ---
+export const getContrato = async (id: string): Promise<Contrato | null> => {
+    const docRef = doc(db, 'contratos', id);
+    const docSnap = await getDoc(docRef);
+    return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } as Contrato : null;
+};
+
+export const saveContrato = async (contratoData: Contrato): Promise<void> => {
+    const contratoRef = doc(db, 'contratos', contratoData.id);
+    await setDoc(contratoRef, contratoData, { merge: true });
+};
+
+export const createOrUpdateContrato = async (negotiationId: string, details: Partial<Contrato>): Promise<string> => {
+    const q = query(collection(db, 'contratos'), where('negotiationId', '==', negotiationId), limit(1));
+    const snapshot = await getDocs(q);
+    
+    if (snapshot.empty) {
+        // Cria um novo
+        const newContratoRef = await addDoc(collection(db, 'contratos'), {
+            negotiationId,
+            ...details,
+        });
+        // Atualiza a negociação com o ID do contrato
+        await updateDoc(doc(db, 'negociacoes', negotiationId), { contratoId: newContratoRef.id });
+        return newContratoRef.id;
+    } else {
+        // Atualiza o existente
+        const contratoDoc = snapshot.docs[0];
+        await updateDoc(contratoDoc.ref, details);
+        return contratoDoc.id;
+    }
+};
+
 
 export const getCommissions = async (): Promise<Commission[]> => {
     const snapshot = await getDocs(collection(db, 'comissoes'));
@@ -464,11 +585,18 @@ export async function completeSaleAndGenerateCommission(negotiation: Negotiation
         stage: "Venda Concluída" as const,
         contractStatus: "Assinado" as const,
         completionDate: new Date().toISOString(),
-        status: 'Finalizado' as const,
-        processStage: 'Finalizado' as const,
-        observations: finalizationNote || negotiation.observations || "Processo finalizado com sucesso.",
     };
     batch.update(negotiationRef, updatedNegotiationData);
+
+    // 1.1 Atualiza o processo
+    if (negotiation.processoId) {
+        const processoRef = doc(db, 'processos', negotiation.processoId);
+        batch.update(processoRef, {
+             status: 'Finalizado' as const,
+             stage: 'Finalizado' as const,
+             observations: finalizationNote || "Processo finalizado com sucesso via conclusão de venda.",
+        });
+    }
 
     // 2. Gera a comissão se for uma venda
     if (negotiation.type === 'Venda') {
@@ -492,7 +620,7 @@ export async function completeSaleAndGenerateCommission(negotiation: Negotiation
     
     // 3. Atualiza o status do imóvel se for uma venda
     if (negotiation.propertyId && negotiation.type === 'Venda') {
-        const propertyRef = doc(db, 'propriedades', negotiation.propertyId);
+        const propertyRef = doc(db, 'imoveis', negotiation.propertyId);
         batch.update(propertyRef, { status: 'Vendido' });
     }
     
@@ -533,7 +661,7 @@ export const getActivitiesForRealtor = async (realtorName: string): Promise<Acti
     };
 
     // 1. Busca captações (imóveis capturados pelo corretor)
-    const capturesQuery = query(collection(db, 'propriedades'), where('capturedBy', '==', realtorName));
+    const capturesQuery = query(collection(db, 'imoveis'), where('capturedBy', '==', realtorName));
     const capturesSnapshot = await getDocs(capturesQuery);
     capturesSnapshot.docs.forEach(doc => {
         const prop = { id: doc.id, ...doc.data() } as Property;
@@ -560,7 +688,7 @@ export const getActivitiesForRealtor = async (realtorName: string): Promise<Acti
             type: 'negotiation',
             name: neg.property,
             value: neg.value,
-            status: determineActivityStatus(neg.status),
+            status: 'Ativo', // O status da negociação é mais complexo, simplificando aqui
         });
     });
 
@@ -577,11 +705,15 @@ export const updateActivityStatus = async (activityId: string, newStatus: Activi
     try {
         const negDoc = await getDoc(negotiationRef);
         if (negDoc.exists()) {
+            const negData = negDoc.data() as Negotiation;
             const statusMap: Record<ActivityStatus, Partial<Negotiation>> = {
-                'Ativo': { status: 'Ativo', processStage: 'Em andamento'},
-                'Pendente': { status: 'Ativo', processStage: 'Pendência'},
-                'Concluído': { status: 'Finalizado', processStage: 'Finalizado', stage: 'Venda Concluída' },
-                'Cancelado': { status: 'Cancelado' }
+                'Ativo': { stage: 'Em Negociação' },
+                'Pendente': { stage: 'Em Negociação' }, // Mapear para um status de negociação
+                'Concluído': { stage: 'Venda Concluída' },
+                'Cancelado': { stage: 'Proposta Enviada' } // Mapear para um status de negociação
+            };
+            if(negData.processoId) {
+                await updateDoc(doc(db, 'processos', negData.processoId), { stage: newStatus === 'Concluído' ? 'Finalizado' : 'Em andamento' });
             }
             await updateDoc(negotiationRef, statusMap[newStatus]);
             updated = true;
@@ -590,7 +722,7 @@ export const updateActivityStatus = async (activityId: string, newStatus: Activi
     
     // Se não for uma negociação, tentamos atualizar um imóvel (captação)
     if (!updated) {
-        const propertyRef = doc(db, "propriedades", activityId);
+        const propertyRef = doc(db, "imoveis", activityId);
         try {
             const propDoc = await getDoc(propertyRef);
             if (propDoc.exists()) {
@@ -605,11 +737,3 @@ export const updateActivityStatus = async (activityId: string, newStatus: Activi
         } catch(e) {}
     }
 };
-
-    
-
-    
-
-    
-
-    

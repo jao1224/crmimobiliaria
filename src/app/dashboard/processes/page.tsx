@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useContext, useMemo } from "react";
@@ -8,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, AlertCircle, CheckCircle, Hourglass } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { getNegotiations, type Negotiation, type ProcessStatus, type ProcessStage, completeSaleAndGenerateCommission, updateNegotiation } from "@/lib/data";
+import { getProcessos, type Processo, type ProcessStatus, type ProcessStage, updateProcesso } from "@/lib/data";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -42,9 +43,9 @@ const getStageVariant = (stage: ProcessStage) => {
 export default function ProcessesPage() {
     const { activeProfile } = useContext(ProfileContext);
     const [currentUser, setCurrentUser] = useState<User | null>(null);
-    const [processes, setProcesses] = useState<Negotiation[]>([]);
+    const [processes, setProcesses] = useState<Processo[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [selectedProcess, setSelectedProcess] = useState<Negotiation | null>(null);
+    const [selectedProcess, setSelectedProcess] = useState<Processo | null>(null);
     const [isPendencyModalOpen, setPendencyModalOpen] = useState(false);
     const [isFinalizeModalOpen, setFinalizeModalOpen] = useState(false);
     const [pendencyNote, setPendencyNote] = useState("");
@@ -67,7 +68,7 @@ export default function ProcessesPage() {
     const refreshProcesses = async () => {
         setIsLoading(true);
         try {
-            const data = await getNegotiations();
+            const data = await getProcessos();
             setProcesses(data);
         } catch (error) {
             toast({ variant: 'destructive', title: "Erro", description: "Não foi possível carregar os processos."});
@@ -80,28 +81,26 @@ export default function ProcessesPage() {
         if (activeProfile === 'Admin' || activeProfile === 'Imobiliária') {
             return processes;
         }
-        if (currentUser) {
+        if (currentUser?.displayName) {
             if (activeProfile === 'Construtora') {
-                 // Construtora vê processos dos seus imóveis (onde ela é a captadora)
-                 return processes.filter(p => p.realtor === currentUser.displayName);
+                 return processes.filter(p => p.realtorName === currentUser.displayName);
             }
-             // Outros perfis (Corretor, Investidor) veem processos em que são parte
             return processes.filter(p => 
-                p.realtor === currentUser.displayName || 
-                p.salesperson === currentUser.displayName ||
-                p.client === currentUser.displayName
+                p.realtorName === currentUser.displayName || 
+                p.salespersonName === currentUser.displayName ||
+                p.clientName === currentUser.displayName
             );
         }
         return [];
     }, [processes, activeProfile, currentUser]);
 
-    const handleOpenPendencyModal = (process: Negotiation) => {
+    const handleOpenPendencyModal = (process: Processo) => {
         setSelectedProcess(process);
         setPendencyNote(process.observations || "");
         setPendencyModalOpen(true);
     };
 
-    const handleOpenFinalizeModal = (process: Negotiation) => {
+    const handleOpenFinalizeModal = (process: Processo) => {
         setSelectedProcess(process);
         setFinalizationNote("");
         setFinalizeModalOpen(true);
@@ -110,12 +109,12 @@ export default function ProcessesPage() {
     const handleSavePendency = async () => {
         if (!selectedProcess) return;
         try {
-            await updateNegotiation(selectedProcess.id, {
-                processStage: 'Pendência',
+            await updateProcesso(selectedProcess.id, {
+                stage: 'Pendência',
                 observations: pendencyNote
             });
             await refreshProcesses();
-            toast({ title: "Pendência Registrada!", description: `Uma nova observação foi adicionada ao processo ${selectedProcess.id.toUpperCase()}.` });
+            toast({ title: "Pendência Registrada!", description: `Uma nova observação foi adicionada ao processo ${selectedProcess.negotiationId.toUpperCase()}.` });
         } catch (error) {
             toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível salvar a pendência.'});
         }
@@ -125,13 +124,16 @@ export default function ProcessesPage() {
     const handleFinalizeProcess = async () => {
         if (!selectedProcess) return;
 
-        const { success, message } = await completeSaleAndGenerateCommission(selectedProcess, finalizationNote);
-
-        if (success) {
+        try {
+            await updateProcesso(selectedProcess.id, {
+                stage: 'Finalizado',
+                status: 'Finalizado',
+                observations: finalizationNote || "Processo finalizado manualmente."
+            });
             await refreshProcesses();
-            toast({ title: "Processo Finalizado!", description: message });
-        } else {
-            toast({ variant: "destructive", title: "Erro ao Finalizar", description: message });
+            toast({ title: "Processo Finalizado!", description: "O processo foi marcado como finalizado." });
+        } catch(error) {
+            toast({ variant: "destructive", title: "Erro ao Finalizar", description: "Não foi possível finalizar o processo." });
         }
         
         setFinalizeModalOpen(false);
@@ -155,10 +157,8 @@ export default function ProcessesPage() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Status</TableHead>
-                                <TableHead>Código</TableHead>
+                                <TableHead>Cód. Neg.</TableHead>
                                 <TableHead>Andamento</TableHead>
-                                <TableHead>Tipo Negociação</TableHead>
-                                <TableHead>Categoria</TableHead>
                                 <TableHead>Imóvel</TableHead>
                                 <TableHead>Vendedor</TableHead>
                                 <TableHead>Captador</TableHead>
@@ -171,30 +171,28 @@ export default function ProcessesPage() {
                             {isLoading ? (
                                 Array.from({ length: 5 }).map((_, i) => (
                                     <TableRow key={i}>
-                                        <TableCell colSpan={11}><Skeleton className="h-8 w-full" /></TableCell>
+                                        <TableCell colSpan={9}><Skeleton className="h-8 w-full" /></TableCell>
                                     </TableRow>
                                 ))
                             ) : filteredProcesses.length > 0 ? (
                                 filteredProcesses.map(process => (
                                     <TableRow key={process.id} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
                                         <TableCell><Badge variant={getStatusVariant(process.status)}>{process.status}</Badge></TableCell>
-                                        <TableCell className="font-mono text-xs">{process.id.toUpperCase()}</TableCell>
+                                        <TableCell className="font-mono text-xs">{process.negotiationId.toUpperCase()}</TableCell>
                                         <TableCell className="whitespace-nowrap">
                                             <div className="flex items-center gap-2">
-                                                {process.processStage === 'Pendência' && <AlertCircle className="h-4 w-4 text-status-orange" />}
-                                                {process.processStage === 'Em andamento' && <Hourglass className="h-4 w-4 text-status-blue" />}
-                                                {process.processStage === 'Finalizado' && <CheckCircle className="h-4 w-4 text-primary" />}
-                                                <Badge variant={getStageVariant(process.processStage)}>{process.processStage}</Badge>
+                                                {process.stage === 'Pendência' && <AlertCircle className="h-4 w-4 text-status-orange" />}
+                                                {process.stage === 'Em andamento' && <Hourglass className="h-4 w-4 text-status-blue" />}
+                                                {process.stage === 'Finalizado' && <CheckCircle className="h-4 w-4 text-primary" />}
+                                                <Badge variant={getStageVariant(process.stage)}>{process.stage}</Badge>
                                             </div>
                                         </TableCell>
-                                        <TableCell>{process.negotiationType}</TableCell>
-                                        <TableCell>{process.category}</TableCell>
                                         <TableCell className="font-medium">
-                                            {process.property}
+                                            {process.propertyName}
                                             <div className="text-xs text-muted-foreground font-mono">{process.propertyDisplayCode}</div>
                                         </TableCell>
-                                        <TableCell>{process.salesperson}</TableCell>
-                                        <TableCell>{process.realtor}</TableCell>
+                                        <TableCell>{process.salespersonName}</TableCell>
+                                        <TableCell>{process.realtorName}</TableCell>
                                         <TableCell>{process.team}</TableCell>
                                         <TableCell className="text-muted-foreground text-xs max-w-xs truncate">{process.observations}</TableCell>
                                         <TableCell>
@@ -222,7 +220,7 @@ export default function ProcessesPage() {
                                 ))
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={11} className="h-24 text-center">Nenhum processo encontrado.</TableCell>
+                                    <TableCell colSpan={9} className="h-24 text-center">Nenhum processo encontrado.</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>
@@ -237,7 +235,7 @@ export default function ProcessesPage() {
                         <DialogTitle>Marcar Pendência no Processo</DialogTitle>
                         <DialogDescription>
                             Adicione uma observação sobre a pendência. Todos os envolvidos no processo 
-                            serão notificados (simulado). Processo: <span className="font-bold">{selectedProcess?.id.toUpperCase()}</span>
+                            serão notificados (simulado). Processo da Negociação: <span className="font-bold">{selectedProcess?.negotiationId.toUpperCase()}</span>
                         </DialogDescription>
                     </DialogHeader>
                     <div className="py-4 space-y-2">
@@ -263,18 +261,18 @@ export default function ProcessesPage() {
                     <DialogHeader>
                         <DialogTitle>Finalizar Processo</DialogTitle>
                         <DialogDescription>
-                            Insira os detalhes finais sobre o que cada parte (corretor, gerente, etc.) tem a receber.
-                             Processo: <span className="font-bold">{selectedProcess?.id.toUpperCase()}</span>
+                            Adicione uma nota de finalização para este processo.
+                             Processo da Negociação: <span className="font-bold">{selectedProcess?.negotiationId.toUpperCase()}</span>
                         </DialogDescription>
                     </DialogHeader>
                     <div className="py-4 space-y-2">
-                        <Label htmlFor="finalization-note">Detalhes do Recebimento</Label>
+                        <Label htmlFor="finalization-note">Nota de Finalização</Label>
                         <Textarea 
                             id="finalization-note" 
                             className="min-h-32" 
                             value={finalizationNote}
                             onChange={(e) => setFinalizationNote(e.target.value)}
-                            placeholder="Ex: Corretor Vendedor: R$ 5.000,00. Corretor Captador: R$ 3.000,00. Gerente: R$ 1.000,00."
+                            placeholder="Ex: Documentação entregue, processo concluído com sucesso."
                         />
                     </div>
                     <DialogFooter>
