@@ -28,7 +28,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { getNegotiations, addNegotiation, type Negotiation, addFinancingProcess, completeSaleAndGenerateCommission, getProperties, type Property, updateNegotiation, getUsers, type User, archiveNegotiation, deleteNegotiation } from "@/lib/data";
+import { getNegotiations, addNegotiation, type Negotiation, addFinancingProcess, completeSaleAndGenerateCommission, getProperties, type Property, updateNegotiation, getUsers, type User, archiveNegotiation } from "@/lib/data";
 import { getClients, type Client } from "@/lib/crm-data";
 import { cn } from "@/lib/utils";
 import { ProfileContext } from "@/contexts/ProfileContext";
@@ -36,6 +36,7 @@ import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { AssignNegotiationDialog } from "@/components/dashboard/assign-negotiation-dialog";
 import Link from "next/link";
+import { deleteNegotiation } from "@/lib/data";
 
 
 export default function NegotiationsPage() {
@@ -414,10 +415,12 @@ export default function NegotiationsPage() {
                                      <div className="space-y-2">
                                         <h4 className="font-semibold text-sm">Imóvel Selecionado</h4>
                                         {foundProperty ? (
-                                            <div className="text-sm text-muted-foreground">
+                                            <div className="text-sm text-muted-foreground space-y-1">
                                                 <p className="font-medium text-foreground">{foundProperty.name}</p>
-                                                <p>{foundProperty.address}</p>
-                                                <p>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(foundProperty.price)}</p>
+                                                <p><strong>Cód:</strong> {foundProperty.displayCode}</p>
+                                                <p><strong>End:</strong> {foundProperty.address}</p>
+                                                <p><strong>Preço:</strong> {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(foundProperty.price)}</p>
+                                                <p className="line-clamp-2"><strong>Desc:</strong> {foundProperty.description || 'N/A'}</p>
                                             </div>
                                         ) : <p className="text-sm text-destructive">Nenhum imóvel selecionado.</p>}
                                     </div>
