@@ -231,33 +231,31 @@ export const getPropertiesByRealtor = async (realtorName: string): Promise<Prope
 };
 
 export const addProperty = async (newPropertyData: Omit<Property, 'id' | 'displayCode'>, file?: File | null): Promise<string> => {
-    const counterRef = doc(db, 'counters', 'propertyCounter');
+    const counterRef = doc(db, 'propertyCounters', 'propertyCounter');
     const propertyCollection = collection(db, 'properties');
 
     let newId = '';
     await runTransaction(db, async (transaction) => {
         const counterDoc = await transaction.get(counterRef);
         
-        let nextNumber = 1001; // Inicia em 1001 se o contador não existir
+        let nextNumber = 1001;
         if (counterDoc.exists()) {
             nextNumber = counterDoc.data().lastNumber + 1;
         }
 
-        const displayCode = `IMB-${nextNumber}`;
-        
+        const propertyNamePrefix = newPropertyData.name.substring(0, 3).toUpperCase();
+        const realtorNamePrefix = newPropertyData.capturedBy.substring(0, 3).toUpperCase();
+        const displayCode = `${propertyNamePrefix}-${realtorNamePrefix}-${nextNumber}`;
+
         const newProperty: Omit<Property, 'id'> = {
             ...newPropertyData,
             displayCode: displayCode,
         };
-        
-        // Log para verificação no console do navegador
-        console.log("Salvando imóvel no Firestore:", newProperty);
 
-        const newPropertyRef = doc(propertyCollection); // Gera um novo ID automático
+        const newPropertyRef = doc(propertyCollection);
         transaction.set(newPropertyRef, newProperty);
         newId = newPropertyRef.id;
 
-        // Atualiza o contador
         transaction.set(counterRef, { lastNumber: nextNumber }, { merge: true });
     });
 
@@ -597,6 +595,8 @@ export const updateActivityStatus = async (activityId: string, newStatus: Activi
         } catch(e) {}
     }
 };
+
+    
 
     
 
