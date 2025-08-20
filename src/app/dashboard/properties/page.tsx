@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import Image from "next/image";
@@ -81,14 +82,15 @@ export default function PropertiesPage() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
         setCurrentUser(user);
-        if (user) {
-            refreshProperties();
-        } else {
-            setIsLoading(false); // If no user, stop loading
-        }
     });
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (currentUser !== undefined) {
+        refreshProperties();
+    }
+  }, [currentUser]);
 
   const refreshProperties = async () => {
     setIsLoading(true);
@@ -199,13 +201,12 @@ export default function PropertiesPage() {
     }
     
     const formData = new FormData(event.currentTarget);
-    const newPropertyData: Omit<Property, 'id' | 'displayCode' | 'capturedById'> = {
+    const newPropertyData: Omit<Property, 'id' | 'displayCode' | 'capturedById' | 'imageUrl'> = {
       name: formData.get("name") as string,
       address: formData.get("address") as string,
       status: "Disponível",
       price: Number(formData.get("price")),
       commission: Number(formData.get("commission")),
-      imageUrl: "https://placehold.co/600x400.png",
       imageHint: "novo imovel",
       capturedBy: currentUser.displayName || 'N/A', // Captura o nome do usuário logado
       description: formData.get("description") as string,
