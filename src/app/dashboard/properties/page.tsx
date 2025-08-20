@@ -43,16 +43,17 @@ import { cn } from "@/lib/utils";
 import type { Property, PropertyType, User } from "@/lib/data";
 import { getProperties, addProperty, updateProperty, deleteProperty, propertyTypes, getUsers } from "@/lib/data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { auth } from "@/lib/firebase";
-import { onAuthStateChanged } from "firebase/auth";
+import { auth, storage } from "@/lib/firebase";
+import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
 import { ProfileContext } from "@/contexts/ProfileContext";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 
 
 export default function PropertiesPage() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const { activeProfile } = useContext(ProfileContext);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
@@ -65,9 +66,7 @@ export default function PropertiesPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const addPropertyFormRef = useRef<HTMLFormElement>(null);
-  const [authUser, setAuthUser] = useState<any | null>(null);
-  const [isAuthReady, setIsAuthReady] = useState(false);
-
+  
   // Estados controlados para Selects no formulário de edição
   const [editCapturedBy, setEditCapturedBy] = useState<string>("");
   const [editType, setEditType] = useState<PropertyType | "">("");
@@ -79,9 +78,16 @@ export default function PropertiesPage() {
   const [captadorFilter, setCaptadorFilter] = useState('all');
   const [sortOrder, setSortOrder] = useState('default'); // 'price-asc', 'price-desc'
 
-  // Aguarda autenticação antes de consultar o Firestore, evitando erros de permissão
   useEffect(() => {
-    refreshProperties();
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+        setCurrentUser(user);
+        if (user) {
+            refreshProperties();
+        } else {
+            setIsLoading(false); // If no user, stop loading
+        }
+    });
+    return () => unsubscribe();
   }, []);
 
   const refreshProperties = async () => {
@@ -189,13 +195,7 @@ export default function PropertiesPage() {
         return;
     }
     setIsSaving(true);
-
-    if (!authUser) {
-      toast({ variant: "destructive", title: "Acesso restrito", description: "Faça login para cadastrar imóveis." });
-      setIsSaving(false);
-      return;
-    }
-
+    
     const formData = new FormData(event.currentTarget);
     const newPropertyData: Omit<Property, 'id' | 'displayCode' | 'capturedById'> = {
       name: formData.get("name") as string,
@@ -205,14 +205,14 @@ export default function PropertiesPage() {
       commission: Number(formData.get("commission")),
       imageUrl: "https://placehold.co/600x400.png",
       imageHint: "novo imovel",
-      capturedBy: "Admin", // Simulado
+      capturedBy: currentUser.displayName || 'N/A', // Captura o nome do usuário logado
       description: formData.get("description") as string,
       ownerInfo: formData.get("owner") as string,
       type: formData.get("type") as PropertyType,
     };
 
     try {
-      await addProperty(newPropertyData, selectedFile);
+      await addProperty(newPropertyData, selectedFile, currentUser.uid);
       await refreshProperties();
       toast({ title: "Sucesso!", description: "Imóvel adicionado com sucesso." });
       setPropertyDialogOpen(false);
@@ -226,26 +226,20 @@ export default function PropertiesPage() {
 
   const handleUpdateProperty = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!editingProperty) return;
+    if (!editingProperty || !currentUser) return;
     setIsSaving(true);
-
-    if (!authUser) {
-      toast({ variant: "destructive", title: "Acesso restrito", description: "Faça login para editar imóveis." });
-      setIsSaving(false);
-      return;
-    }
-
-    const formData = new FormData(event.currentTarget);
     
-    const selectedCaptador = users.find(u => u.id === formData.get("capturedById"));
+    const formData = new FormData(event.currentTarget);
+    const capturedById = formData.get("capturedBy") as string;
+    const selectedCaptador = users.find(u => u.id === capturedById);
 
     const updatedPropertyData: Partial<Property> = {
       name: formData.get("name") as string,
       address: formData.get("address") as string,
       price: Number(formData.get("price")),
       commission: Number(formData.get("commission")),
-      imageUrl: imagePreview || editingProperty.imageUrl,
-      capturedBy: formData.get("capturedBy") as string,
+      capturedById: capturedById,
+      capturedBy: selectedCaptador?.name || editingProperty.capturedBy,
       description: formData.get("description") as string,
       ownerInfo: formData.get("owner") as string,
       type: (editType || editingProperty.type) as PropertyType,
@@ -274,7 +268,7 @@ export default function PropertiesPage() {
     e.stopPropagation();
     setEditingProperty(property);
     setImagePreview(property.imageUrl);
-    setEditCapturedBy(property.capturedBy);
+    setEditCapturedBy(property.capturedById);
     setEditType(property.type);
     setEditStatus(property.status);
     setEditDialogOpen(true);
@@ -719,7 +713,7 @@ export default function PropertiesPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="edit-capturedBy">Captado por</Label>
-                       <Select name="capturedBy" defaultValue={editingProperty.capturedBy} required>
+                       <Select name="capturedBy" defaultValue={editingProperty.capturedById} required>
                           <SelectTrigger><SelectValue/></SelectTrigger>
                           <SelectContent>
                               {users.map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}

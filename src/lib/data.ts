@@ -1,7 +1,8 @@
 
 
-import { db } from './firebase';
+import { db, storage } from './firebase';
 import { collection, getDocs, addDoc, doc, updateDoc, writeBatch, serverTimestamp, query, orderBy, limit, where, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 // Tipos para os dados de CRM
 export type Lead = {
@@ -306,7 +307,7 @@ export const getUsers = async (): Promise<User[]> => {
 };
 
 export const getProperties = async (): Promise<Property[]> => {
-    const propertiesCollection = collection(db, 'properties');
+    const propertiesCollection = collection(db, 'imoveis');
     const snapshot = await getDocs(propertiesCollection);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Property));
 };
@@ -317,8 +318,26 @@ export const getPropertiesByRealtor = async (realtorName: string): Promise<Prope
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Property));
 };
 
-export const addProperty = async (newProperty: Omit<Property, 'id'>): Promise<string> => {
-    const docRef = await addDoc(collection(db, 'properties'), newProperty);
+export const addProperty = async (newProperty: Omit<Property, 'id' | 'displayCode'>, file: File | null, userId: string): Promise<string> => {
+    
+    let imageUrl = "https://placehold.co/600x400.png";
+    if (file) {
+        const storageRef = ref(storage, `properties/${Date.now()}_${file.name}`);
+        await uploadBytes(storageRef, file);
+        imageUrl = await getDownloadURL(storageRef);
+    }
+    
+    const timestamp = Date.now();
+    const displayCode = `ID-${String(timestamp).slice(-6)}`;
+
+    const propertyToSave = {
+        ...newProperty,
+        imageUrl,
+        capturedById: userId,
+        displayCode: displayCode
+    }
+
+    const docRef = await addDoc(collection(db, 'imoveis'), propertyToSave);
     return docRef.id;
 };
 
@@ -880,6 +899,7 @@ export const updateActivityStatus = async (activityId: string, newStatus: Activi
     
 
     
+
 
 
 
