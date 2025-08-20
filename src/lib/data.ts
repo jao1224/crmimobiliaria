@@ -3,6 +3,7 @@
 import { db, storage } from './firebase';
 import { collection, getDocs, addDoc, doc, updateDoc, writeBatch, serverTimestamp, query, orderBy, limit, where, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { type User as FirebaseUser } from 'firebase/auth';
 
 // Tipos para os dados de CRM
 export type Lead = {
@@ -318,7 +319,7 @@ export const getPropertiesByRealtor = async (realtorName: string): Promise<Prope
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Property));
 };
 
-export const addProperty = async (newProperty: Omit<Property, 'id' | 'displayCode' | 'capturedById' | 'imageUrl'>, file: File | null, userId: string): Promise<string> => {
+export const addProperty = async (newProperty: Omit<Property, 'id' | 'displayCode' | 'capturedById' | 'imageUrl'>, file: File | null, user: FirebaseUser): Promise<string> => {
     
     let imageUrl = "https://placehold.co/600x400.png";
     if (file) {
@@ -334,7 +335,8 @@ export const addProperty = async (newProperty: Omit<Property, 'id' | 'displayCod
         ...newProperty,
         imageUrl,
         displayCode,
-        capturedById: userId,
+        capturedById: user.uid,
+        capturedBy: user.displayName || 'N/A',
     }
 
     const docRef = await addDoc(collection(db, 'imoveis'), propertyToSave);
@@ -899,6 +901,7 @@ export const updateActivityStatus = async (activityId: string, newStatus: Activi
     
 
     
+
 
 
 

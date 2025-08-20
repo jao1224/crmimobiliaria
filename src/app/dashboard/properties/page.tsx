@@ -41,8 +41,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
-import type { Property, PropertyType } from "@/lib/data";
-import { getProperties, addProperty, updateProperty, deleteProperty, propertyTypes, getUsers, type User } from "@/lib/data";
+import type { Property, PropertyType, User } from "@/lib/data";
+import { getProperties, addProperty, updateProperty, deleteProperty, propertyTypes, getUsers } from "@/lib/data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { auth, storage } from "@/lib/firebase";
 import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
@@ -215,7 +215,7 @@ export default function PropertiesPage() {
     };
 
     try {
-      await addProperty(newPropertyData, selectedFile, currentUser.uid);
+      await addProperty(newPropertyData, selectedFile, currentUser);
       await refreshProperties();
       toast({ title: "Sucesso!", description: "Imóvel adicionado com sucesso." });
       setPropertyDialogOpen(false);
@@ -783,3 +783,4 @@ export default function PropertiesPage() {
     </div>
   );
 }
+
