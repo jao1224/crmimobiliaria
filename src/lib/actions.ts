@@ -2,6 +2,7 @@
 'use server';
 
 import { matchProperties as matchPropertiesFlow, type MatchPropertiesInput } from '@/ai/flows/property-matching';
+import { getReportInsights as getReportInsightsFlow, type ReportInsightsInput, type ReportInsightsOutput } from '@/ai/flows/reporting-insights';
 import { getProperties } from './data';
 
 export async function findMatchingProperties(clientRequirements: string) {
@@ -33,4 +34,21 @@ export async function findMatchingProperties(clientRequirements: string) {
     console.error('Erro em findMatchingProperties:', error);
     return { success: false, error: 'Falha ao encontrar imóveis correspondentes devido a um erro no servidor.' };
   }
+}
+
+export async function getReportInsights(salesData: string, captureData: string, teamData: string): Promise<{ success: boolean, data?: ReportInsightsOutput, error?: string}> {
+    try {
+        if (!salesData && !captureData && !teamData) {
+            return { success: false, error: "Dados insuficientes para gerar uma análise."};
+        }
+
+        const input: ReportInsightsInput = { salesData, captureData, teamData };
+        const result = await getReportInsightsFlow(input);
+
+        return { success: true, data: result };
+
+    } catch (error) {
+        console.error('Erro em getReportInsights:', error);
+        return { success: false, error: 'Falha ao gerar análise de relatório devido a um erro no servidor.' };
+    }
 }

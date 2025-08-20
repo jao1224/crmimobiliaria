@@ -7,10 +7,11 @@ import { SalesReport } from "@/components/dashboard/sales-report";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Download, Building, Users } from "lucide-react";
+import { Download, Building, Users, Wand2, Sparkles, AlertTriangle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
 import { getNegotiations, propertyTypes, type Negotiation, getProperties, type Property, getUsers, getPayments, type PaymentCLT, getExpenses, type Expense } from "@/lib/data";
+import { getReportInsights, type ReportInsightsOutput } from "@/lib/actions";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -20,6 +21,8 @@ import { db, auth } from "@/lib/firebase";
 import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 
 
 type Team = {
@@ -131,6 +134,10 @@ export default function ReportingPage() {
     const [expenseCategoryFilter, setExpenseCategoryFilter] = useState('all');
     const [paymentTypeFilter, setPaymentTypeFilter] = useState('all');
 
+    // Estados para IA
+    const [isAiAnalysisLoading, setIsAiAnalysisLoading] = useState(false);
+    const [aiInsights, setAiInsights] = useState<ReportInsightsOutput | null>(null);
+
     
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -235,6 +242,28 @@ export default function ReportingPage() {
     const totalPayments = useMemo(() => filteredPayments.reduce((sum, p) => sum + p.amount, 0), [filteredPayments]);
     const totalExpenses = useMemo(() => filteredExpenses.reduce((sum, e) => sum + e.amount, 0), [filteredExpenses]);
 
+    const handleAiAnalysis = async () => {
+        setIsAiAnalysisLoading(true);
+        setAiInsights(null);
+
+        const salesDataString = `Vendas: ${filteredNegotiations.length} negócios totalizando ${formatCurrency(filteredNegotiations.reduce((acc, neg) => acc + neg.value, 0))}.`;
+        const capturesDataString = `Captações: ${realtorCaptures.length > 0 ? realtorCaptures.map(r => `${r.name} (${r.captures})`).join(', ') : 'Nenhuma'}.`;
+        const teamDataString = `Equipes: ${teamPerformanceData.length > 0 ? teamPerformanceData.map(t => `${t.name} (Receita: ${formatCurrency(t.revenue)})`).join(', ') : 'Nenhuma'}.`;
+
+        const result = await getReportInsights(salesDataString, capturesDataString, teamDataString);
+        
+        if (result.success) {
+            setAiInsights(result.data!);
+        } else {
+            toast({
+                variant: 'destructive',
+                title: 'Erro na Análise',
+                description: result.error,
+            });
+        }
+        setIsAiAnalysisLoading(false);
+    };
+
     const handleExport = () => {
         if (activeTab !== 'sales' || filteredNegotiations.length === 0) {
             toast({
@@ -283,10 +312,16 @@ export default function ReportingPage() {
                     <h1 className="text-2xl font-bold">Relatórios & Análises</h1>
                     <p className="text-muted-foreground">Analise o desempenho com relatórios e visualizações detalhadas.</p>
                 </div>
-                <Button onClick={handleExport}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Exportar Relatório
-                </Button>
+                <div className="flex items-center gap-2">
+                     <Button onClick={handleAiAnalysis} variant="outline" disabled={isAiAnalysisLoading}>
+                        <Wand2 className="mr-2 h-4 w-4" />
+                        {isAiAnalysisLoading ? 'Analisando...' : 'Analisar com IA'}
+                    </Button>
+                    <Button onClick={handleExport}>
+                        <Download className="mr-2 h-4 w-4" />
+                        Exportar Relatório
+                    </Button>
+                </div>
             </div>
 
             <Card>
@@ -383,6 +418,47 @@ export default function ReportingPage() {
                     </div>
                 </CardHeader>
             </Card>
+
+             {(isAiAnalysisLoading || aiInsights) && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <Sparkles className="text-primary h-5 w-5" />
+                            Análise da Inteligência Artificial
+                        </CardTitle>
+                        <CardDescription>
+                            Um resumo inteligente e insights gerados com base nos filtros atuais.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {isAiAnalysisLoading ? (
+                            <div className="space-y-4">
+                                <Skeleton className="h-4 w-1/3" />
+                                <Skeleton className="h-4 w-full" />
+                                <Skeleton className="h-4 w-4/5" />
+                                <br/>
+                                <Skeleton className="h-4 w-1/4" />
+                                <Skeleton className="h-4 w-full" />
+                            </div>
+                        ) : aiInsights ? (
+                             <Alert>
+                                <AlertTriangle className="h-4 w-4" />
+                                <AlertTitle>{aiInsights.summary}</AlertTitle>
+                                <AlertDescription className="mt-4 space-y-2">
+                                     <div>
+                                        <h3 className="font-semibold">Destaques:</h3>
+                                        <p className="whitespace-pre-wrap">{aiInsights.highlights}</p>
+                                    </div>
+                                    <div>
+                                        <h3 className="font-semibold">Sugestões:</h3>
+                                        <p className="whitespace-pre-wrap">{aiInsights.suggestions}</p>
+                                    </div>
+                                </AlertDescription>
+                            </Alert>
+                        ) : null}
+                    </CardContent>
+                </Card>
+            )}
 
             <Tabs defaultValue="sales" onValueChange={setActiveTab}>
                 <TabsList>
