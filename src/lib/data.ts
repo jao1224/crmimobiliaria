@@ -496,6 +496,11 @@ export const addCommission = async (newCommission: Omit<Commission, 'id'>): Prom
     return docRef.id;
 };
 
+export const updateCommission = async (id: string, data: Partial<Commission>): Promise<void> => {
+    const commissionRef = doc(db, 'comissoes', id);
+    await updateDoc(commissionRef, data);
+};
+
 export const getPayments = async (): Promise<PaymentCLT[]> => {
     const snapshot = await getDocs(collection(db, 'pagamentos'));
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PaymentCLT));
@@ -737,3 +742,6 @@ export const updateActivityStatus = async (activityId: string, newStatus: Activi
         } catch(e) {}
     }
 };
+
+
+    

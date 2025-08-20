@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, PlusCircle, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,7 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import type { UserProfile } from "../layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getCommissions, type Commission, addCommission, getPayments, addPayment, type PaymentCLT, getExpenses, addExpense, type Expense, getNegotiations, type Negotiation } from "@/lib/data";
+import { getCommissions, type Commission, addCommission, getPayments, addPayment, type PaymentCLT, getExpenses, addExpense, type Expense, getNegotiations, type Negotiation, updateCommission } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -47,6 +47,11 @@ export default function FinancePage() {
     const [isCommissionDialogOpen, setCommissionDialogOpen] = useState(false);
     const [negotiations, setNegotiations] = useState<Negotiation[]>([]);
     const [selectedNegotiation, setSelectedNegotiation] = useState<Negotiation | null>(null);
+    
+    // Estados para Edição de Comissão
+    const [isEditCommissionDialogOpen, setEditCommissionDialogOpen] = useState(false);
+    const [editingCommission, setEditingCommission] = useState<Commission | null>(null);
+
 
     // Estados para Pagamentos CLT
     const [payments, setPayments] = useState<PaymentCLT[]>([]);
@@ -166,6 +171,30 @@ export default function FinancePage() {
         setSelectedNegotiation(null);
     };
 
+    const handleEditCommission = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        if (!editingCommission) return;
+
+        const formData = new FormData(event.currentTarget);
+
+        const updatedData: Partial<Commission> = {
+            managerName: formData.get('managerName') as string,
+            clientSignal: parseFloat(formData.get('clientSignal') as string),
+            commissionValue: parseFloat(formData.get('commissionValue') as string),
+            commissionRate: parseFloat(formData.get('commissionRate') as string),
+            status: formData.get('status') as Commission['status'],
+            paymentDate: formData.get('paymentDate') as string,
+            notes: formData.get('notes') as string,
+        };
+
+        await updateCommission(editingCommission.id, updatedData);
+        await refreshFinanceData();
+        toast({ title: "Sucesso!", description: "Comissão atualizada com sucesso." });
+        setEditCommissionDialogOpen(false);
+        setEditingCommission(null);
+    };
+
+
     const handleAddPayment = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         const formData = new FormData(event.currentTarget);
@@ -205,6 +234,11 @@ export default function FinancePage() {
         if (negotiation) {
             setSelectedNegotiation(negotiation);
         }
+    };
+    
+    const handleOpenEditDialog = (commission: Commission) => {
+        setEditingCommission(commission);
+        setEditCommissionDialogOpen(true);
     };
 
 
@@ -263,7 +297,7 @@ export default function FinancePage() {
                                                     </div>
                                                     <div className="space-y-2">
                                                         <Label htmlFor="clientSignal">Sinal do Cliente (R$)</Label>
-                                                        <Input id="clientSignal" name="clientSignal" type="number" step="0.01" placeholder="Opcional" />
+                                                        <Input id="clientSignal" name="clientSignal" type="number" step="0.01" min="0" placeholder="Opcional" />
                                                     </div>
                                                 </div>
 
@@ -285,11 +319,11 @@ export default function FinancePage() {
                                                 <div className="border-t pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                                                      <div className="space-y-2">
                                                         <Label htmlFor="commissionRate">Taxa de Comissão (%)</Label>
-                                                        <Input id="commissionRate" name="commissionRate" type="number" step="0.1" required defaultValue={selectedNegotiation ? 5 : ''}/>
+                                                        <Input id="commissionRate" name="commissionRate" type="number" step="0.1" min="0" required defaultValue={selectedNegotiation ? 5 : ''}/>
                                                     </div>
                                                     <div className="space-y-2">
                                                         <Label htmlFor="commissionValue">Valor da Comissão (R$)</Label>
-                                                        <Input id="commissionValue" name="commissionValue" type="number" step="0.01" required defaultValue={selectedNegotiation ? (selectedNegotiation.value * 0.05).toFixed(2) : ''}/>
+                                                        <Input id="commissionValue" name="commissionValue" type="number" step="0.01" min="0" required defaultValue={selectedNegotiation ? (selectedNegotiation.value * 0.05).toFixed(2) : ''}/>
                                                     </div>
                                                     <div className="space-y-2">
                                                         <Label htmlFor="paymentDate">Data de Pagamento</Label>
@@ -377,7 +411,9 @@ export default function FinancePage() {
                                                             <DropdownMenu>
                                                                 <DropdownMenuTrigger asChild><Button aria-haspopup="true" size="icon" variant="ghost"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                                                                 <DropdownMenuContent align="end">
-                                                                    <DropdownMenuLabel>Alterar Status</DropdownMenuLabel>
+                                                                    <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                                                                    <DropdownMenuItem onClick={() => handleOpenEditDialog(commission)}>Editar Comissão</DropdownMenuItem>
+                                                                    <DropdownMenuSeparator />
                                                                     <DropdownMenuItem onClick={() => handleStatusChange(commission.id, 'Pago')}>Marcar como Pago</DropdownMenuItem>
                                                                     <DropdownMenuItem onClick={() => handleStatusChange(commission.id, 'Pendente')}>Marcar como Pendente</DropdownMenuItem>
                                                                     <DropdownMenuItem onClick={() => handleStatusChange(commission.id, 'Vencido')}>Marcar como Vencido</DropdownMenuItem>
@@ -435,7 +471,7 @@ export default function FinancePage() {
                                             </div>
                                             <div className="space-y-2">
                                                 <Label htmlFor="amount_payment">Valor (R$)</Label>
-                                                <Input id="amount_payment" name="amount" type="number" step="0.01" required />
+                                                <Input id="amount_payment" name="amount" type="number" step="0.01" min="0.01" required />
                                             </div>
                                              <div className="space-y-2">
                                                 <Label htmlFor="paymentDate_payment">Data de Pagamento</Label>
@@ -518,7 +554,7 @@ export default function FinancePage() {
                                             </div>
                                             <div className="space-y-2">
                                                 <Label htmlFor="amount_expense">Valor (R$)</Label>
-                                                <Input id="amount_expense" name="amount" type="number" step="0.01" required />
+                                                <Input id="amount_expense" name="amount" type="number" step="0.01" min="0.01" required />
                                             </div>
                                              <div className="space-y-2">
                                                 <Label htmlFor="dueDate">Data de Vencimento</Label>
@@ -573,6 +609,86 @@ export default function FinancePage() {
                     </Card>
                 </TabsContent>)}
             </Tabs>
+
+             {/* Modal de Edição de Comissão */}
+            <Dialog open={isEditCommissionDialogOpen} onOpenChange={(isOpen) => {
+                setEditCommissionDialogOpen(isOpen);
+                if (!isOpen) setEditingCommission(null);
+            }}>
+                {editingCommission && (
+                    <DialogContent className="sm:max-w-2xl">
+                        <DialogHeader>
+                            <DialogTitle>Editar Comissão</DialogTitle>
+                            <DialogDescription>
+                                Atualize os detalhes da comissão para a negociação ID: 
+                                <span className="font-mono text-sm ml-1">{editingCommission.negotiationId.toUpperCase()}</span>
+                            </DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={handleEditCommission} key={editingCommission.id}>
+                            <div className="grid gap-4 py-4">
+                                <div className="p-4 border rounded-md bg-muted/50">
+                                    <h4 className="font-semibold mb-2">Resumo do Negócio</h4>
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 text-sm">
+                                        <div><span className="text-muted-foreground">Cliente:</span> {editingCommission.clientName}</div>
+                                        <div><span className="text-muted-foreground">Captador:</span> {editingCommission.realtorName}</div>
+                                        <div><span className="text-muted-foreground">Vendedor:</span> {editingCommission.salespersonName}</div>
+                                        <div><span className="text-muted-foreground">Valor Imóvel:</span> {formatCurrency(editingCommission.propertyValue)}</div>
+                                    </div>
+                                </div>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                     <div className="space-y-2">
+                                        <Label htmlFor="edit_managerName">Gerente</Label>
+                                        <Input id="edit_managerName" name="managerName" defaultValue={editingCommission.managerName} placeholder="Nome do gerente (opcional)" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="edit_clientSignal">Sinal do Cliente (R$)</Label>
+                                        <Input id="edit_clientSignal" name="clientSignal" type="number" step="0.01" min="0" defaultValue={editingCommission.clientSignal} placeholder="Opcional" />
+                                    </div>
+                                </div>
+                                
+                                <div className="border-t pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                     <div className="space-y-2">
+                                        <Label htmlFor="edit_commissionRate">Taxa de Comissão (%)</Label>
+                                        <Input id="edit_commissionRate" name="commissionRate" type="number" step="0.1" min="0" required defaultValue={editingCommission.commissionRate}/>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="edit_commissionValue">Valor da Comissão (R$)</Label>
+                                        <Input id="edit_commissionValue" name="commissionValue" type="number" step="0.01" min="0.01" required defaultValue={editingCommission.commissionValue}/>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="edit_paymentDate">Data de Pagamento</Label>
+                                        <Input id="edit_paymentDate" name="paymentDate" type="date" required defaultValue={editingCommission.paymentDate} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="edit_status">Status</Label>
+                                        <Select name="status" defaultValue={editingCommission.status} required>
+                                            <SelectTrigger><SelectValue/></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="Pendente">Pendente</SelectItem>
+                                                <SelectItem value="Pago">Pago</SelectItem>
+                                                <SelectItem value="Vencido">Vencido</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+
+                                 <div className="space-y-2">
+                                    <Label htmlFor="edit_notes">Observações</Label>
+                                    <Textarea id="edit_notes" name="notes" defaultValue={editingCommission.notes} placeholder="Detalhes sobre a divisão, adiantamentos, etc." />
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <Button type="button" variant="outline" onClick={() => setEditCommissionDialogOpen(false)}>Cancelar</Button>
+                                <Button type="submit">Salvar Alterações</Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                )}
+            </Dialog>
         </div>
     );
 }
+
+
+    
