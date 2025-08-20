@@ -21,14 +21,14 @@ import {
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MoreHorizontal, Search, Archive, Trash2 } from "lucide-react";
+import { MoreHorizontal, Search, Archive, Trash2, Landmark } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { getNegotiations, addNegotiation, type Negotiation, addFinancingProcess, completeSaleAndGenerateCommission, getProperties, type Property, updateNegotiation, getUsers, type User, archiveNegotiation } from "@/lib/data";
+import { getNegotiations, addNegotiation, type Negotiation, addFinancingProcess, completeSaleAndGenerateCommission, getProperties, type Property, updateNegotiation, getUsers, type User, archiveNegotiation, addServiceRequest } from "@/lib/data";
 import { getClients, type Client } from "@/lib/crm-data";
 import { cn } from "@/lib/utils";
 import { ProfileContext } from "@/contexts/ProfileContext";
@@ -283,6 +283,34 @@ export default function NegotiationsPage() {
             });
         }
     };
+    
+    const handleTriggerCorrespondent = async (negotiation: Negotiation) => {
+        const client = await getClients().then(clients => clients.find(c => c.id === negotiation.clientId));
+        if (!client) {
+            toast({ variant: "destructive", title: "Erro", description: "Cliente da negociação não encontrado." });
+            return;
+        }
+
+        const request: Omit<any, 'id'> = {
+            type: 'credit_approval',
+            realtorName: negotiation.salesperson,
+            clientInfo: `Nome: ${client.name}, CPF: ${client.document}, Renda: ${client.monthlyIncome}`,
+            propertyInfo: `Imóvel: ${negotiation.property} (${negotiation.propertyDisplayCode})`,
+            status: 'Pendente',
+            date: new Date().toISOString()
+        };
+
+        try {
+            await addServiceRequest(request);
+            toast({
+                title: "Solicitação Enviada!",
+                description: "Uma solicitação de aprovação de crédito foi enviada ao Correspondente Bancário.",
+            });
+        } catch (error) {
+             toast({ variant: "destructive", title: "Erro", description: "Não foi possível enviar a solicitação." });
+        }
+    };
+
 
     const handleOpenAssignDialog = (negotiation: Negotiation) => {
         setSelectedNegotiation(negotiation);
@@ -605,6 +633,10 @@ export default function NegotiationsPage() {
                                                         Ver/Editar Contrato
                                                     </DropdownMenuItem>
                                                 )}
+                                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleTriggerCorrespondent(neg); }}>
+                                                    <Landmark className="mr-2 h-4 w-4" />
+                                                    Acionar Correspondente
+                                                </DropdownMenuItem>
                                                 {(activeProfile === 'Admin' || activeProfile === 'Imobiliária') && (
                                                     <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenAssignDialog(neg); }}>
                                                         Enviar/Atribuir
