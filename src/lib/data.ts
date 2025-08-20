@@ -201,6 +201,28 @@ export type LegalRequest = {
   createdAt: string;
 };
 
+// --- NOVOS TIPOS PARA LOCAÇÃO ---
+export type RentalContract = {
+  id: string;
+  propertyId: string;
+  propertyName: string;
+  tenantId: string; // Inquilino
+  tenantName: string;
+  monthlyRent: number;
+  adminFee: number; // Taxa de administração (%)
+  startDate: string;
+  endDate: string;
+  status: 'Ativo' | 'Finalizado' | 'Inadimplente';
+};
+
+export type RentalPayment = {
+  id: string;
+  rentalContractId: string;
+  amount: number;
+  paymentDate: string;
+  referenceMonth: string; // ex: "Janeiro/2024"
+};
+
 
 export type EventType = 'personal' | 'company' | 'team_visit';
 
@@ -604,6 +626,46 @@ export const addEvent = async (newEvent: Omit<Event, 'id'>): Promise<string> => 
     const docRef = await addDoc(collection(db, 'eventos'), newEvent);
     return docRef.id;
 };
+
+// --- FUNÇÕES DE LOCAÇÃO ---
+export const getRentalContracts = async (): Promise<RentalContract[]> => {
+    const snapshot = await getDocs(collection(db, 'locacao_contratos'));
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as RentalContract));
+};
+
+export const addRentalContract = async (newContract: Omit<RentalContract, 'id'>): Promise<string> => {
+    const batch = writeBatch(db);
+
+    // Adiciona o contrato
+    const contractRef = doc(collection(db, 'locacao_contratos'));
+    batch.set(contractRef, newContract);
+
+    // Altera o status do imóvel para "Alugado"
+    const propertyRef = doc(db, 'imoveis', newContract.propertyId);
+    batch.update(propertyRef, { status: "Alugado" });
+
+    // Gera notificação
+    await addNotification({
+        title: "Novo Contrato de Aluguel",
+        description: `O imóvel ${newContract.propertyName} foi alugado para ${newContract.tenantName}.`,
+    });
+    
+    await batch.commit();
+    return contractRef.id;
+};
+
+export const getRentalPayments = async (contractId: string): Promise<RentalPayment[]> => {
+    const q = query(collection(db, 'locacao_pagamentos'), where('rentalContractId', '==', contractId), orderBy('paymentDate', 'desc'));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as RentalPayment));
+};
+
+export const addRentalPayment = async (newPayment: Omit<RentalPayment, 'id'>): Promise<string> => {
+    const docRef = await addDoc(collection(db, 'locacao_pagamentos'), newPayment);
+    // Poderia gerar uma notificação aqui se necessário
+    return docRef.id;
+};
+
 
 export const addNotification = async (notification: Omit<Notification, 'id' | 'createdAt' | 'read'>): Promise<string> => {
     const docRef = await addDoc(collection(db, 'notificacoes'), {
