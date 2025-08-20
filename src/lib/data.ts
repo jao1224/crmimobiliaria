@@ -1,4 +1,5 @@
 
+
 import { db } from './firebase';
 import { collection, getDocs, addDoc, doc, updateDoc, writeBatch, serverTimestamp, query, orderBy, limit, where, getDoc, setDoc, deleteDoc, runTransaction } from 'firebase/firestore';
 
@@ -248,6 +249,9 @@ export const addProperty = async (newPropertyData: Omit<Property, 'id' | 'displa
             ...newPropertyData,
             displayCode: displayCode,
         };
+        
+        // Log para verificação no console do navegador
+        console.log("Salvando imóvel no Firestore:", newProperty);
 
         const newPropertyRef = doc(propertyCollection); // Gera um novo ID automático
         transaction.set(newPropertyRef, newProperty);
@@ -593,5 +597,7 @@ export const updateActivityStatus = async (activityId: string, newStatus: Activi
         } catch(e) {}
     }
 };
+
+    
 
     
