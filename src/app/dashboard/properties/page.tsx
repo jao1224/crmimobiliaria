@@ -40,8 +40,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
-import type { Property, PropertyType } from "@/lib/data";
-import { getProperties, addProperty, realtors, updateProperty, deleteProperty, propertyTypes } from "@/lib/data";
+import type { Property, PropertyType, User } from "@/lib/data";
+import { getProperties, addProperty, updateProperty, deleteProperty, propertyTypes, getUsers } from "@/lib/data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
@@ -65,7 +65,7 @@ export default function PropertiesPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const addPropertyFormRef = useRef<HTMLFormElement>(null);
-  const [authUser, setAuthUser] = useState<User | null>(null);
+  const [authUser, setAuthUser] = useState<any | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
 
   // Estados controlados para Selects no formulário de edição
@@ -197,7 +197,7 @@ export default function PropertiesPage() {
     }
 
     const formData = new FormData(event.currentTarget);
-    const newPropertyData: Omit<Property, 'id' | 'displayCode'> = {
+    const newPropertyData: Omit<Property, 'id' | 'displayCode' | 'capturedById'> = {
       name: formData.get("name") as string,
       address: formData.get("address") as string,
       status: "Disponível",
