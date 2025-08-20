@@ -3,11 +3,87 @@
 import {initializeApp} from "firebase-admin/app";
 import {onCall} from "firebase-functions/v2/https";
 import {beforeUserCreated} from "firebase-functions/v2/identity";
+import * as functions from "firebase-functions";
 import {PDFDocument, rgb, StandardFonts, PDFFont} from "pdf-lib";
-// Para o envio de e-mails, você precisará de um provedor.
-// Exemplo com SendGrid: import * as sgMail from "@sendgrid/mail";
+import * as nodemailer from "nodemailer";
 
 initializeApp();
+
+
+// --- INÍCIO: LÓGICA DE NOTIFICAÇÃO DE EVENTOS ---
+
+// TODO: Para ativar o envio de e-mails de notificação de eventos, siga os passos:
+// 1. Escolha um provedor de e-mail (ex: Gmail, SendGrid, Resend).
+// 2. Salve as credenciais de e-mail (usuário e senha/chave de API) de forma segura.
+//    Execute no seu terminal:
+//    firebase functions:secrets:set EMAIL_USER
+//    firebase functions:secrets:set EMAIL_PASS
+// 3. Descomente a função `sendEventNotification` abaixo.
+// 4. Preencha o campo `to` com o e-mail que deve receber as notificações.
+// 5. Faça o deploy da função: `firebase deploy --only functions`
+
+/*
+import {defineString} from "firebase-functions/params";
+const emailUser = defineString("EMAIL_USER");
+const emailPass = defineString("EMAIL_PASS");
+
+
+// Configuração do Nodemailer (exemplo com Gmail, mas funciona com outros provedores)
+const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+        user: emailUser.value(),
+        pass: emailPass.value(),
+    },
+});
+
+// Gatilho: Função que é executada QUANDO um novo evento é criado no Firestore.
+export const sendEventNotification = functions.firestore
+    .document("eventos/{eventId}")
+    .onCreate(async (snap, context) => {
+        const eventData = snap.data();
+
+        // Só envia notificação para eventos de agendas compartilhadas
+        if (eventData.type === "personal") {
+            console.log(`Evento pessoal de ${eventData.title} criado. Nenhuma notificação enviada.`);
+            return null;
+        }
+
+        const eventId = context.params.eventId;
+        const title = eventData.title;
+        const eventDate = new Date(eventData.date.seconds * 1000).toLocaleDateString("pt-BR");
+        const time = eventData.time;
+        const description = eventData.description;
+        const typeLabel = eventData.type === "company" ? "Agenda da Imobiliária" : "Visitas da Equipe";
+
+        const mailOptions = {
+            from: `Ideal Imóveis <${emailUser.value()}>`,
+            to: "email-do-admin-ou-gerente@example.com", // <-- IMPORTANTE: Defina o destinatário aqui
+            subject: `Novo Evento na Agenda: ${title}`,
+            html: `
+                <h1>Novo Evento Agendado</h1>
+                <p>Um novo evento foi adicionado na <strong>${typeLabel}</strong>.</p>
+                <ul>
+                    <li><strong>Título:</strong> ${title}</li>
+                    <li><strong>Data:</strong> ${eventDate}</li>
+                    <li><strong>Hora:</strong> ${time}</li>
+                    <li><strong>Descrição:</strong> ${description || "N/A"}</li>
+                </ul>
+                <p>ID do Evento: ${eventId}</p>
+            `,
+        };
+
+        try {
+            await transporter.sendMail(mailOptions);
+            console.log(`E-mail de notificação do evento '${title}' enviado com sucesso.`);
+        } catch (error) {
+            console.error("Erro ao enviar e-mail de notificação de evento:", error);
+        }
+
+        return null;
+    });
+
+*/
 
 // --- INÍCIO: LÓGICA DE NOTIFICAÇÃO POR E-MAIL ---
 
@@ -23,6 +99,7 @@ initializeApp();
 /*
 // Carrega a chave de API das secrets do Firebase.
 import {defineString} from "firebase-functions/params";
+import * as sgMail from "@sendgrid/mail";
 const sendgridApiKey = defineString("SENDGRID_API_KEY");
 
 // Gatilho: Função que é executada DEPOIS que um usuário é criado no Firebase Auth.
