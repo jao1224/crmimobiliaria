@@ -259,14 +259,14 @@ export default function CrmPage() {
                         <DialogTrigger asChild>
                             <Button variant="outline">Adicionar Cliente</Button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-2xl">
+                        <DialogContent className="sm:max-w-2xl flex flex-col max-h-[90vh]">
                             <DialogHeader>
                                 <DialogTitle>Adicionar Novo Cliente</DialogTitle>
                                 <DialogDescription>Preencha os detalhes abaixo para criar um novo cliente diretamente.</DialogDescription>
                             </DialogHeader>
-                            <form onSubmit={handleAddClient}>
-                                <ScrollArea className="max-h-[70vh] p-1">
-                                    <div className="space-y-6 p-4">
+                            <form onSubmit={handleAddClient} className="flex-1 min-h-0">
+                                <ScrollArea className="h-full pr-6 -mr-6">
+                                    <div className="space-y-6 py-4">
                                         {/* Informações Pessoais */}
                                         <div className="space-y-4 rounded-lg border p-4">
                                             <h3 className="text-lg font-medium">Informações Pessoais</h3>
@@ -328,7 +328,7 @@ export default function CrmPage() {
                                         </div>
                                     </div>
                                 </ScrollArea>
-                                <DialogFooter className="mt-4 pt-4 border-t">
+                                <DialogFooter className="mt-4 pt-4 border-t bg-background">
                                     <Button type="submit">Salvar Cliente</Button>
                                 </DialogFooter>
                             </form>
