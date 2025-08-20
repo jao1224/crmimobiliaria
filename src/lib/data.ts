@@ -215,33 +215,42 @@ export const propertyTypes: PropertyType[] = ['Lançamento', 'Revenda', 'Terreno
 // --- FUNÇÕES DE MANIPULAÇÃO DE DADOS (FIRESTORE) ---
 
 export const getUsers = async (): Promise<User[]> => {
-    const snapshot = await getDocs(collection(db, 'users'));
+    const snapshot = await getDocs(collection(db, 'usuarios'));
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
 };
 
 export const getProperties = async (): Promise<Property[]> => {
-    const snapshot = await getDocs(collection(db, 'properties'));
+    const snapshot = await getDocs(collection(db, 'propriedades'));
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Property));
 };
 
 export const getPropertiesByRealtor = async (realtorName: string): Promise<Property[]> => {
-    const q = query(collection(db, 'properties'), where('capturedBy', '==', realtorName));
+    const q = query(collection(db, 'propriedades'), where('capturedBy', '==', realtorName));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Property));
 };
 
 export const addProperty = async (newPropertyData: Omit<Property, 'id' | 'displayCode'>, file?: File | null): Promise<string> => {
-    const counterRef = doc(db, 'propertyCounters', 'propertyCounter');
-    const propertyCollection = collection(db, 'properties');
+    const counterRef = doc(db, 'contadores', 'propertyCounter');
+    const propertyCollection = collection(db, 'propriedades');
 
     let newId = '';
     await runTransaction(db, async (transaction) => {
         const counterDoc = await transaction.get(counterRef);
         
-        let nextNumber = 1001;
-        if (counterDoc.exists()) {
-            nextNumber = counterDoc.data().lastNumber + 1;
+        let nextNumber = 1000; // Alterado para 1000 para começar em 1001
+        
+        const propertiesSnapshot = await getDocs(query(propertyCollection, orderBy('displayCode', 'desc'), limit(1)));
+        if (!propertiesSnapshot.empty) {
+            const lastProperty = propertiesSnapshot.docs[0].data() as Property;
+            const lastNumberStr = lastProperty.displayCode.split('-').pop();
+            const lastNumber = lastNumberStr ? parseInt(lastNumberStr, 10) : 1000;
+            if (!isNaN(lastNumber)) {
+                nextNumber = lastNumber;
+            }
         }
+        
+        nextNumber++; // Incrementa para o próximo número
 
         const propertyNamePrefix = newPropertyData.name.substring(0, 3).toUpperCase();
         const realtorNamePrefix = newPropertyData.capturedBy.substring(0, 3).toUpperCase();
@@ -256,6 +265,7 @@ export const addProperty = async (newPropertyData: Omit<Property, 'id' | 'displa
         transaction.set(newPropertyRef, newProperty);
         newId = newPropertyRef.id;
 
+        // Atualiza o contador com o último número usado
         transaction.set(counterRef, { lastNumber: nextNumber }, { merge: true });
     });
 
@@ -264,31 +274,31 @@ export const addProperty = async (newPropertyData: Omit<Property, 'id' | 'displa
 
 export const updateProperty = async (id: string, data: Partial<Property>, file?: File | null): Promise<void> => {
     // Lógica de upload similar a `addProperty` se uma nova `file` for fornecida.
-    await updateDoc(doc(db, 'properties', id), data);
+    await updateDoc(doc(db, 'propriedades', id), data);
 };
 
 export const deleteProperty = async (id: string): Promise<void> => {
-    await deleteDoc(doc(db, 'properties', id));
+    await deleteDoc(doc(db, 'propriedades', id));
 };
 
 export const getNegotiations = async (): Promise<Negotiation[]> => {
-    const snapshot = await getDocs(collection(db, 'negotiations'));
+    const snapshot = await getDocs(collection(db, 'negociacoes'));
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Negotiation));
 };
 
 export const getNegotiationsByRealtor = async (realtorName: string): Promise<Negotiation[]> => {
-    const q = query(collection(db, 'negotiations'), where('salesperson', '==', realtorName));
+    const q = query(collection(db, 'negociacoes'), where('salesperson', '==', realtorName));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Negotiation));
 };
 
 export const addNegotiation = async (newNegotiation: Omit<Negotiation, 'id'>): Promise<string> => {
-    const docRef = await addDoc(collection(db, 'negotiations'), newNegotiation);
+    const docRef = await addDoc(collection(db, 'negociacoes'), newNegotiation);
     return docRef.id;
 };
 
 export const updateNegotiation = async (id: string, data: Partial<Negotiation>): Promise<void> => {
-    await updateDoc(doc(db, 'negotiations', id), data);
+    await updateDoc(doc(db, 'negociacoes', id), data);
 };
 
 export const deleteNegotiation = async (negotiation: Negotiation): Promise<void> => {
@@ -302,11 +312,11 @@ export const deleteNegotiation = async (negotiation: Negotiation): Promise<void>
     });
 
     // Depois, apaga o documento
-    await deleteDoc(doc(db, "negotiations", negotiation.id));
+    await deleteDoc(doc(db, "negociacoes", negotiation.id));
 };
 
 export const markAsDeleted = async (id: string, deletedStatus: boolean): Promise<void> => {
-    const negRef = doc(db, "negotiations", id);
+    const negRef = doc(db, "negociacoes", id);
     const negSnap = await getDoc(negRef);
 
     if (negSnap.exists()) {
@@ -331,7 +341,7 @@ export const markAsDeleted = async (id: string, deletedStatus: boolean): Promise
 };
 
 export const archiveNegotiation = async (id: string, archiveStatus: boolean = true): Promise<void> => {
-    const negRef = doc(db, "negotiations", id);
+    const negRef = doc(db, "negociacoes", id);
     const negSnap = await getDoc(negRef);
 
     if (negSnap.exists()) {
@@ -356,61 +366,61 @@ export const archiveNegotiation = async (id: string, archiveStatus: boolean = tr
 };
 
 export const getCommissions = async (): Promise<Commission[]> => {
-    const snapshot = await getDocs(collection(db, 'commissions'));
+    const snapshot = await getDocs(collection(db, 'comissoes'));
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Commission));
 };
 
 export const addCommission = async (newCommission: Omit<Commission, 'id'>): Promise<string> => {
-    const docRef = await addDoc(collection(db, 'commissions'), newCommission);
+    const docRef = await addDoc(collection(db, 'comissoes'), newCommission);
     return docRef.id;
 };
 
 export const getPayments = async (): Promise<PaymentCLT[]> => {
-    const snapshot = await getDocs(collection(db, 'payments'));
+    const snapshot = await getDocs(collection(db, 'pagamentos'));
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PaymentCLT));
 };
 
 export const addPayment = async (newPayment: Omit<PaymentCLT, 'id'>): Promise<string> => {
-    const docRef = await addDoc(collection(db, 'payments'), newPayment);
+    const docRef = await addDoc(collection(db, 'pagamentos'), newPayment);
     return docRef.id;
 };
 
 export const getExpenses = async (): Promise<Expense[]> => {
-    const snapshot = await getDocs(collection(db, 'expenses'));
+    const snapshot = await getDocs(collection(db, 'despesas'));
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Expense));
 };
 
 export const addExpense = async (newExpense: Omit<Expense, 'id'>): Promise<string> => {
-    const docRef = await addDoc(collection(db, 'expenses'), newExpense);
+    const docRef = await addDoc(collection(db, 'despesas'), newExpense);
     return docRef.id;
 };
 
 export const getServiceRequests = async (): Promise<ServiceRequest[]> => {
-    const snapshot = await getDocs(collection(db, 'serviceRequests'));
+    const snapshot = await getDocs(collection(db, 'solicitacoesServico'));
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRequest));
 };
 
 export const addServiceRequest = async (newRequest: Omit<ServiceRequest, 'id'>): Promise<string> => {
-    const docRef = await addDoc(collection(db, 'serviceRequests'), newRequest);
+    const docRef = await addDoc(collection(db, 'solicitacoesServico'), newRequest);
     return docRef.id;
 };
 
 export const getFinancingProcesses = async (): Promise<FinancingProcess[]> => {
-    const snapshot = await getDocs(collection(db, 'financingProcesses'));
+    const snapshot = await getDocs(collection(db, 'processosFinanciamento'));
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FinancingProcess));
 };
 
 export const addFinancingProcess = async (newProcess: Omit<FinancingProcess, 'id'>): Promise<string> => {
-    const docRef = await addDoc(collection(db, 'financingProcesses'), newProcess);
+    const docRef = await addDoc(collection(db, 'processosFinanciamento'), newProcess);
     return docRef.id;
 };
 
 export const updateFinancingProcess = async (id: string, data: Partial<FinancingProcess>): Promise<void> => {
-    await updateDoc(doc(db, 'financingProcesses', id), data);
+    await updateDoc(doc(db, 'processosFinanciamento', id), data);
 };
 
 export const getEvents = async (): Promise<Event[]> => {
-    const snapshot = await getDocs(collection(db, 'events'));
+    const snapshot = await getDocs(collection(db, 'eventos'));
     return snapshot.docs.map(doc => {
         const data = doc.data();
         return {
@@ -422,12 +432,12 @@ export const getEvents = async (): Promise<Event[]> => {
 };
 
 export const addEvent = async (newEvent: Omit<Event, 'id'>): Promise<string> => {
-    const docRef = await addDoc(collection(db, 'events'), newEvent);
+    const docRef = await addDoc(collection(db, 'eventos'), newEvent);
     return docRef.id;
 };
 
 export const addNotification = async (notification: Omit<Notification, 'id' | 'createdAt' | 'read'>): Promise<string> => {
-    const docRef = await addDoc(collection(db, 'notifications'), {
+    const docRef = await addDoc(collection(db, 'notificacoes'), {
         ...notification,
         createdAt: serverTimestamp(),
         read: false,
@@ -436,7 +446,7 @@ export const addNotification = async (notification: Omit<Notification, 'id' | 'c
 };
 
 export const getNotifications = async (): Promise<Notification[]> => {
-    const q = query(collection(db, 'notifications'), orderBy('createdAt', 'desc'), limit(10));
+    const q = query(collection(db, 'notificacoes'), orderBy('createdAt', 'desc'), limit(10));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
 };
@@ -449,7 +459,7 @@ export async function completeSaleAndGenerateCommission(negotiation: Negotiation
     const batch = writeBatch(db);
 
     // 1. Atualiza a negociação
-    const negotiationRef = doc(db, 'negotiations', negotiation.id);
+    const negotiationRef = doc(db, 'negociacoes', negotiation.id);
     const updatedNegotiationData = {
         stage: "Venda Concluída" as const,
         contractStatus: "Assinado" as const,
@@ -464,7 +474,7 @@ export async function completeSaleAndGenerateCommission(negotiation: Negotiation
     if (negotiation.type === 'Venda') {
         const commissionRate = 5;
         const commissionValue = negotiation.value * (commissionRate / 100);
-        const newCommissionRef = doc(collection(db, 'commissions'));
+        const newCommissionRef = doc(collection(db, 'comissoes'));
         const newCommissionData: Omit<Commission, 'id'> = {
             negotiationId: negotiation.id,
             propertyValue: negotiation.value,
@@ -482,12 +492,12 @@ export async function completeSaleAndGenerateCommission(negotiation: Negotiation
     
     // 3. Atualiza o status do imóvel se for uma venda
     if (negotiation.propertyId && negotiation.type === 'Venda') {
-        const propertyRef = doc(db, 'properties', negotiation.propertyId);
+        const propertyRef = doc(db, 'propriedades', negotiation.propertyId);
         batch.update(propertyRef, { status: 'Vendido' });
     }
     
      // 4. Atualiza a atividade no Kanban para "Concluído", se existir
-    const activityRef = doc(db, 'activities', negotiation.id);
+    const activityRef = doc(db, 'atividades', negotiation.id);
     const activitySnap = await getDoc(activityRef);
     if (activitySnap.exists()) {
         batch.update(activityRef, { status: 'Concluído' });
@@ -523,7 +533,7 @@ export const getActivitiesForRealtor = async (realtorName: string): Promise<Acti
     };
 
     // 1. Busca captações (imóveis capturados pelo corretor)
-    const capturesQuery = query(collection(db, 'properties'), where('capturedBy', '==', realtorName));
+    const capturesQuery = query(collection(db, 'propriedades'), where('capturedBy', '==', realtorName));
     const capturesSnapshot = await getDocs(capturesQuery);
     capturesSnapshot.docs.forEach(doc => {
         const prop = { id: doc.id, ...doc.data() } as Property;
@@ -539,7 +549,7 @@ export const getActivitiesForRealtor = async (realtorName: string): Promise<Acti
     });
 
     // 2. Busca negociações (vendas realizadas pelo corretor)
-    const negotiationsQuery = query(collection(db, 'negotiations'), where('salesperson', '==', realtorName));
+    const negotiationsQuery = query(collection(db, 'negociacoes'), where('salesperson', '==', realtorName));
     const negotiationsSnapshot = await getDocs(negotiationsQuery);
     negotiationsSnapshot.docs.forEach(doc => {
         const neg = { id: doc.id, ...doc.data() } as Negotiation;
@@ -561,7 +571,7 @@ export const getActivitiesForRealtor = async (realtorName: string): Promise<Acti
 export const updateActivityStatus = async (activityId: string, newStatus: ActivityStatus): Promise<void> => {
     // Como a atividade é uma representação, precisamos atualizar o item original
     // Primeiro, tentamos atualizar um documento na coleção 'negotiations'
-    const negotiationRef = doc(db, "negotiations", activityId);
+    const negotiationRef = doc(db, "negociacoes", activityId);
     let updated = false;
 
     try {
@@ -580,7 +590,7 @@ export const updateActivityStatus = async (activityId: string, newStatus: Activi
     
     // Se não for uma negociação, tentamos atualizar um imóvel (captação)
     if (!updated) {
-        const propertyRef = doc(db, "properties", activityId);
+        const propertyRef = doc(db, "propriedades", activityId);
         try {
             const propDoc = await getDoc(propertyRef);
             if (propDoc.exists()) {
@@ -595,6 +605,8 @@ export const updateActivityStatus = async (activityId: string, newStatus: Activi
         } catch(e) {}
     }
 };
+
+    
 
     
 
