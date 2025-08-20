@@ -29,16 +29,16 @@ const agendaTabs: { id: EventType, label: string }[] = [
 
 // Permissões de VISUALIZAÇÃO
 const agendaPermissions: Record<EventType, UserProfile[]> = {
-    'personal': ['Admin', 'Imobiliária', 'Corretor Autônomo', 'Investidor', 'Construtora', 'Financeiro'], // Todos podem ter agenda pessoal
-    'company': ['Admin', 'Imobiliária', 'Corretor Autônomo', 'Investidor', 'Construtora', 'Financeiro'],  // Todos podem ver
-    'team_visit': ['Admin', 'Imobiliária', 'Construtora'] // Apenas perfis de gestão de equipe
+    'personal': ['Admin', 'Imobiliária', 'Corretor Autônomo', 'Investidor', 'Construtora', 'Financeiro', 'Vendedor'], // Todos podem ter agenda pessoal
+    'company': ['Admin', 'Imobiliária', 'Corretor Autônomo', 'Investidor', 'Construtora', 'Financeiro', 'Vendedor'],  // Todos podem ver
+    'team_visit': ['Admin', 'Imobiliária', 'Construtora', 'Vendedor', 'Corretor Autônomo'] // Apenas perfis de gestão de equipe
 };
 
 // Permissões de EDIÇÃO
 const editPermissions: Record<EventType, UserProfile[]> = {
-    'personal': ['Admin', 'Imobiliária', 'Corretor Autônomo', 'Investidor', 'Construtora', 'Financeiro'], // Cada um edita a sua
+    'personal': ['Admin', 'Imobiliária', 'Corretor Autônomo', 'Investidor', 'Construtora', 'Financeiro', 'Vendedor'], // Cada um edita a sua
     'company': ['Admin', 'Imobiliária'], // Apenas Admin/Imobiliária editam a agenda geral
-    'team_visit': ['Admin', 'Imobiliária', 'Construtora'] // Admins e Construtoras podem marcar visitas de suas equipes
+    'team_visit': ['Admin', 'Imobiliária', 'Construtora', 'Vendedor', 'Corretor Autônomo'] // Admins e Construtoras podem marcar visitas de suas equipes
 };
 
 
@@ -104,22 +104,43 @@ export default function AgendaPage() {
                    eventMonth === selectedMonth &&
                    eventYear === selectedYear &&
                    event.type === activeTab;
-        });
+        }).sort((a,b) => a.time.localeCompare(b.time));
     }, [selectedDate, events, activeTab]);
     
     const handleAddEvent = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         const formData = new FormData(event.currentTarget);
         const dateStr = formData.get("date") as string;
+        const timeStr = formData.get("time") as string;
         
         const date = new Date(dateStr);
         const userTimezoneOffset = date.getTimezoneOffset() * 60000;
         const correctDate = new Date(date.getTime() + userTimezoneOffset);
 
+        // Validação de Conflito
+        const conflict = events.some(e => {
+            const eventDate = new Date(e.date as any);
+            return e.type === activeTab &&
+                   eventDate.getUTCFullYear() === correctDate.getUTCFullYear() &&
+                   eventDate.getUTCMonth() === correctDate.getUTCMonth() &&
+                   eventDate.getUTCDate() === correctDate.getUTCDate() &&
+                   e.time === timeStr;
+        });
+
+        if (conflict) {
+            toast({
+                variant: 'destructive',
+                title: "Conflito de Horário",
+                description: `Já existe um evento na agenda de "${getEventTypeLabel(activeTab).label}" neste dia e horário.`,
+            });
+            return;
+        }
+
+
         const newEventData: Omit<Event, 'id'> = {
             date: correctDate,
             title: formData.get("title") as string,
-            time: formData.get("time") as string,
+            time: timeStr,
             description: formData.get("description") as string,
             type: activeTab,
         };

@@ -10,7 +10,7 @@ export const menuConfig: Record<UserProfile, string[]> = {
     'Corretor Autônomo': ['/dashboard', '/dashboard/properties', '/dashboard/crm', '/dashboard/negotiations', '/dashboard/processes', '/dashboard/finance', '/dashboard/agenda', '/dashboard/settings'],
     'Investidor': ['/dashboard', '/dashboard/properties', '/dashboard/negotiations', '/dashboard/agenda', '/dashboard/finance', '/dashboard/settings'],
     'Construtora': ['/dashboard', '/dashboard/properties', '/dashboard/negotiations', '/dashboard/processes', '/dashboard/finance', '/dashboard/agenda', '/dashboard/reporting', '/dashboard/settings'],
-    'Financeiro': ['/dashboard', '/dashboard/finance', '/dashboard/negotiations', '/dashboard/processes', '/dashboard/reporting', '/dashboard/settings'],
+    'Financeiro': ['/dashboard', '/dashboard/finance', '/dashboard/negotiations', '/dashboard/processes', '/dashboard/reporting', '/dashboard/settings', '/dashboard/agenda'],
 };
 
 export const allModules = [
