@@ -40,8 +40,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
-import type { Property, PropertyType, User } from "@/lib/data";
-import { getProperties, addProperty, updateProperty, deleteProperty, propertyTypes, getUsers } from "@/lib/data";
+import type { Property, PropertyType } from "@/lib/data";
+import { getProperties, addProperty, realtors, updateProperty, deleteProperty, propertyTypes } from "@/lib/data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
@@ -65,6 +65,13 @@ export default function PropertiesPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const addPropertyFormRef = useRef<HTMLFormElement>(null);
+  const [authUser, setAuthUser] = useState<User | null>(null);
+  const [isAuthReady, setIsAuthReady] = useState(false);
+
+  // Estados controlados para Selects no formulário de edição
+  const [editCapturedBy, setEditCapturedBy] = useState<string>("");
+  const [editType, setEditType] = useState<PropertyType | "">("");
+  const [editStatus, setEditStatus] = useState<string>("");
 
 
   // Estados para filtros e ordenação
@@ -72,18 +79,10 @@ export default function PropertiesPage() {
   const [captadorFilter, setCaptadorFilter] = useState('all');
   const [sortOrder, setSortOrder] = useState('default'); // 'price-asc', 'price-desc'
 
+  // Aguarda autenticação antes de consultar o Firestore, evitando erros de permissão
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-        setCurrentUser(user as any); // Cast to any to access custom claims if needed later
-    });
-    return () => unsubscribe();
+    refreshProperties();
   }, []);
-
-  useEffect(() => {
-    if (currentUser !== undefined) {
-        refreshProperties();
-    }
-  }, [currentUser]);
 
   const refreshProperties = async () => {
     setIsLoading(true);
@@ -191,6 +190,12 @@ export default function PropertiesPage() {
     }
     setIsSaving(true);
 
+    if (!authUser) {
+      toast({ variant: "destructive", title: "Acesso restrito", description: "Faça login para cadastrar imóveis." });
+      setIsSaving(false);
+      return;
+    }
+
     const formData = new FormData(event.currentTarget);
     const newPropertyData: Omit<Property, 'id' | 'displayCode'> = {
       name: formData.get("name") as string,
@@ -200,8 +205,7 @@ export default function PropertiesPage() {
       commission: Number(formData.get("commission")),
       imageUrl: "https://placehold.co/600x400.png",
       imageHint: "novo imovel",
-      capturedBy: currentUser.displayName || "Usuário sem nome",
-      capturedById: currentUser.uid,
+      capturedBy: "Admin", // Simulado
       description: formData.get("description") as string,
       ownerInfo: formData.get("owner") as string,
       type: formData.get("type") as PropertyType,
@@ -225,6 +229,12 @@ export default function PropertiesPage() {
     if (!editingProperty) return;
     setIsSaving(true);
 
+    if (!authUser) {
+      toast({ variant: "destructive", title: "Acesso restrito", description: "Faça login para editar imóveis." });
+      setIsSaving(false);
+      return;
+    }
+
     const formData = new FormData(event.currentTarget);
     
     const selectedCaptador = users.find(u => u.id === formData.get("capturedById"));
@@ -234,12 +244,12 @@ export default function PropertiesPage() {
       address: formData.get("address") as string,
       price: Number(formData.get("price")),
       commission: Number(formData.get("commission")),
-      capturedBy: selectedCaptador?.name || editingProperty.capturedBy,
-      capturedById: selectedCaptador?.id || editingProperty.capturedById,
+      imageUrl: imagePreview || editingProperty.imageUrl,
+      capturedBy: formData.get("capturedBy") as string,
       description: formData.get("description") as string,
       ownerInfo: formData.get("owner") as string,
-      type: formData.get("type") as PropertyType,
-      status: formData.get("status") as Property['status'],
+      type: (editType || editingProperty.type) as PropertyType,
+      status: (editStatus || editingProperty.status) as Property['status'],
     };
     
     try {
@@ -264,6 +274,9 @@ export default function PropertiesPage() {
     e.stopPropagation();
     setEditingProperty(property);
     setImagePreview(property.imageUrl);
+    setEditCapturedBy(property.capturedBy);
+    setEditType(property.type);
+    setEditStatus(property.status);
     setEditDialogOpen(true);
   };
   
@@ -304,6 +317,9 @@ export default function PropertiesPage() {
     if (!isEditDialogOpen) {
         setImagePreview(null);
         setSelectedFile(null);
+        setEditCapturedBy("");
+        setEditType("");
+        setEditStatus("");
     }
   }, [isPropertyDialogOpen, isEditDialogOpen]);
 
@@ -702,8 +718,8 @@ export default function PropertiesPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="edit-capturedById">Captado por</Label>
-                       <Select name="capturedById" defaultValue={editingProperty.capturedById} required>
+                      <Label htmlFor="edit-capturedBy">Captado por</Label>
+                       <Select name="capturedBy" defaultValue={editingProperty.capturedBy} required>
                           <SelectTrigger><SelectValue/></SelectTrigger>
                           <SelectContent>
                               {users.map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
@@ -712,7 +728,7 @@ export default function PropertiesPage() {
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="type">Tipo de Imóvel</Label>
-                        <Select name="type" defaultValue={editingProperty.type}>
+                        <Select value={editType || editingProperty.type} onValueChange={(v) => setEditType(v as PropertyType)}>
                             <SelectTrigger><SelectValue /></SelectTrigger>
                             <SelectContent>
                                 {propertyTypes.map(type => (
@@ -724,7 +740,7 @@ export default function PropertiesPage() {
                   </div>
                   <div className="space-y-2">
                       <Label htmlFor="edit-status">Status</Label>
-                      <Select name="status" defaultValue={editingProperty.status}>
+                      <Select value={editStatus || editingProperty.status} onValueChange={setEditStatus}>
                           <SelectTrigger><SelectValue /></SelectTrigger>
                           <SelectContent>
                               <SelectItem value="Disponível">Disponível</SelectItem>

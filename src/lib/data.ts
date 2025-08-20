@@ -1,8 +1,7 @@
 
 
-import { db, storage } from './firebase';
-import { collection, getDocs, addDoc, doc, updateDoc, writeBatch, serverTimestamp, query, orderBy, limit, where, getDoc, setDoc, deleteDoc, runTransaction } from 'firebase/firestore';
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { db } from './firebase';
+import { collection, getDocs, addDoc, doc, updateDoc, writeBatch, serverTimestamp, query, orderBy, limit, where, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 
 // Tipos para os dados de CRM
 export type Lead = {
@@ -42,8 +41,8 @@ export type Property = {
   capturedBy: string; // Nome do corretor que captou
   capturedById: string; // ID do corretor que captou
   description?: string;
-  ownerInfo?: string; // Pode conter múltiplos proprietários, separados por nova linha
-  team?: string; 
+  ownerInfo?: string;
+  team?: string; // CAMPO ADICIONADO PARA GESTÃO DE LOJAS/EQUIPES
 };
 
 
@@ -307,7 +306,8 @@ export const getUsers = async (): Promise<User[]> => {
 };
 
 export const getProperties = async (): Promise<Property[]> => {
-    const snapshot = await getDocs(collection(db, 'imoveis'));
+    const propertiesCollection = collection(db, 'properties');
+    const snapshot = await getDocs(propertiesCollection);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Property));
 };
 
@@ -317,53 +317,10 @@ export const getPropertiesByRealtor = async (realtorName: string): Promise<Prope
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Property));
 };
 
-export const addProperty = async (newPropertyData: Omit<Property, 'id' | 'displayCode'>, file?: File | null): Promise<string> => {
-    const propertyCollection = collection(db, 'imoveis');
-    
-    let newImageUrl = "https://placehold.co/600x400.png";
-    if (file) {
-        const storageRef = ref(storage, `properties/${Date.now()}_${file.name}`);
-        await uploadBytes(storageRef, file);
-        newImageUrl = await getDownloadURL(storageRef);
-    }
-    
-    console.log("Objeto completo a ser salvo:", newPropertyData);
-
-    let newId = '';
-    await runTransaction(db, async (transaction) => {
-        // Obter o último número do contador de imóveis
-        let nextNumber = 1001; // Começa em 1001
-        
-        const propertiesSnapshot = await getDocs(query(propertyCollection, orderBy('displayCode', 'desc'), limit(1)));
-        if (!propertiesSnapshot.empty) {
-            const lastProperty = propertiesSnapshot.docs[0].data() as Property;
-            const lastNumberStr = lastProperty.displayCode.split('-').pop();
-            if (lastNumberStr) {
-                const lastNumber = parseInt(lastNumberStr, 10);
-                if (!isNaN(lastNumber)) {
-                    nextNumber = lastNumber + 1;
-                }
-            }
-        }
-        
-        const propertyNamePrefix = newPropertyData.name.substring(0, 3).toUpperCase();
-        const realtorNamePrefix = newPropertyData.capturedBy.substring(0, 3).toUpperCase();
-        const displayCode = `${propertyNamePrefix}-${realtorNamePrefix}-${nextNumber}`;
-
-        const newProperty: Omit<Property, 'id'> = {
-            ...newPropertyData,
-            displayCode: displayCode,
-            imageUrl: newImageUrl,
-        };
-
-        const newPropertyRef = doc(propertyCollection);
-        transaction.set(newPropertyRef, newProperty);
-        newId = newPropertyRef.id;
-    });
-
-    return newId;
+export const addProperty = async (newProperty: Omit<Property, 'id'>): Promise<string> => {
+    const docRef = await addDoc(collection(db, 'properties'), newProperty);
+    return docRef.id;
 };
-
 
 export const updateProperty = async (id: string, data: Partial<Property>, file?: File | null): Promise<void> => {
     const propertyRef = doc(db, 'imoveis', id);
