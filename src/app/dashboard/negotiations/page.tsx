@@ -187,8 +187,13 @@ export default function NegotiationsPage() {
     
     // Busca automática ao selecionar
     useEffect(() => {
-        if (propertyCode && clientCode) {
-            handleSearch();
+        if (propertyCode) {
+             const prop = availableProperties.find(p => p.id === propertyCode);
+             setFoundProperty(prop || null);
+        }
+        if (clientCode) {
+            const cli = availableClients.find(c => c.id === clientCode);
+            setFoundClient(cli || null);
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [propertyCode, clientCode]);
@@ -415,7 +420,7 @@ export default function NegotiationsPage() {
                                             <SelectContent>
                                                 {availableClients.map(cli => (
                                                     <SelectItem key={cli.id} value={cli.id}>
-                                                        {cli.name} {cli.document && `(${cli.document})`}
+                                                        {cli.name}
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>
@@ -440,7 +445,9 @@ export default function NegotiationsPage() {
                                              {isSearching ? <Skeleton className="h-12 w-full" /> : foundClient ? (
                                                 <div className="text-sm text-muted-foreground">
                                                     <p className="font-medium text-foreground">{foundClient.name}</p>
-                                                    <p>Fonte: {foundClient.source}</p>
+                                                    <p>Documento: {foundClient.document || 'N/A'}</p>
+                                                    <p>Endereço: {foundClient.address || 'N/A'}</p>
+                                                    <p>Responsável: {foundClient.assignedTo}</p>
                                                 </div>
                                             ) : <p className="text-sm text-destructive">Selecione um cliente.</p>}
                                         </div>
@@ -701,4 +708,5 @@ export default function NegotiationsPage() {
         </>
     );
 }
+
 
