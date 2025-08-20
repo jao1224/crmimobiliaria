@@ -264,9 +264,9 @@ export default function CrmPage() {
                                 <DialogTitle>Adicionar Novo Cliente</DialogTitle>
                                 <DialogDescription>Preencha os detalhes abaixo para criar um novo cliente diretamente.</DialogDescription>
                             </DialogHeader>
-                            <form onSubmit={handleAddClient} className="flex-1 overflow-hidden flex flex-col">
-                                <ScrollArea className="flex-1 p-1 -m-1">
-                                    <div className="space-y-6 py-4 pr-6">
+                            <form id="addClientForm" onSubmit={handleAddClient} className="flex-1 overflow-hidden flex flex-col gap-4">
+                                <ScrollArea className="flex-1 -mx-6 px-6">
+                                    <div className="space-y-6 py-4 pr-1">
                                         {/* Informações Pessoais */}
                                         <div className="space-y-4 rounded-lg border p-4">
                                             <h3 className="text-lg font-medium">Informações Pessoais</h3>
@@ -328,8 +328,8 @@ export default function CrmPage() {
                                         </div>
                                     </div>
                                 </ScrollArea>
-                                <DialogFooter className="mt-4 pt-4 border-t bg-background shrink-0">
-                                    <Button type="submit">Salvar Cliente</Button>
+                                <DialogFooter className="mt-auto shrink-0">
+                                    <Button type="submit" form="addClientForm">Salvar Cliente</Button>
                                 </DialogFooter>
                             </form>
                         </DialogContent>
@@ -605,5 +605,3 @@ export default function CrmPage() {
         </>
     )
 }
-
-    
