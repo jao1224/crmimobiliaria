@@ -329,6 +329,13 @@ export default function PropertiesPage() {
     }
   };
 
+  const getCaptadorWithRole = (property: Property) => {
+    if (!property) return "Não informado.";
+    const captadorUser = users.find(u => u.id === property.capturedById);
+    const role = captadorUser ? captadorUser.role : null;
+    return `${property.capturedBy}${role ? ` (${role})` : ''}`;
+  }
+
 
   return (
     <div className="flex flex-col gap-6">
@@ -626,7 +633,7 @@ export default function PropertiesPage() {
                   </div>
                    <div>
                     <h3 className="font-semibold text-lg">Captado por</h3>
-                    <p className="text-sm text-muted-foreground mt-2">{selectedProperty.capturedBy || "Não informado."}</p>
+                    <p className="text-sm text-muted-foreground mt-2">{getCaptadorWithRole(selectedProperty)}</p>
                   </div>
                 </div>
               </div>
