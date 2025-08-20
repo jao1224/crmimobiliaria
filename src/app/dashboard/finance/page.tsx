@@ -18,15 +18,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import type { UserProfile } from "../layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getCommissions, type Commission, addCommission, getPayments, addPayment, type PaymentCLT, getExpenses, addExpense, type Expense, getNegotiations, type Negotiation, updateCommission } from "@/lib/data";
+import { getCommissions, type Commission, addCommission, getPayments, addPayment, type PaymentCLT, getExpenses, addExpense, type Expense, getNegotiations, type Negotiation, updateCommission, getUsers, type User } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { auth } from "@/lib/firebase";
-import { onAuthStateChanged, type User } from "firebase/auth";
-
-
-const employees = ['Secretária Admin', 'Gerente de Vendas', 'Corretor A'];
+import { onAuthStateChanged } from "firebase/auth";
 
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount);
@@ -62,6 +59,7 @@ export default function FinancePage() {
     const [isExpenseDialogOpen, setExpenseDialogOpen] = useState(false);
     
     const [isLoading, setIsLoading] = useState(true);
+    const [allUsers, setAllUsers] = useState<User[]>([]);
 
     const { toast } = useToast();
     
@@ -71,7 +69,7 @@ export default function FinancePage() {
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (user) => {
-            setCurrentUser(user);
+            setCurrentUser(user as any);
         });
         return () => unsubscribe();
     }, []);
@@ -80,12 +78,16 @@ export default function FinancePage() {
     useEffect(() => {
         if (currentUser !== undefined) { // Garante que a verificação do usuário já ocorreu
             refreshFinanceData();
-            const fetchNegotiations = async () => {
-                const negs = await getNegotiations();
+            const fetchAuxData = async () => {
+                const [negs, usersData] = await Promise.all([
+                    getNegotiations(),
+                    getUsers(),
+                ]);
                 // Filtra para negociações que podem gerar comissão
                 setNegotiations(negs.filter(n => n.status === 'Finalizado' || n.stage === 'Venda Concluída'));
+                setAllUsers(usersData);
             };
-            fetchNegotiations();
+            fetchAuxData();
         }
     }, [currentUser]);
 
@@ -198,8 +200,11 @@ export default function FinancePage() {
     const handleAddPayment = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         const formData = new FormData(event.currentTarget);
+        const employeeId = formData.get('employee') as string;
+        const employeeName = allUsers.find(u => u.id === employeeId)?.name || 'N/A';
+        
         const newPaymentData: Omit<PaymentCLT, 'id'> = {
-            employee: formData.get('employee') as string,
+            employee: employeeName,
             type: formData.get('type') as PaymentCLT['type'],
             amount: parseFloat(formData.get('amount') as string),
             paymentDate: formData.get('paymentDate') as string,
@@ -453,7 +458,7 @@ export default function FinancePage() {
                                                 <Select name="employee" required>
                                                     <SelectTrigger><SelectValue placeholder="Selecione o colaborador" /></SelectTrigger>
                                                     <SelectContent>
-                                                        {employees.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
+                                                        {allUsers.map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
                                                     </SelectContent>
                                                 </Select>
                                             </div>
@@ -689,6 +694,3 @@ export default function FinancePage() {
         </div>
     );
 }
-
-
-    
