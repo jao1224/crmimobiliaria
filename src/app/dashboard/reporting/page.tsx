@@ -120,12 +120,17 @@ export default function ReportingPage() {
     // Estados de UI e Filtros
     const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
     const [activeTab, setActiveTab] = useState("sales");
+    // Filtros Gerais
     const [realtorFilter, setRealtorFilter] = useState('all');
     const [teamFilter, setTeamFilter] = useState('all');
     const [propertyTypeFilter, setPropertyTypeFilter] = useState('all');
     const [operationTypeFilter, setOperationTypeFilter] = useState('all');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
+    // Filtros Específicos
+    const [expenseCategoryFilter, setExpenseCategoryFilter] = useState('all');
+    const [paymentTypeFilter, setPaymentTypeFilter] = useState('all');
+
     
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -160,19 +165,23 @@ export default function ReportingPage() {
     };
 
     const filterByDate = (items: (Negotiation | PaymentCLT | Expense)[], dateField: keyof (Negotiation | PaymentCLT | Expense)) => {
-        if (!startDate || !endDate) return items;
+        if (!startDate && !endDate) return items;
+        const start = startDate ? new Date(`${startDate}T00:00:00`) : null;
+        const end = endDate ? new Date(`${endDate}T23:59:59`) : null;
+        
         return items.filter(item => {
             const itemDateStr = item[dateField];
             if (!itemDateStr || typeof itemDateStr !== 'string') return false;
             
-            // Corrige o fuso horário adicionando a hora
             const itemDate = new Date(`${itemDateStr}T00:00:00`);
-            const start = new Date(`${startDate}T00:00:00`);
-            const end = new Date(`${endDate}T23:59:59`);
-
-            return itemDate >= start && itemDate <= end;
+            
+            if (start && end) return itemDate >= start && itemDate <= end;
+            if (start) return itemDate >= start;
+            if (end) return itemDate <= end;
+            return true;
         });
     }
+
 
     const filteredNegotiations = useMemo(() => {
         let negotiations = [...allNegotiations];
@@ -203,8 +212,22 @@ export default function ReportingPage() {
         });
     }, [allProperties, realtorFilter, propertyTypeFilter, userCanSeeAll, currentUser]);
     
-    const filteredPayments = useMemo(() => filterByDate(allPayments, 'paymentDate') as PaymentCLT[], [allPayments, startDate, endDate]);
-    const filteredExpenses = useMemo(() => filterByDate(allExpenses, 'dueDate') as Expense[], [allExpenses, startDate, endDate]);
+    const filteredExpenses = useMemo(() => {
+        let expenses = filterByDate(allExpenses, 'dueDate') as Expense[];
+        if (expenseCategoryFilter !== 'all') {
+            expenses = expenses.filter(exp => exp.category === expenseCategoryFilter);
+        }
+        return expenses;
+    }, [allExpenses, startDate, endDate, expenseCategoryFilter]);
+
+    const filteredPayments = useMemo(() => {
+        let payments = filterByDate(allPayments, 'paymentDate') as PaymentCLT[];
+        if (paymentTypeFilter !== 'all') {
+            payments = payments.filter(pay => pay.type === paymentTypeFilter);
+        }
+        return payments;
+    }, [allPayments, startDate, endDate, paymentTypeFilter]);
+
 
     const chartData = useMemo(() => processSalesData(filteredNegotiations), [filteredNegotiations]);
     const { realtorCaptures, propertyTypeCaptures } = useMemo(() => processCaptureData(operationTypeFilter === 'venda' ? [] : filteredCaptures), [filteredCaptures, operationTypeFilter]);
@@ -323,6 +346,39 @@ export default function ReportingPage() {
                                 <Input type="date" id="end-date" value={endDate} onChange={e => setEndDate(e.target.value)} />
                             </div>
                         </div>
+                        )}
+                         {(activeTab === 'expenses' || activeTab === 'payments') && (
+                            <div className="border-t pt-4 mt-4">
+                                <h3 className="text-sm font-medium mb-2">Filtros Financeiros</h3>
+                                <div className="flex items-center gap-2">
+                                     {activeTab === 'expenses' && (
+                                         <Select value={expenseCategoryFilter} onValueChange={setExpenseCategoryFilter}>
+                                            <SelectTrigger className="w-full sm:w-auto min-w-[180px]">
+                                                <SelectValue placeholder="Categoria da Despesa" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="all">Todas as Categorias</SelectItem>
+                                                <SelectItem value="Fixa">Fixa</SelectItem>
+                                                <SelectItem value="Variável">Variável</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    )}
+                                    {activeTab === 'payments' && (
+                                         <Select value={paymentTypeFilter} onValueChange={setPaymentTypeFilter}>
+                                            <SelectTrigger className="w-full sm:w-auto min-w-[180px]">
+                                                <SelectValue placeholder="Tipo de Pagamento" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="all">Todos os Tipos</SelectItem>
+                                                <SelectItem value="Salário">Salário</SelectItem>
+                                                <SelectItem value="13º Salário">13º Salário</SelectItem>
+                                                <SelectItem value="Férias">Férias</SelectItem>
+                                                <SelectItem value="Impostos">Impostos</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    )}
+                                </div>
+                            </div>
                         )}
                     </div>
                 </CardHeader>
@@ -525,5 +581,3 @@ export default function ReportingPage() {
         </div>
     )
 }
-
-    
