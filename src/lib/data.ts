@@ -318,7 +318,7 @@ export const getPropertiesByRealtor = async (realtorName: string): Promise<Prope
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Property));
 };
 
-export const addProperty = async (newProperty: Omit<Property, 'id' | 'displayCode'>, file: File | null, userId: string): Promise<string> => {
+export const addProperty = async (newProperty: Omit<Property, 'id' | 'displayCode' | 'capturedById'>, file: File | null, userId: string): Promise<string> => {
     
     let imageUrl = "https://placehold.co/600x400.png";
     if (file) {
@@ -330,11 +330,11 @@ export const addProperty = async (newProperty: Omit<Property, 'id' | 'displayCod
     const timestamp = Date.now();
     const displayCode = `ID-${String(timestamp).slice(-6)}`;
 
-    const propertyToSave = {
+    const propertyToSave: Omit<Property, 'id'> = {
         ...newProperty,
         imageUrl,
+        displayCode,
         capturedById: userId,
-        displayCode: displayCode
     }
 
     const docRef = await addDoc(collection(db, 'imoveis'), propertyToSave);
@@ -899,6 +899,7 @@ export const updateActivityStatus = async (activityId: string, newStatus: Activi
     
 
     
+
 
 
 
