@@ -41,7 +41,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
-import { getProperties, addProperty, updateProperty, deleteProperty, propertyTypes, getUsers, type User, type Property, type PropertyType } from "@/lib/data";
+import { getProperties, addProperty, updateProperty, deleteProperty, propertyTypes, type Property, type PropertyType, getUsers, type User } from "@/lib/data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { auth, storage } from "@/lib/firebase";
 import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
@@ -235,26 +235,29 @@ export default function PropertiesPage() {
 
   const handleUpdateProperty = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!editingProperty || !currentUser) return;
-    
+    if (!editingProperty || !currentUser) {
+        toast({ variant: 'destructive', title: 'Erro', description: 'Imóvel ou usuário não encontrado para edição.' });
+        return;
+    }
+
     setIsSaving(true);
-    
+
     try {
         const formData = new FormData(event.currentTarget);
         const capturedById = formData.get("capturedBy") as string;
         const selectedCaptador = users.find(u => u.id === capturedById);
 
         const updatedPropertyData: Partial<Property> = {
-          name: formData.get("name") as string,
-          address: formData.get("address") as string,
-          price: Number(formData.get("price")),
-          commission: Number(formData.get("commission")),
-          capturedById: capturedById,
-          capturedBy: selectedCaptador?.name || editingProperty.capturedBy,
-          description: formData.get("description") as string,
-          ownerInfo: formData.get("owner") as string,
-          type: (editType || editingProperty.type) as PropertyType,
-          status: (editStatus || editingProperty.status) as Property['status'],
+            name: formData.get("name") as string,
+            address: formData.get("address") as string,
+            price: Number(formData.get("price")),
+            commission: Number(formData.get("commission")),
+            capturedById: capturedById,
+            capturedBy: selectedCaptador?.name || editingProperty.capturedBy,
+            description: formData.get("description") as string,
+            ownerInfo: formData.get("owner") as string,
+            type: (editType || editingProperty.type) as PropertyType,
+            status: (editStatus || editingProperty.status) as Property['status'],
         };
         
         await updateProperty(editingProperty.id, updatedPropertyData, selectedFile);
@@ -268,7 +271,7 @@ export default function PropertiesPage() {
     } finally {
         setIsSaving(false);
     }
-  };
+};
 
 
   const handleCardClick = (property: Property) => {
@@ -792,5 +795,3 @@ export default function PropertiesPage() {
     </div>
   );
 }
-
-    
