@@ -289,6 +289,20 @@ export const updateNegotiation = async (id: string, data: Partial<Negotiation>):
     await updateDoc(doc(db, 'negotiations', id), data);
 };
 
+export const deleteNegotiation = async (negotiation: Negotiation): Promise<void> => {
+    const codePart = negotiation.propertyDisplayCode ? `(${negotiation.propertyDisplayCode})` : '';
+    const description = `Imóvel: ${negotiation.property} ${codePart}. Cliente: ${negotiation.client}. Vendedor: ${negotiation.salesperson}.`;
+    
+    // Primeiro, cria a notificação para garantir o registro do histórico
+    await addNotification({
+        title: "Negociação Excluída",
+        description: description,
+    });
+
+    // Depois, apaga o documento
+    await deleteDoc(doc(db, "negotiations", negotiation.id));
+};
+
 export const markAsDeleted = async (id: string, deletedStatus: boolean): Promise<void> => {
     const negRef = doc(db, "negotiations", id);
     const negSnap = await getDoc(negRef);
@@ -314,7 +328,7 @@ export const markAsDeleted = async (id: string, deletedStatus: boolean): Promise
     }
 };
 
-export const archiveNegotiation = async (id: string, archiveStatus: boolean): Promise<void> => {
+export const archiveNegotiation = async (id: string, archiveStatus: boolean = true): Promise<void> => {
     const negRef = doc(db, "negotiations", id);
     const negSnap = await getDoc(negRef);
 
