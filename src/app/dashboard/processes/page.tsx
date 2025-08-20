@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, AlertCircle, CheckCircle, Hourglass } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { getProcessos, type Processo, type ProcessStatus, type ProcessStage, updateProcesso } from "@/lib/data";
+import { getProcessos, type Processo, type ProcessStatus, type ProcessStage, updateProcesso, addNotification } from "@/lib/data";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -113,6 +113,10 @@ export default function ProcessesPage() {
                 stage: 'Pendência',
                 observations: pendencyNote
             });
+            await addNotification({
+                title: "Pendência Registrada!",
+                description: `No processo do imóvel ${selectedProcess.propertyName} (${selectedProcess.propertyDisplayCode}) - Vendedor: ${selectedProcess.salespersonName}.`,
+            });
             await refreshProcesses();
             toast({ title: "Pendência Registrada!", description: `Uma nova observação foi adicionada ao processo ${selectedProcess.negotiationId.toUpperCase()}.` });
         } catch (error) {
@@ -129,6 +133,10 @@ export default function ProcessesPage() {
                 stage: 'Finalizado',
                 status: 'Finalizado',
                 observations: finalizationNote || "Processo finalizado manualmente."
+            });
+             await addNotification({
+                title: "Processo Finalizado!",
+                description: `O processo do imóvel ${selectedProcess.propertyName} (${selectedProcess.propertyDisplayCode}) foi concluído.`,
             });
             await refreshProcesses();
             toast({ title: "Processo Finalizado!", description: "O processo foi marcado como finalizado." });
