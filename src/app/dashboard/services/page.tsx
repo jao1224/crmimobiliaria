@@ -31,6 +31,7 @@ const legalRequestTypes: { id: LegalRequestType, label: string }[] = [
     { id: 'contract_review', label: 'Análise Contratual' },
     { id: 'document_regularization', label: 'Regularização de Documentos' },
     { id: 'due_diligence', label: 'Due Diligence Imobiliária' },
+    { id: 'rental_collection', label: 'Ação de Cobrança (Aluguel)' },
     { id: 'other', label: 'Outra Solicitação' }
 ];
 
@@ -59,14 +60,36 @@ function LegalTabContent() {
     const [users, setUsers] = useState<User[]>([]);
     const [isRequestOpen, setIsRequestOpen] = useState(false);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
-
+    
+    // State to pre-fill from another tab
+    const [prefilledData, setPrefilledData] = useState<{ rentalContractId?: string; description?: string; type?: LegalRequestType } | null>(null);
+    
     useEffect(() => {
         fetchData();
+
+        // Listener for custom event
+        const handleTriggerLegal = (e: any) => {
+            const { contract } = e.detail;
+            setPrefilledData({
+                rentalContractId: contract.id,
+                description: `Referente ao contrato de locação do imóvel "${contract.propertyName}" com o inquilino "${contract.tenantName}".`,
+                type: 'rental_collection'
+            });
+            setIsRequestOpen(true);
+        };
+        
+        window.addEventListener('triggerLegalRequest', handleTriggerLegal);
+
+        return () => {
+            window.removeEventListener('triggerLegalRequest', handleTriggerLegal);
+        };
+
     }, []);
     
     useEffect(() => {
         if (!isRequestOpen) {
             setSelectedFile(null);
+            setPrefilledData(null); // Reset prefilled data when dialog closes
         }
     }, [isRequestOpen]);
 
@@ -101,7 +124,8 @@ function LegalTabContent() {
         const formData = new FormData(event.currentTarget);
         
         const newRequest: Omit<LegalRequest, 'id'> = {
-            negotiationId: formData.get('negotiationId') as string,
+            negotiationId: formData.get('negotiationId') as string || undefined,
+            rentalContractId: formData.get('rentalContractId') as string || undefined,
             requestingUserId: formData.get('requestingUserId') as string,
             type: formData.get('type') as LegalRequestType,
             description: formData.get('description') as string,
@@ -142,10 +166,12 @@ function LegalTabContent() {
                         </DialogHeader>
                         <form onSubmit={handleNewRequest}>
                             <div className="py-4 space-y-4">
+                               {prefilledData?.rentalContractId && <Input type="hidden" name="rentalContractId" value={prefilledData.rentalContractId} />}
+
                                 <div className="space-y-2">
-                                    <Label htmlFor="negotiationId">Negociação (Opcional)</Label>
-                                    <Select name="negotiationId">
-                                        <SelectTrigger><SelectValue placeholder="Vincular a uma negociação"/></SelectTrigger>
+                                    <Label htmlFor="negotiationId">Vincular Negociação de Venda (Opcional)</Label>
+                                    <Select name="negotiationId" disabled={!!prefilledData?.rentalContractId}>
+                                        <SelectTrigger><SelectValue placeholder="Selecione uma negociação"/></SelectTrigger>
                                         <SelectContent>
                                             {negotiations.map(n => <SelectItem key={n.id} value={n.id}>{n.property} (Cliente: {n.client})</SelectItem>)}
                                         </SelectContent>
@@ -162,7 +188,7 @@ function LegalTabContent() {
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="type">Tipo de Serviço</Label>
-                                    <Select name="type" required>
+                                    <Select name="type" required defaultValue={prefilledData?.type}>
                                         <SelectTrigger><SelectValue placeholder="Selecione o tipo de serviço"/></SelectTrigger>
                                         <SelectContent>
                                             {legalRequestTypes.map(rt => <SelectItem key={rt.id} value={rt.id}>{rt.label}</SelectItem>)}
@@ -171,7 +197,7 @@ function LegalTabContent() {
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="description">Descrição da Solicitação</Label>
-                                    <Textarea id="description" name="description" placeholder="Descreva claramente o que você precisa." required/>
+                                    <Textarea id="description" name="description" placeholder="Descreva claramente o que você precisa." required defaultValue={prefilledData?.description}/>
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="file">Anexar Documento (Opcional)</Label>
@@ -195,7 +221,7 @@ function LegalTabContent() {
                             <TableHead>Data</TableHead>
                             <TableHead>Tipo</TableHead>
                             <TableHead>Solicitante</TableHead>
-                            <TableHead>Negociação</TableHead>
+                            <TableHead>Ref.</TableHead>
                             <TableHead>Anexo</TableHead>
                             <TableHead>Status</TableHead>
                         </TableRow>
@@ -211,7 +237,9 @@ function LegalTabContent() {
                                     <TableCell>{new Date(req.createdAt).toLocaleDateString()}</TableCell>
                                     <TableCell className="font-medium">{legalRequestTypes.find(rt => rt.id === req.type)?.label || req.type}</TableCell>
                                     <TableCell>{users.find(u => u.id === req.requestingUserId)?.name || 'Desconhecido'}</TableCell>
-                                    <TableCell className="text-xs text-muted-foreground">{negotiations.find(n => n.id === req.negotiationId)?.property || 'N/A'}</TableCell>
+                                    <TableCell className="text-xs text-muted-foreground">
+                                        {req.negotiationId ? `Neg. ${req.negotiationId.substring(0,5)}...` : req.rentalContractId ? `Loc. ${req.rentalContractId.substring(0,5)}...` : 'N/A'}
+                                    </TableCell>
                                     <TableCell>
                                         {req.fileUrl ? (
                                             <a href={req.fileUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
@@ -253,7 +281,7 @@ function RentalTabContent() {
                 getClients()
             ]);
             setContracts(conData);
-            setProperties(propData.filter(p => p.status === 'Disponível')); 
+            setProperties(propData.filter(p => p.status === 'Disponível' || conData.some(c => c.propertyId === p.id))); 
             setClients(cliData);
         } catch (error) {
             toast({ variant: 'destructive', title: "Erro", description: "Não foi possível carregar os dados de locação." });
@@ -265,6 +293,13 @@ function RentalTabContent() {
     useEffect(() => {
         fetchData();
     }, []);
+    
+    const handleTriggerLegal = (contract: RentalContract) => {
+        const event = new CustomEvent('triggerLegalRequest', { detail: { contract } });
+        window.dispatchEvent(event);
+        // Maybe switch tab? For now, just dispatch event.
+        toast({ title: "Ação Iniciada", description: "Formulário de solicitação jurídica aberto e pré-preenchido." });
+    };
 
     const handleNewContract = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -407,9 +442,12 @@ function RentalTabContent() {
                                     <TableCell>{c.tenantName}</TableCell>
                                     <TableCell>{formatCurrency(c.monthlyRent)}</TableCell>
                                     <TableCell><Badge variant={c.status === 'Ativo' ? 'success' : 'secondary'}>{c.status}</Badge></TableCell>
-                                    <TableCell className="text-right">
+                                    <TableCell className="text-right space-x-2">
                                         <Button variant="outline" size="sm" onClick={() => openPaymentModal(c)}>
-                                            <Wallet className="mr-2 h-4 w-4" /> Registrar Pagamento
+                                            <Wallet className="mr-2 h-4 w-4" /> Pagamento
+                                        </Button>
+                                        <Button variant="destructive" size="sm" onClick={() => handleTriggerLegal(c)}>
+                                            <Gavel className="mr-2 h-4 w-4" /> Acionar Jurídico
                                         </Button>
                                     </TableCell>
                                 </TableRow>

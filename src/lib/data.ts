@@ -189,11 +189,12 @@ export type ServiceRequest = {
     date: string;
 };
 
-export type LegalRequestType = 'contract_review' | 'document_regularization' | 'due_diligence' | 'other';
+export type LegalRequestType = 'contract_review' | 'document_regularization' | 'due_diligence' | 'rental_collection' | 'other';
 
 export type LegalRequest = {
   id: string;
-  negotiationId?: string; // Vinculado a uma negociação
+  negotiationId?: string; // Vinculado a uma negociação de venda
+  rentalContractId?: string; // Vinculado a um contrato de locação
   requestingUserId: string; // ID do usuário que solicitou
   type: LegalRequestType;
   description: string;
@@ -610,7 +611,17 @@ export const addLegalRequest = async (newRequest: Omit<LegalRequest, 'id'>, user
     const requestingUser = users.find(u => u.id === newRequest.requestingUserId);
     const negotiation = newRequest.negotiationId ? negotiations.find(n => n.id === newRequest.negotiationId) : null;
     
-    const description = `Solicitante: ${requestingUser?.name || 'N/A'}. ${negotiation ? `Ref. Negociação: ${negotiation.property}`: ''}`;
+    let description = `Solicitante: ${requestingUser?.name || 'N/A'}.`;
+    if (negotiation) {
+        description += ` Ref. Negociação: ${negotiation.property}`;
+    } else if (newRequest.rentalContractId) {
+        // Se houver um ID de contrato de aluguel, buscaremos os detalhes para a notificação
+        const rentalContractDoc = await getDoc(doc(db, 'locacao_contratos', newRequest.rentalContractId));
+        if (rentalContractDoc.exists()) {
+            const rentalData = rentalContractDoc.data();
+            description += ` Ref. Contrato Locação: ${rentalData.propertyName}`;
+        }
+    }
     
     await addNotification({
         title: "Nova Solicitação Jurídica",
