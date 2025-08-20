@@ -8,6 +8,8 @@ import { type Property } from './data';
 export type Lead = {
     id: string;
     name: string;
+    email: string;
+    phone: string;
     source: string;
     status: string;
     assignedTo: string;
@@ -25,10 +27,15 @@ export type Deal = {
 export type Client = {
     id: string;
     name: string;
+    email: string;
+    phone: string;
     source: string;
     assignedTo: string;
     document?: string;
+    civilStatus?: 'Solteiro(a)' | 'Casado(a)' | 'Divorciado(a)' | 'Viúvo(a)' | 'União Estável';
+    birthDate?: string;
     address?: string;
+    monthlyIncome?: number;
 };
 
 
@@ -79,6 +86,8 @@ export const convertLeadToClient = async (lead: Lead): Promise<void> => {
     // 1. Cria um novo documento de cliente
     const newClientData: Omit<Client, 'id'> = {
         name: lead.name,
+        email: lead.email,
+        phone: lead.phone,
         source: lead.source,
         assignedTo: lead.assignedTo,
     };

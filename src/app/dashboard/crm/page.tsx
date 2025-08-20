@@ -21,6 +21,8 @@ import { Separator } from "@/components/ui/separator";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, type User } from "firebase/auth";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function CrmPage() {
     const { activeProfile } = useContext(ProfileContext);
@@ -66,7 +68,7 @@ export default function CrmPage() {
 
             const canSeeAll = activeProfile === 'Admin' || activeProfile === 'Imobiliária';
             
-            if (canSeeAll || !currentUser) {
+            if (canSeeAll || !currentUser?.displayName) {
                 setLeads(leadsData);
                 setDeals(dealsData);
                 setClients(clientsData);
@@ -121,8 +123,10 @@ export default function CrmPage() {
         if (!currentUser) return;
 
         const formData = new FormData(event.currentTarget);
-        const newLeadData = {
+        const newLeadData: Omit<Lead, 'id'> = {
             name: formData.get("name") as string,
+            email: formData.get("email") as string,
+            phone: formData.get("phone") as string,
             source: formData.get("source") as string,
             status: "Novo",
             assignedTo: currentUser.displayName || 'N/A', // Atribui ao usuário logado
@@ -143,12 +147,17 @@ export default function CrmPage() {
         event.preventDefault();
          if (!currentUser) return;
         const formData = new FormData(event.currentTarget);
-        const newClientData = {
+        const newClientData: Omit<Client, 'id'> = {
             name: formData.get("name") as string,
-            source: formData.get("source") as string,
-            assignedTo: currentUser.displayName || 'N/A', // Atribui ao usuário logado
+            email: formData.get("email") as string,
+            phone: formData.get("phone") as string,
+            source: "Cadastro Direto",
+            assignedTo: currentUser.displayName || 'N/A',
             document: formData.get("document") as string,
+            civilStatus: formData.get("civilStatus") as Client['civilStatus'],
+            birthDate: formData.get("birthDate") as string,
             address: formData.get("address") as string,
+            monthlyIncome: parseFloat(formData.get("monthlyIncome") as string),
         };
         
         try {
@@ -228,6 +237,14 @@ export default function CrmPage() {
                                         <Input id="name-lead" name="name" className="col-span-3" required />
                                     </div>
                                     <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="email-lead" className="text-right">E-mail</Label>
+                                        <Input id="email-lead" name="email" type="email" className="col-span-3" required />
+                                    </div>
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="phone-lead" className="text-right">Telefone</Label>
+                                        <Input id="phone-lead" name="phone" className="col-span-3" required />
+                                    </div>
+                                    <div className="grid grid-cols-4 items-center gap-4">
                                         <Label htmlFor="source-lead" className="text-right">Fonte</Label>
                                         <Input id="source-lead" name="source" className="col-span-3" required />
                                     </div>
@@ -242,31 +259,76 @@ export default function CrmPage() {
                         <DialogTrigger asChild>
                             <Button variant="outline">Adicionar Cliente</Button>
                         </DialogTrigger>
-                        <DialogContent>
+                        <DialogContent className="sm:max-w-2xl">
                             <DialogHeader>
                                 <DialogTitle>Adicionar Novo Cliente</DialogTitle>
                                 <DialogDescription>Preencha os detalhes abaixo para criar um novo cliente diretamente.</DialogDescription>
                             </DialogHeader>
                             <form onSubmit={handleAddClient}>
-                                <div className="grid gap-4 py-4">
-                                    <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="name-client" className="text-right">Nome</Label>
-                                        <Input id="name-client" name="name" className="col-span-3" required />
+                                <ScrollArea className="max-h-[70vh] p-1">
+                                    <div className="space-y-6 p-4">
+                                        {/* Informações Pessoais */}
+                                        <div className="space-y-4 rounded-lg border p-4">
+                                            <h3 className="text-lg font-medium">Informações Pessoais</h3>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="name-client">Nome Completo</Label>
+                                                    <Input id="name-client" name="name" required />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="document-client">CPF / CNPJ</Label>
+                                                    <Input id="document-client" name="document" />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="birthDate-client">Data de Nascimento</Label>
+                                                    <Input id="birthDate-client" name="birthDate" type="date" />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="civilStatus-client">Estado Civil</Label>
+                                                    <Select name="civilStatus">
+                                                        <SelectTrigger id="civilStatus-client"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="Solteiro(a)">Solteiro(a)</SelectItem>
+                                                            <SelectItem value="Casado(a)">Casado(a)</SelectItem>
+                                                            <SelectItem value="Divorciado(a)">Divorciado(a)</SelectItem>
+                                                            <SelectItem value="Viúvo(a)">Viúvo(a)</SelectItem>
+                                                            <SelectItem value="União Estável">União Estável</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Informações de Contato */}
+                                        <div className="space-y-4 rounded-lg border p-4">
+                                            <h3 className="text-lg font-medium">Contato e Endereço</h3>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="email-client">E-mail</Label>
+                                                    <Input id="email-client" name="email" type="email" required/>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="phone-client">Telefone / WhatsApp</Label>
+                                                    <Input id="phone-client" name="phone" required/>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="address-client">Endereço Completo</Label>
+                                                <Input id="address-client" name="address" placeholder="Rua, número, bairro, cidade, CEP" />
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Informações Financeiras */}
+                                        <div className="space-y-4 rounded-lg border p-4">
+                                            <h3 className="text-lg font-medium">Informações Financeiras</h3>
+                                             <div className="space-y-2">
+                                                <Label htmlFor="monthlyIncome-client">Renda Mensal Comprovada (R$)</Label>
+                                                <Input id="monthlyIncome-client" name="monthlyIncome" type="number" step="0.01" placeholder="5000.00" />
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="source-client" className="text-right">Fonte</Label>
-                                        <Input id="source-client" name="source" className="col-span-3" required />
-                                    </div>
-                                    <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="document-client" className="text-right">Documento</Label>
-                                        <Input id="document-client" name="document" placeholder="CPF ou CNPJ" className="col-span-3" />
-                                    </div>
-                                     <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="address-client" className="text-right">Endereço</Label>
-                                        <Input id="address-client" name="address" placeholder="Endereço do cliente" className="col-span-3" />
-                                    </div>
-                                </div>
-                                <DialogFooter>
+                                </ScrollArea>
+                                <DialogFooter className="mt-4 pt-4 border-t">
                                     <Button type="submit">Salvar Cliente</Button>
                                 </DialogFooter>
                             </form>
@@ -325,6 +387,8 @@ export default function CrmPage() {
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Nome</TableHead>
+                                        <TableHead className="hidden md:table-cell">E-mail</TableHead>
+                                        <TableHead className="hidden md:table-cell">Telefone</TableHead>
                                         <TableHead>Fonte</TableHead>
                                         <TableHead>Status</TableHead>
                                         <TableHead>Atribuído a</TableHead>
@@ -335,13 +399,15 @@ export default function CrmPage() {
                                     {isLoading ? (
                                         Array.from({ length: 3 }).map((_, i) => (
                                             <TableRow key={i}>
-                                                <TableCell colSpan={5}><Skeleton className="h-8 w-full" /></TableCell>
+                                                <TableCell colSpan={7}><Skeleton className="h-8 w-full" /></TableCell>
                                             </TableRow>
                                         ))
                                     ) : leads.length > 0 ? (
                                         leads.map(lead => (
                                             <TableRow key={lead.id} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
                                                 <TableCell className="font-medium">{lead.name}</TableCell>
+                                                <TableCell className="hidden md:table-cell">{lead.email}</TableCell>
+                                                <TableCell className="hidden md:table-cell">{lead.phone}</TableCell>
                                                 <TableCell>{lead.source}</TableCell>
                                                 <TableCell><Badge variant="secondary">{lead.status}</Badge></TableCell>
                                                 <TableCell>{lead.assignedTo}</TableCell>
@@ -361,7 +427,7 @@ export default function CrmPage() {
                                         ))
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={5} className="h-24 text-center">Nenhum lead encontrado.</TableCell>
+                                            <TableCell colSpan={7} className="h-24 text-center">Nenhum lead encontrado.</TableCell>
                                         </TableRow>
                                     )}
                                 </TableBody>
@@ -424,7 +490,9 @@ export default function CrmPage() {
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Nome</TableHead>
-                                        <TableHead>Fonte Original</TableHead>
+                                        <TableHead className="hidden sm:table-cell">E-mail</TableHead>
+                                        <TableHead className="hidden md:table-cell">Telefone</TableHead>
+                                        <TableHead className="hidden lg:table-cell">Fonte Original</TableHead>
                                         <TableHead>Atribuído a</TableHead>
                                         <TableHead><span className="sr-only">Ações</span></TableHead>
                                     </TableRow>
@@ -433,14 +501,16 @@ export default function CrmPage() {
                                      {isLoading ? (
                                         Array.from({ length: 5 }).map((_, i) => (
                                             <TableRow key={i}>
-                                                <TableCell colSpan={4}><Skeleton className="h-8 w-full" /></TableCell>
+                                                <TableCell colSpan={6}><Skeleton className="h-8 w-full" /></TableCell>
                                             </TableRow>
                                         ))
                                     ) : clients.length > 0 ? (
                                         clients.map(client => (
                                             <TableRow key={client.id} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
                                                 <TableCell className="font-medium">{client.name}</TableCell>
-                                                <TableCell>{client.source}</TableCell>
+                                                <TableCell className="hidden sm:table-cell">{client.email}</TableCell>
+                                                <TableCell className="hidden md:table-cell">{client.phone}</TableCell>
+                                                <TableCell className="hidden lg:table-cell">{client.source}</TableCell>
                                                 <TableCell>{client.assignedTo}</TableCell>
                                                 <TableCell>
                                                      <DropdownMenu>
@@ -459,7 +529,7 @@ export default function CrmPage() {
                                         ))
                                      ) : (
                                         <TableRow>
-                                            <TableCell colSpan={4} className="h-24 text-center">Nenhum cliente cadastrado.</TableCell>
+                                            <TableCell colSpan={6} className="h-24 text-center">Nenhum cliente cadastrado.</TableCell>
                                         </TableRow>
                                     )}
                                 </TableBody>
@@ -535,7 +605,3 @@ export default function CrmPage() {
         </>
     )
 }
-
-    
-
-    
