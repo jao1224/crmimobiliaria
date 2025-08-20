@@ -192,7 +192,7 @@ export default function PropertiesPage() {
     setIsSaving(true);
 
     const formData = new FormData(event.currentTarget);
-    const newPropertyData: Omit<Property, 'id'> = {
+    const newPropertyData: Omit<Property, 'id' | 'displayCode'> = {
       name: formData.get("name") as string,
       address: formData.get("address") as string,
       status: "Disponível",
@@ -546,14 +546,18 @@ export default function PropertiesPage() {
                         </DropdownMenu>
                     </div>
                     </div>
-                    <CardHeader>
+                    <CardHeader className="pb-2">
                         <CardTitle className="truncate text-lg">{property.name}</CardTitle>
                         <CardDescription className="truncate">{property.address}</CardDescription>
+                        <CardDescription className="font-mono text-xs pt-1">Cód: {property.displayCode}</CardDescription>
                     </CardHeader>
-                    <CardContent className="flex-grow">
-                    <div className="text-2xl font-bold">
+                    <CardContent className="flex-grow pt-2">
+                        <div className="text-2xl font-bold">
                             {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(property.price)}
-                    </div>
+                        </div>
+                        <p className="text-sm text-muted-foreground line-clamp-2 mt-2">
+                            {property.description}
+                        </p>
                     </CardContent>
                     <CardFooter className="flex justify-between items-center text-xs text-muted-foreground">
                         <span>Captador: {property.capturedBy}</span>
