@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useMemo, useContext } from "react";
@@ -414,7 +415,7 @@ export default function NegotiationsPage() {
                                             <SelectContent>
                                                 {availableClients.map(cli => (
                                                     <SelectItem key={cli.id} value={cli.id}>
-                                                        {cli.name}
+                                                        {cli.name} {cli.document && `(${cli.document})`}
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>
@@ -700,3 +701,4 @@ export default function NegotiationsPage() {
         </>
     );
 }
+
