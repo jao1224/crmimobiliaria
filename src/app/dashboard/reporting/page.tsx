@@ -7,22 +7,24 @@ import { SalesReport } from "@/components/dashboard/sales-report";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Download, Building, Users, Wand2, Sparkles, AlertTriangle } from "lucide-react";
+import { Download, Building, Users, Wand2, Sparkles, AlertTriangle, FileDown } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
 import { getNegotiations, propertyTypes, type Negotiation, getProperties, type Property, getUsers, getPayments, type PaymentCLT, getExpenses, type Expense } from "@/lib/data";
-import { getReportInsights, type ReportInsightsOutput } from "@/lib/actions";
+import { getReportInsights as getReportInsightsAction } from "@/lib/actions";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { collection, getDocs } from "firebase/firestore";
-import { db, auth } from "@/lib/firebase";
+import { db, auth, functions } from "@/lib/firebase";
+import { httpsCallable } from "firebase/functions";
 import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 
 type Team = {
@@ -136,7 +138,8 @@ export default function ReportingPage() {
 
     // Estados para IA
     const [isAiAnalysisLoading, setIsAiAnalysisLoading] = useState(false);
-    const [aiInsights, setAiInsights] = useState<ReportInsightsOutput | null>(null);
+    const [aiInsights, setAiInsights] = useState<any | null>(null);
+    const [isExporting, setIsExporting] = useState(false);
 
     
     useEffect(() => {
@@ -250,7 +253,7 @@ export default function ReportingPage() {
         const capturesDataString = `Captações: ${realtorCaptures.length > 0 ? realtorCaptures.map(r => `${r.name} (${r.captures})`).join(', ') : 'Nenhuma'}.`;
         const teamDataString = `Equipes: ${teamPerformanceData.length > 0 ? teamPerformanceData.map(t => `${t.name} (Receita: ${formatCurrency(t.revenue)})`).join(', ') : 'Nenhuma'}.`;
 
-        const result = await getReportInsights(salesDataString, capturesDataString, teamDataString);
+        const result = await getReportInsightsAction(salesDataString, capturesDataString, teamDataString);
         
         if (result.success) {
             setAiInsights(result.data!);
@@ -264,15 +267,8 @@ export default function ReportingPage() {
         setIsAiAnalysisLoading(false);
     };
 
-    const handleExport = () => {
-        if (activeTab !== 'sales' || filteredNegotiations.length === 0) {
-            toast({
-                variant: 'destructive',
-                title: "Nenhum dado para exportar",
-                description: "A exportação detalhada está disponível apenas para a aba 'Vendas' e requer que haja dados nos filtros atuais.",
-            });
-            return;
-        }
+    const handleExport = async (format: 'csv' | 'pdf') => {
+        setIsExporting(true);
 
         const dataToExport = filteredNegotiations.map(neg => ({
             "ID Negociacao": neg.id, "Imovel": neg.property, "Cliente": neg.client,
@@ -280,29 +276,80 @@ export default function ReportingPage() {
             "Equipe": teams.find(t => t.members.includes(neg.salespersonId))?.name || 'Sem Equipe',
             "Valor": neg.value,
             "Data Conclusao": neg.completionDate ? new Date(neg.completionDate).toLocaleDateString('pt-BR') : 'N/A',
-            "Tipo": neg.type, "Status Contrato": neg.contractStatus,
         }));
-        
-        const headers = Object.keys(dataToExport[0]);
-        const escapeCsvCell = (cell: any) => {
-            const cellStr = String(cell ?? '');
-            return cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n') ? `"${cellStr.replace(/"/g, '""')}"` : cellStr;
-        };
 
-        let csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\r\n";
-        dataToExport.forEach(row => {
-            csvContent += headers.map(header => escapeCsvCell(row[header as keyof typeof row])).join(",") + "\r\n";
-        });
+        if (dataToExport.length === 0) {
+            toast({
+                variant: 'destructive',
+                title: "Nenhum dado para exportar",
+                description: "A exportação requer que haja dados de vendas nos filtros atuais.",
+            });
+            setIsExporting(false);
+            return;
+        }
 
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", 'relatorio_vendas_detalhado.csv');
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        if (format === 'csv') {
+            const headers = Object.keys(dataToExport[0]);
+            const escapeCsvCell = (cell: any) => {
+                const cellStr = String(cell ?? '');
+                return cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n') ? `"${cellStr.replace(/"/g, '""')}"` : cellStr;
+            };
+            let csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\r\n";
+            dataToExport.forEach(row => {
+                csvContent += headers.map(header => escapeCsvCell(row[header as keyof typeof row])).join(",") + "\r\n";
+            });
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", 'relatorio_vendas.csv');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } else if (format === 'pdf') {
+            try {
+                const generateReportPdf = httpsCallable(functions, 'generateReportPdf');
+                
+                const reportData = {
+                    title: "Relatório de Vendas",
+                    filters: {
+                        startDate: startDate || 'N/A',
+                        endDate: endDate || 'N/A',
+                    },
+                    sales: dataToExport,
+                    summary: {
+                        totalRevenue: filteredNegotiations.reduce((acc, neg) => acc + neg.value, 0),
+                        totalDeals: filteredNegotiations.length,
+                    }
+                };
+
+                const result = await generateReportPdf(reportData) as any;
+                const pdfBase64 = result.data.pdfBase64;
+
+                const byteCharacters = atob(pdfBase64);
+                const byteNumbers = new Array(byteCharacters.length);
+                for (let i = 0; i < byteCharacters.length; i++) {
+                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                }
+                const byteArray = new Uint8Array(byteNumbers);
+                const blob = new Blob([byteArray], { type: 'application/pdf' });
+
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `Relatorio-Vendas.pdf`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(link.href);
+
+                toast({ title: "PDF Gerado!", description: "O download do relatório foi iniciado." });
+
+            } catch (error) {
+                console.error("Erro ao gerar PDF: ", error);
+                toast({ variant: 'destructive', title: "Erro", description: "Não foi possível gerar o PDF. Verifique o console." });
+            }
+        }
         
-        toast({ title: "Exportação Concluída", description: "O arquivo foi baixado." });
+        setIsExporting(false);
     };
 
     return (
@@ -313,14 +360,22 @@ export default function ReportingPage() {
                     <p className="text-muted-foreground">Analise o desempenho com relatórios e visualizações detalhadas.</p>
                 </div>
                 <div className="flex items-center gap-2">
-                     <Button onClick={handleAiAnalysis} variant="outline" disabled={isAiAnalysisLoading}>
+                     <Button onClick={handleAiAnalysis} variant="outline" disabled={isAiAnalysisLoading || isExporting}>
                         <Wand2 className="mr-2 h-4 w-4" />
                         {isAiAnalysisLoading ? 'Analisando...' : 'Analisar com IA'}
                     </Button>
-                    <Button onClick={handleExport}>
-                        <Download className="mr-2 h-4 w-4" />
-                        Exportar Relatório
-                    </Button>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button disabled={isExporting}>
+                                <FileDown className="mr-2 h-4 w-4" />
+                                {isExporting ? 'Exportando...' : 'Exportar'}
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                            <DropdownMenuItem onClick={() => handleExport('csv')}>Exportar para CSV</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleExport('pdf')}>Exportar para PDF</DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
             </div>
 

@@ -92,6 +92,28 @@ interface ContractData {
     date: string;
 }
 
+interface ReportData {
+    title: string;
+    filters: {
+        startDate: string;
+        endDate: string;
+    },
+    sales: {
+        "ID Negociacao": string;
+        "Imovel": string;
+        "Cliente": string;
+        "Vendedor": string;
+        "Captador": string;
+        "Equipe": string;
+        "Valor": number;
+        "Data Conclusao": string;
+    }[];
+    summary: {
+        totalRevenue: number;
+        totalDeals: number;
+    }
+}
+
 // Helper function to draw wrapped text
 async function drawText(
   font: PDFFont,
@@ -118,7 +140,7 @@ async function drawText(
       line = testLine;
     }
   }
-  page.drawText(line, {x, y: currentY, font, size, color: rgb(0, 0, 0)});
+  page.drawText(line, {x: x, y: currentY, font: font, size: size, color: rgb(0, 0, 0)});
 
   // Return the new Y position after drawing the text
   return currentY - lineHeight;
@@ -145,6 +167,73 @@ async function drawPartyInfo(
 
     return currentY;
 }
+
+export const generateReportPdf = onCall<ReportData, Promise<{pdfBase64: string}>>(async (request) => {
+    const data = request.data;
+    const pdfDoc = await PDFDocument.create();
+    const page = pdfDoc.addPage();
+    const {width, height} = page.getSize();
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+    const margin = 50;
+    const contentWidth = width - 2 * margin;
+    let y = height - margin;
+
+    // Title
+    page.drawText(data.title, {
+        x: margin, y, font: boldFont, size: 18, color: rgb(0, 0, 0),
+    });
+    y -= 20;
+    page.drawText(`Período: ${data.filters.startDate} a ${data.filters.endDate}`, {
+        x: margin, y, font, size: 10, color: rgb(0.5, 0.5, 0.5),
+    });
+    y -= 30;
+
+    // Summary
+    page.drawText("Resumo do Período", {x: margin, y, font: boldFont, size: 14});
+    y -= 20;
+    const revenueText = `Receita Total: ${new Intl.NumberFormat('pt-BR', {style: 'currency', currency: 'BRL'}).format(data.summary.totalRevenue)}`;
+    page.drawText(revenueText, {x: margin, y, font, size: 12});
+    y -= 20;
+    const dealsText = `Total de Negócios Concluídos: ${data.summary.totalDeals}`;
+    page.drawText(dealsText, {x: margin, y, font, size: 12});
+    y -= 40;
+
+    // Table Header
+    page.drawText("Detalhamento das Vendas", {x: margin, y, font: boldFont, size: 14});
+    y -= 20;
+
+    const tableTop = y;
+    const colWidths = [150, 100, 100, 100, 100];
+    const colPositions = [margin, margin + 150, margin + 250, margin + 350, margin + 450];
+    const tableHeaders = ["Imóvel", "Cliente", "Vendedor", "Data", "Valor"];
+
+    page.drawText(tableHeaders[0], {x: colPositions[0], y, font: boldFont, size: 10});
+    page.drawText(tableHeaders[1], {x: colPositions[1], y, font: boldFont, size: 10});
+    page.drawText(tableHeaders[2], {x: colPositions[2], y, font: boldFont, size: 10});
+    page.drawText(tableHeaders[3], {x: colPositions[3], y, font: boldFont, size: 10});
+    page.drawText(tableHeaders[4], {x: colPositions[4], y, font: boldFont, size: 10});
+    y -= 15;
+
+    // Table Rows
+    data.sales.forEach(sale => {
+        if (y < margin + 20) { // Check for page break
+            page = pdfDoc.addPage();
+            y = height - margin;
+        }
+        const valueFormatted = new Intl.NumberFormat('pt-BR', {style: 'currency', currency: 'BRL'}).format(sale.Valor);
+        page.drawText(sale.Imovel.substring(0, 25), {x: colPositions[0], y, font, size: 9});
+        page.drawText(sale.Cliente.substring(0, 15), {x: colPositions[1], y, font, size: 9});
+        page.drawText(sale.Vendedor.substring(0, 15), {x: colPositions[2], y, font, size: 9});
+        page.drawText(sale["Data Conclusao"], {x: colPositions[3], y, font, size: 9});
+        page.drawText(valueFormatted, {x: colPositions[4], y, font, size: 9});
+        y -= 12;
+    });
+
+    const pdfBytes = await pdfDoc.save();
+    return {pdfBase64: Buffer.from(pdfBytes).toString("base64")};
+});
 
 
 export const generateContractPdf = onCall<ContractData, Promise<{pdfBase64: string}>>(async (request) => {
