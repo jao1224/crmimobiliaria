@@ -5,7 +5,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Scale, Gavel, Hammer, FileCheck2, Building, PlusCircle, Send, Wallet } from "lucide-react";
+import { Scale, Gavel, Hammer, FileCheck2, Building, PlusCircle, Send, Wallet, Link as LinkIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -58,10 +58,18 @@ function LegalTabContent() {
     const [negotiations, setNegotiations] = useState<Negotiation[]>([]);
     const [users, setUsers] = useState<User[]>([]);
     const [isRequestOpen, setIsRequestOpen] = useState(false);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
     useEffect(() => {
         fetchData();
     }, []);
+    
+    useEffect(() => {
+        if (!isRequestOpen) {
+            setSelectedFile(null);
+        }
+    }, [isRequestOpen]);
+
 
     const fetchData = async () => {
         setIsLoading(true);
@@ -81,6 +89,12 @@ function LegalTabContent() {
         }
     };
 
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            setSelectedFile(e.target.files[0]);
+        }
+    };
+
     const handleNewRequest = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         setIsSubmitting(true);
@@ -96,7 +110,7 @@ function LegalTabContent() {
         };
 
         try {
-            await addLegalRequest(newRequest, users, negotiations);
+            await addLegalRequest(newRequest, users, negotiations, selectedFile);
             await fetchData();
             toast({ title: "Sucesso!", description: "Sua solicitação foi enviada ao departamento jurídico." });
             setIsRequestOpen(false);
@@ -159,6 +173,11 @@ function LegalTabContent() {
                                     <Label htmlFor="description">Descrição da Solicitação</Label>
                                     <Textarea id="description" name="description" placeholder="Descreva claramente o que você precisa." required/>
                                 </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="file">Anexar Documento (Opcional)</Label>
+                                    <Input id="file" name="file" type="file" onChange={handleFileChange} />
+                                    {selectedFile && <p className="text-xs text-muted-foreground">Arquivo selecionado: {selectedFile.name}</p>}
+                                </div>
                             </div>
                             <DialogFooter>
                                 <Button type="submit" disabled={isSubmitting}>
@@ -176,14 +195,15 @@ function LegalTabContent() {
                             <TableHead>Data</TableHead>
                             <TableHead>Tipo</TableHead>
                             <TableHead>Solicitante</TableHead>
-                            <TableHead>Negociação Vinculada</TableHead>
+                            <TableHead>Negociação</TableHead>
+                            <TableHead>Anexo</TableHead>
                             <TableHead>Status</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {isLoading ? (
                             Array.from({length: 3}).map((_, i) => (
-                                <TableRow key={i}><TableCell colSpan={5}><Skeleton className="h-8 w-full"/></TableCell></TableRow>
+                                <TableRow key={i}><TableCell colSpan={6}><Skeleton className="h-8 w-full"/></TableCell></TableRow>
                             ))
                         ) : requests.length > 0 ? (
                             requests.map(req => (
@@ -192,11 +212,18 @@ function LegalTabContent() {
                                     <TableCell className="font-medium">{legalRequestTypes.find(rt => rt.id === req.type)?.label || req.type}</TableCell>
                                     <TableCell>{users.find(u => u.id === req.requestingUserId)?.name || 'Desconhecido'}</TableCell>
                                     <TableCell className="text-xs text-muted-foreground">{negotiations.find(n => n.id === req.negotiationId)?.property || 'N/A'}</TableCell>
+                                    <TableCell>
+                                        {req.fileUrl ? (
+                                            <a href={req.fileUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                                                <LinkIcon className="h-4 w-4 inline-block"/>
+                                            </a>
+                                        ) : 'N/A'}
+                                    </TableCell>
                                     <TableCell><Badge variant={getStatusVariant(req.status)}>{req.status}</Badge></TableCell>
                                 </TableRow>
                             ))
                         ) : (
-                            <TableRow><TableCell colSpan={5} className="h-24 text-center">Nenhuma solicitação jurídica encontrada.</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={6} className="h-24 text-center">Nenhuma solicitação jurídica encontrada.</TableCell></TableRow>
                         )}
                     </TableBody>
                 </Table>

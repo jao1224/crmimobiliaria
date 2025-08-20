@@ -199,6 +199,8 @@ export type LegalRequest = {
   description: string;
   status: 'Pendente' | 'Em Análise' | 'Concluído';
   createdAt: string;
+  fileUrl?: string;
+  fileName?: string;
 };
 
 // --- NOVOS TIPOS PARA LOCAÇÃO E OUTROS SERVIÇOS ---
@@ -584,8 +586,25 @@ export const getLegalRequests = async (): Promise<LegalRequest[]> => {
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as LegalRequest));
 };
 
-export const addLegalRequest = async (newRequest: Omit<LegalRequest, 'id'>, users: User[], negotiations: Negotiation[]): Promise<string> => {
-    const docRef = await addDoc(collection(db, 'juridico_solicitacoes'), newRequest);
+export const addLegalRequest = async (newRequest: Omit<LegalRequest, 'id'>, users: User[], negotiations: Negotiation[], file?: File | null): Promise<string> => {
+    
+    let fileUrl: string | undefined = undefined;
+    let fileName: string | undefined = undefined;
+
+    if (file) {
+        const storageRef = ref(storage, `legal_docs/${Date.now()}_${file.name}`);
+        await uploadBytes(storageRef, file);
+        fileUrl = await getDownloadURL(storageRef);
+        fileName = file.name;
+    }
+
+    const requestToSave = {
+        ...newRequest,
+        fileUrl,
+        fileName,
+    };
+    
+    const docRef = await addDoc(collection(db, 'juridico_solicitacoes'), requestToSave);
     
     // Create a notification
     const requestingUser = users.find(u => u.id === newRequest.requestingUserId);
