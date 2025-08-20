@@ -2,9 +2,69 @@
 
 import {initializeApp} from "firebase-admin/app";
 import {onCall} from "firebase-functions/v2/https";
+import {beforeUserCreated} from "firebase-functions/v2/identity";
 import {PDFDocument, rgb, StandardFonts, PDFFont} from "pdf-lib";
+// Para o envio de e-mails, você precisará de um provedor.
+// Exemplo com SendGrid: import * as sgMail from "@sendgrid/mail";
 
 initializeApp();
+
+// --- INÍCIO: LÓGICA DE NOTIFICAÇÃO POR E-MAIL ---
+
+// TODO: Para ativar o envio de e-mails, siga os passos:
+// 1. Escolha um provedor de e-mail (ex: SendGrid, Resend, Mailgun).
+// 2. Obtenha uma chave de API (API Key) do provedor escolhido.
+// 3. Salve a chave de API de forma segura no seu ambiente de Cloud Functions.
+//    Execute no seu terminal: firebase functions:secrets:set SENDGRID_API_KEY
+//    Cole a chave quando solicitado.
+// 4. Instale o pacote do provedor na pasta `functions`: npm install @sendgrid/mail
+// 5. Descomente o código abaixo e adicione o e-mail remetente.
+
+/*
+// Carrega a chave de API das secrets do Firebase.
+import {defineString} from "firebase-functions/params";
+const sendgridApiKey = defineString("SENDGRID_API_KEY");
+
+// Gatilho: Função que é executada DEPOIS que um usuário é criado no Firebase Auth.
+export const sendWelcomeEmail = beforeUserCreated(async (event) => {
+    const user = event.data;
+    const email = user.email;
+    const displayName = user.displayName || "Novo Usuário";
+
+    if (!email) {
+        console.log("Usuário criado sem e-mail, não é possível enviar boas-vindas.");
+        return;
+    }
+
+    // Inicializa o cliente do serviço de e-mail.
+    sgMail.setApiKey(sendgridApiKey.value());
+
+    const msg = {
+        to: email,
+        from: "seu-email@seudominio.com", // <-- IMPORTANTE: Use um e-mail verificado no seu provedor.
+        subject: "Bem-vindo(a) à Ideal Imóveis!",
+        html: `
+            <h1>Olá, ${displayName}!</h1>
+            <p>Sua conta na plataforma Ideal Imóveis foi criada com sucesso.</p>
+            <p>Agora você pode acessar nosso painel e explorar todas as funcionalidades para otimizar seu negócio imobiliário.</p>
+            <p>Se tiver qualquer dúvida, nossa equipe de suporte está à disposição.</p>
+            <br>
+            <p>Atenciosamente,</p>
+            <p>Equipe Ideal Imóveis</p>
+        `,
+    };
+
+    try {
+        await sgMail.send(msg);
+        console.log(`E-mail de boas-vindas enviado para ${email}`);
+    } catch (error) {
+        console.error("Erro ao enviar e-mail de boas-vindas:", error);
+    }
+});
+*/
+
+// --- FIM: LÓGICA DE NOTIFICAÇÃO POR E-MAIL ---
+
 
 interface Party {
     name: string;
