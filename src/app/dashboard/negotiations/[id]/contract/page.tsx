@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useRouter, useParams } from "next/navigation";
-import { Printer, Save, Upload, FileText, Link as LinkIcon, ArrowLeft } from "lucide-react";
+import { Printer, Save, Upload, FileText, Link as LinkIcon, ArrowLeft, Download } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,7 +18,8 @@ import type { UserProfile } from "@/app/dashboard/layout";
 import { getNegotiations, getProperties, type Property, type Negotiation } from "@/lib/data";
 import { getClients, type Client } from "@/lib/crm-data";
 import { doc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db, auth } from "@/lib/firebase";
+import { getFunctions, httpsCallable } from "firebase/functions";
 
 
 // Tipos para os dados simulados
@@ -60,6 +61,7 @@ export default function ContractPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
+    const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [contractUrl, setContractUrl] = useState<string | null>(null);
 
@@ -184,9 +186,67 @@ export default function ContractPage() {
             </div>
         );
     }
-    
-    const handlePrint = () => {
-        window.print();
+
+    const handleDownloadPdf = async () => {
+        if (!property || !client || !realtor || !negotiation) return;
+        
+        setIsGeneratingPdf(true);
+        try {
+            const functions = getFunctions(db.app, 'southamerica-east1');
+            const generateContractPdf = httpsCallable(functions, 'generateContractPdf');
+            
+            const fullContractData = {
+                clientName: client.name,
+                clientDoc: client.document || 'N/A',
+                clientAddress: client.address || 'N/A',
+                sellerName: contractData.sellerName,
+                sellerDoc: contractData.sellerDoc,
+                sellerAddress: contractData.sellerAddress,
+                realtorName: realtor.name,
+                realtorCreci: realtor.creci,
+                propertyName: property.name,
+                propertyCode: property.displayCode,
+                propertyAddress: property.address,
+                propertyArea: contractData.propertyArea,
+                propertyRegistration: contractData.propertyRegistration,
+                propertyRegistryOffice: contractData.propertyRegistryOffice,
+                negotiationValue: new Intl.NumberFormat('pt-BR').format(negotiation.value),
+                paymentTerms: contractData.paymentTerms,
+                commissionClause: contractData.commissionClause,
+                generalClauses: contractData.generalClauses,
+                additionalClauses: contractData.additionalClauses,
+                city: contractData.city,
+                date: new Date(contractData.date).toLocaleDateString('pt-BR'),
+            };
+
+            const result = await generateContractPdf(fullContractData) as any;
+            const pdfBase64 = result.data.pdfBase64;
+
+            // Decodificar e iniciar o download
+            const byteCharacters = atob(pdfBase64);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            const blob = new Blob([byteArray], { type: 'application/pdf' });
+
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `Contrato-${property.displayCode}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+
+            toast({ title: "PDF Gerado!", description: "O download do contrato foi iniciado." });
+
+        } catch (error) {
+            console.error("Erro ao gerar PDF: ", error);
+            toast({ variant: 'destructive', title: "Erro", description: "Não foi possível gerar o PDF. Verifique o console para mais detalhes." });
+        } finally {
+            setIsGeneratingPdf(false);
+        }
     };
     
     const handleSave = async () => {
@@ -264,13 +324,13 @@ export default function ContractPage() {
                     </div>
                 </div>
                 <div className="flex gap-2">
-                    <Button onClick={handleSave} variant="default" disabled={isSaving || !canEdit}>
+                    <Button onClick={handleSave} variant="outline" disabled={isSaving || !canEdit}>
                         <Save className="mr-2 h-4 w-4" />
                         {isSaving ? "Salvando..." : "Salvar Editor"}
                     </Button>
-                    <Button onClick={handlePrint} variant="outline">
-                        <Printer className="mr-2 h-4 w-4" />
-                        Imprimir / Gerar PDF
+                    <Button onClick={handleDownloadPdf} variant="default" disabled={isGeneratingPdf}>
+                        <Download className="mr-2 h-4 w-4" />
+                        {isGeneratingPdf ? "Gerando PDF..." : "Baixar PDF"}
                     </Button>
                 </div>
             </div>
@@ -432,5 +492,3 @@ export default function ContractPage() {
         </div>
     );
 }
-
-    
