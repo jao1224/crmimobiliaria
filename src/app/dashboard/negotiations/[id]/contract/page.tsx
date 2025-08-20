@@ -48,9 +48,8 @@ export default function ContractPage() {
     
     const [contrato, setContrato] = useState<Contrato | null>(null);
     const [contractData, setContractData] = useState<ContractDetails>({
-        sellerName: "Ana Vendedora",
-        sellerDoc: "987.654.321-00",
-        sellerAddress: "Rua dos Vendedores, 1010, Centro, Fortaleza",
+        sellers: [{ name: "Ana Vendedora", doc: "987.654.321-00", address: "Rua dos Vendedores, 1010, Centro, Fortaleza" }],
+        buyers: [{ name: "", doc: "", address: "" }],
         propertyArea: "150",
         propertyRegistration: "Matrícula 98765 do 2º CRI",
         propertyRegistryOffice: "2º Cartório de Registro de Imóveis de Fortaleza",
@@ -92,25 +91,41 @@ export default function ContractPage() {
                     setClient(foundClient);
                     setRealtor({ name: foundNegotiation.realtor, creci: "N/A" }); // Simulado
 
+                    // Pré-preencher os dados dos compradores e vendedores
+                    const buyers = foundClient ? [{ name: foundClient.name, doc: foundClient.document || 'N/A', address: foundClient.address || 'N/A' }] : [];
+                    const sellers = foundProperty?.ownerInfo?.split('\n').map(line => {
+                        const [name, doc, ...addressParts] = line.split(',');
+                        return { name: name?.trim() || '', doc: doc?.trim() || '', address: addressParts.join(',').trim() || '' };
+                    }).filter(s => s.name) || [{ name: 'Proprietário não informado', doc: '', address: '' }];
+
+
                     // Buscar ou inicializar o contrato
                     if (foundNegotiation.contratoId) {
                         const existingContrato = await getContrato(foundNegotiation.contratoId);
                         if (existingContrato) {
                             setContrato(existingContrato);
                             setContractData(existingContrato.details);
+                        } else {
+                            // Se não houver contrato salvo, mas houver dados, pré-preenche
+                             setContractData(prev => ({...prev, buyers, sellers}));
                         }
+                    } else {
+                        setContractData(prev => ({...prev, buyers, sellers}));
                     }
-
+                    
                     if (foundProperty && !foundNegotiation.contratoId) { // Só preenche se for um contrato novo
                         const commissionRate = foundProperty.commission || 5;
                         const commissionValue = foundNegotiation.value * (commissionRate / 100);
                         const defaultCommissionClause = `Os honorários devidos pela intermediação desta negociação, no montante de ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(commissionValue)}, correspondentes a ${commissionRate}% do valor da venda, são de responsabilidade do VENDEDOR(ES), a serem pagos à INTERVENIENTE ANUENTE na data da compensação do sinal.`;
                         setContractData(prev => ({...prev, commissionClause: defaultCommissionClause}));
                     }
+
+
                 } else {
                     toast({ variant: 'destructive', title: "Erro", description: "Negociação não encontrada." });
                 }
             } catch (error) {
+                console.error(error);
                 toast({ variant: 'destructive', title: "Erro", description: "Não foi possível carregar os dados do contrato." });
             } finally {
                 setIsLoading(false);
@@ -125,6 +140,29 @@ export default function ContractPage() {
         const { id, value } = e.target;
         setContractData(prev => ({ ...prev, [id]: value }));
     };
+    
+    const handlePartyChange = (partyType: 'buyers' | 'sellers', index: number, field: 'name' | 'doc' | 'address', value: string) => {
+        setContractData(prev => {
+            const updatedParties = [...(prev[partyType] || [])];
+            updatedParties[index] = { ...updatedParties[index], [field]: value };
+            return { ...prev, [partyType]: updatedParties };
+        });
+    };
+
+    const addParty = (partyType: 'buyers' | 'sellers') => {
+        setContractData(prev => ({
+            ...prev,
+            [partyType]: [...(prev[partyType] || []), { name: '', doc: '', address: '' }]
+        }));
+    };
+
+    const removeParty = (partyType: 'buyers' | 'sellers', index: number) => {
+        setContractData(prev => ({
+            ...prev,
+            [partyType]: (prev[partyType] || []).filter((_, i) => i !== index)
+        }));
+    };
+
 
     if (isLoading) {
         return (
@@ -175,12 +213,8 @@ export default function ContractPage() {
             const generateContractPdf = httpsCallable(functions, 'generateContractPdf');
             
             const fullContractData = {
-                clientName: client.name,
-                clientDoc: client.document || 'N/A',
-                clientAddress: client.address || 'N/A',
-                sellerName: contractData.sellerName,
-                sellerDoc: contractData.sellerDoc,
-                sellerAddress: contractData.sellerAddress,
+                buyers: contractData.buyers,
+                sellers: contractData.sellers,
                 realtorName: realtor.name,
                 realtorCreci: realtor.creci,
                 propertyName: property.name,
@@ -369,27 +403,41 @@ export default function ContractPage() {
                             {/* Parties */}
                             <div className="space-y-4">
                                 <div>
-                                    <h3 className="font-semibold mb-2">VENDEDOR(ES):</h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border p-4 rounded-md">
-                                        <div className="space-y-1">
-                                            <Label htmlFor="sellerName">Nome</Label>
-                                            <Input id="sellerName" placeholder="Nome do Proprietário" value={contractData.sellerName} onChange={handleInputChange} disabled={!canEdit} />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <Label htmlFor="sellerDoc">CPF/CNPJ</Label>
-                                            <Input id="sellerDoc" placeholder="Documento do Proprietário" value={contractData.sellerDoc} onChange={handleInputChange} disabled={!canEdit} />
-                                        </div>
-                                        <div className="col-span-1 md:col-span-2 space-y-1">
-                                            <Label htmlFor="sellerAddress">Endereço</Label>
-                                            <Input id="sellerAddress" placeholder="Endereço Completo do Proprietário" value={contractData.sellerAddress} onChange={handleInputChange} disabled={!canEdit} />
-                                        </div>
+                                    <div className="flex justify-between items-center mb-2">
+                                        <h3 className="font-semibold">VENDEDOR(ES):</h3>
+                                        <Button type="button" size="sm" variant="outline" onClick={() => addParty('sellers')} disabled={!canEdit}>Adicionar Vendedor</Button>
+                                    </div>
+                                    <div className="space-y-4">
+                                        {contractData.sellers?.map((seller, index) => (
+                                            <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 border p-4 rounded-md relative">
+                                                <div className="space-y-1">
+                                                    <Label htmlFor={`sellerName-${index}`}>Nome</Label>
+                                                    <Input id={`sellerName-${index}`} placeholder="Nome do Proprietário" value={seller.name} onChange={(e) => handlePartyChange('sellers', index, 'name', e.target.value)} disabled={!canEdit} />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <Label htmlFor={`sellerDoc-${index}`}>CPF/CNPJ</Label>
+                                                    <Input id={`sellerDoc-${index}`} placeholder="Documento do Proprietário" value={seller.doc} onChange={(e) => handlePartyChange('sellers', index, 'doc', e.target.value)} disabled={!canEdit} />
+                                                </div>
+                                                <div className="col-span-1 md:col-span-2 space-y-1">
+                                                    <Label htmlFor={`sellerAddress-${index}`}>Endereço</Label>
+                                                    <Input id={`sellerAddress-${index}`} placeholder="Endereço Completo do Proprietário" value={seller.address} onChange={(e) => handlePartyChange('sellers', index, 'address', e.target.value)} disabled={!canEdit} />
+                                                </div>
+                                                {contractData.sellers.length > 1 && canEdit && (
+                                                    <Button type="button" size="sm" variant="destructive" className="absolute top-2 right-2" onClick={() => removeParty('sellers', index)}>Remover</Button>
+                                                )}
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
                                 <div>
-                                    <h3 className="font-semibold mb-2">COMPRADOR(A):</h3>
-                                    <p className="border p-4 rounded-md bg-muted/50">
-                                        <strong>Nome:</strong> {client.name}, <strong>CPF/CNPJ:</strong> {client.document || 'N/A'}, residente e domiciliado em {client.address || 'N/A'}.
-                                    </p>
+                                    <h3 className="font-semibold mb-2">COMPRADOR(A/ES):</h3>
+                                     <div className="space-y-4">
+                                        {(contractData.buyers || []).map((buyer, index) => (
+                                             <div key={index} className="border p-4 rounded-md bg-muted/50">
+                                                <p><strong>Nome:</strong> {buyer.name}, <strong>CPF/CNPJ:</strong> {buyer.doc}, residente e domiciliado em {buyer.address}.</p>
+                                             </div>
+                                        ))}
+                                    </div>
                                 </div>
                                 <div>
                                     <h3 className="font-semibold mb-2">INTERVENIENTE ANUENTE (IMOBILIÁRIA):</h3>
@@ -457,10 +505,20 @@ export default function ContractPage() {
                             <Separator />
 
                             {/* Signatures */}
-                            <div className="pt-8 text-center space-y-8">
-                                <div>_________________________<br/><strong>{client.name}</strong><br/>COMPRADOR(A)</div>
-                                <div>_________________________<br/><strong className="uppercase">{contractData.sellerName || '[NOME DO PROPRIETÁRIO]'}</strong><br/>VENDEDOR(ES)</div>
-                                <div>_________________________<br/><strong>{realtor.name} (CRECI: {realtor.creci})</strong><br/>INTERVENIENTE ANUENTE</div>
+                             <div className="pt-8 text-center space-y-8">
+                                {(contractData.buyers || []).map((buyer, index) => (
+                                    <div key={`buyer-sig-${index}`}>
+                                        _________________________<br/><strong>{buyer.name}</strong><br/>COMPRADOR(A)
+                                    </div>
+                                ))}
+                                {(contractData.sellers || []).map((seller, index) => (
+                                     <div key={`seller-sig-${index}`}>
+                                        _________________________<br/><strong className="uppercase">{seller.name}</strong><br/>VENDEDOR(A)
+                                    </div>
+                                ))}
+                                <div>
+                                    _________________________<br/><strong>{realtor.name} (CRECI: {realtor.creci})</strong><br/>INTERVENIENTE ANUENTE
+                                </div>
                             </div>
 
                             <div className="text-center text-sm text-muted-foreground pt-8">

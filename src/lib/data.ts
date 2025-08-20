@@ -42,7 +42,7 @@ export type Property = {
   capturedBy: string; // Nome do corretor que captou
   capturedById: string; // ID do corretor que captou
   description?: string;
-  ownerInfo?: string;
+  ownerInfo?: string; // Pode conter múltiplos proprietários, separados por nova linha
   team?: string; 
 };
 
@@ -91,10 +91,11 @@ export type Processo = {
 };
 
 // --- TIPO PARA CONTRATO ---
+export type Party = { name: string; doc: string; address: string; };
+
 export type ContractDetails = {
-    sellerName: string;
-    sellerDoc: string;
-    sellerAddress: string;
+    sellers: Party[];
+    buyers: Party[];
     propertyArea: string;
     propertyRegistration: string;
     propertyRegistryOffice: string;
@@ -252,7 +253,7 @@ export const propertyTypes: PropertyType[] = ['Lançamento', 'Revenda', 'Terreno
 // --- FUNÇÕES DE MANIPULAÇÃO DE DADOS (FIRESTORE) ---
 
 export const getUsers = async (): Promise<User[]> => {
-    const snapshot = await getDocs(collection(db, 'usuarios'));
+    const snapshot = await getDocs(collection(db, 'users'));
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
 };
 

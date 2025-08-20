@@ -1,17 +1,20 @@
 
+
 import {initializeApp} from "firebase-admin/app";
 import {onCall} from "firebase-functions/v2/https";
 import {PDFDocument, rgb, StandardFonts, PDFFont} from "pdf-lib";
 
 initializeApp();
 
+interface Party {
+    name: string;
+    doc: string;
+    address: string;
+}
+
 interface ContractData {
-    clientName: string;
-    clientDoc: string;
-    clientAddress: string;
-    sellerName: string;
-    sellerDoc: string;
-    sellerAddress: string;
+    buyers: Party[];
+    sellers: Party[];
     realtorName: string;
     realtorCreci: string;
     propertyName: string;
@@ -39,7 +42,7 @@ async function drawText(
   maxWidth: number,
   lineHeight: number,
   page: any
-) {
+): Promise<number> {
   const words = text.split(" ");
   let line = "";
   let currentY = y;
@@ -48,17 +51,39 @@ async function drawText(
     const testLine = line + (line === "" ? "" : " ") + word;
     const {width} = font.widthOfTextAtSize(testLine, size);
     if (width > maxWidth) {
-      page.drawText(line, {x, y: currentY, font, size});
+      page.drawText(line, {x, y: currentY, font, size, color: rgb(0, 0, 0)});
       line = word;
       currentY -= lineHeight;
     } else {
       line = testLine;
     }
   }
-  page.drawText(line, {x, y: currentY, font, size});
+  page.drawText(line, {x, y: currentY, font, size, color: rgb(0, 0, 0)});
 
   // Return the new Y position after drawing the text
   return currentY - lineHeight;
+}
+
+async function drawPartyInfo(
+    title: string,
+    parties: Party[],
+    font: PDFFont,
+    boldFont: PDFFont,
+    x: number,
+    y: number,
+    contentWidth: number,
+    page: any
+): Promise<number> {
+    page.drawText(title, {x, y, font: boldFont, size: 12});
+    let currentY = y - 15;
+
+    for (const party of parties) {
+        const partyText = `${party.name}, CPF/CNPJ: ${party.doc}, residente em ${party.address}.`;
+        currentY = await drawText(font, partyText, x, currentY, 10, contentWidth, 15, page);
+        currentY -= 5; // Espaço entre as partes, se houver múltiplas
+    }
+
+    return currentY;
 }
 
 
@@ -80,20 +105,14 @@ export const generateContractPdf = onCall<ContractData, Promise<{pdfBase64: stri
     y,
     font: boldFont,
     size: 14,
+    color: rgb(0, 0, 0),
   });
   y -= 40;
 
   // Parties
-  page.drawText("VENDEDOR(ES):", {x: margin, y, font: boldFont, size: 12});
-  y -= 15;
-  const sellerText = `${data.sellerName}, CPF/CNPJ: ${data.sellerDoc}, residente em ${data.sellerAddress}.`;
-  y = await drawText(font, sellerText, margin, y, 10, contentWidth, 15, page);
+  y = await drawPartyInfo("VENDEDOR(ES):", data.sellers, font, boldFont, margin, y, contentWidth, page);
   y -= 10;
-
-  page.drawText("COMPRADOR(A):", {x: margin, y, font: boldFont, size: 12});
-  y -= 15;
-  const clientText = `${data.clientName}, CPF/CNPJ: ${data.clientDoc}, residente em ${data.clientAddress}.`;
-  y = await drawText(font, clientText, margin, y, 10, contentWidth, 15, page);
+  y = await drawPartyInfo("COMPRADOR(A/ES):", data.buyers, font, boldFont, margin, y, contentWidth, page);
   y -= 10;
 
   page.drawText("INTERVENIENTE ANUENTE (IMOBILIÁRIA):", {x: margin, y, font: boldFont, size: 12});
@@ -134,15 +153,26 @@ export const generateContractPdf = onCall<ContractData, Promise<{pdfBase64: stri
   }
 
   // Signatures
-  y = 120;
-  const center = width / 2;
-  page.drawText("_________________________", {x: center - 100, y, font, size: 12});
-  page.drawText(data.clientName, {x: center - 100, y: y - 15, font, size: 10});
-  page.drawText("COMPRADOR(A)", {x: center - 100, y: y-30, font: boldFont, size: 10});
+  y = Math.min(y, 180); // Garante que a seção de assinaturas não saia da página
+  const line = "_________________________";
 
-  page.drawText("_________________________", {x: center - 100, y: y - 60, font, size: 12});
-  page.drawText(data.sellerName, {x: center - 100, y: y - 75, font, size: 10});
-  page.drawText("VENDEDOR(ES)", {x: center - 100, y: y - 90, font: boldFont, size: 10});
+  data.buyers.forEach((buyer) => {
+      page.drawText(line, {x: margin, y, font, size: 12});
+      y -= 15;
+      page.drawText(buyer.name, {x: margin, y, font, size: 10});
+      y -= 15;
+      page.drawText("COMPRADOR(A)", {x: margin, y, font: boldFont, size: 10});
+      y -= 30;
+  });
+
+  data.sellers.forEach((seller) => {
+      page.drawText(line, {x: margin, y, font, size: 12});
+      y -= 15;
+      page.drawText(seller.name, {x: margin, y, font, size: 10});
+      y -= 15;
+      page.drawText("VENDEDOR(A)", {x: margin, y, font: boldFont, size: 10});
+      y -= 30;
+  });
 
   const pdfBytes = await pdfDoc.save();
   const pdfBase64 = Buffer.from(pdfBytes).toString("base64");
