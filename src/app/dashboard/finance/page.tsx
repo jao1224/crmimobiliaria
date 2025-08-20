@@ -142,7 +142,8 @@ export default function FinancePage() {
     
     const handleAddCommission = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        const formData = new FormData(event.currentTarget);
+        const form = event.currentTarget;
+        const formData = new FormData(form);
         const negotiationId = formData.get('negotiationId') as string;
         const negotiation = negotiations.find(n => n.id === negotiationId);
 
@@ -168,9 +169,9 @@ export default function FinancePage() {
         await addCommission(newCommissionData);
         await refreshFinanceData();
         toast({ title: "Sucesso!", description: "Comissão lançada com sucesso." });
-        setCommissionDialogOpen(false);
-        (event.currentTarget as HTMLFormElement).reset();
+        form.reset();
         setSelectedNegotiation(null);
+        setCommissionDialogOpen(false);
     };
 
     const handleEditCommission = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -199,7 +200,8 @@ export default function FinancePage() {
 
     const handleAddPayment = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        const formData = new FormData(event.currentTarget);
+        const form = event.currentTarget;
+        const formData = new FormData(form);
         const employeeId = formData.get('employee') as string;
         const employeeName = allUsers.find(u => u.id === employeeId)?.name || 'N/A';
         
@@ -213,13 +215,14 @@ export default function FinancePage() {
         await addPayment(newPaymentData);
         await refreshFinanceData();
         toast({ title: "Sucesso!", description: "Pagamento lançado com sucesso." });
+        form.reset();
         setPaymentDialogOpen(false);
-        (event.currentTarget as HTMLFormElement).reset();
     };
 
     const handleAddExpense = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        const formData = new FormData(event.currentTarget);
+        const form = event.currentTarget;
+        const formData = new FormData(form);
         const newExpenseData: Omit<Expense, 'id'> = {
             description: formData.get('description') as string,
             category: formData.get('category') as Expense['category'],
@@ -230,8 +233,8 @@ export default function FinancePage() {
         await addExpense(newExpenseData);
         await refreshFinanceData();
         toast({ title: "Sucesso!", description: "Despesa lançada com sucesso." });
+        form.reset();
         setExpenseDialogOpen(false);
-        (event.currentTarget as HTMLFormElement).reset();
     };
     
     const handleNegotiationSelect = (negotiationId: string) => {

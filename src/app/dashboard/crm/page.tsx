@@ -122,7 +122,8 @@ export default function CrmPage() {
         event.preventDefault();
         if (!currentUser) return;
 
-        const formData = new FormData(event.currentTarget);
+        const form = event.currentTarget;
+        const formData = new FormData(form);
         const newLeadData: Omit<Lead, 'id'> = {
             name: formData.get("name") as string,
             email: formData.get("email") as string,
@@ -136,8 +137,8 @@ export default function CrmPage() {
             await addLead(newLeadData);
             await refreshData();
             toast({ title: "Sucesso!", description: "Lead adicionado com sucesso." });
+            form.reset();
             setLeadDialogOpen(false);
-            (event.target as HTMLFormElement).reset();
         } catch (error) {
             toast({ variant: "destructive", title: "Erro", description: "Não foi possível adicionar o lead." });
         }
@@ -146,7 +147,8 @@ export default function CrmPage() {
     const handleAddClient = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
          if (!currentUser) return;
-        const formData = new FormData(event.currentTarget);
+        const form = event.currentTarget;
+        const formData = new FormData(form);
         const newClientData: Omit<Client, 'id'> = {
             name: formData.get("name") as string,
             email: formData.get("email") as string,
@@ -164,8 +166,8 @@ export default function CrmPage() {
             await addClient(newClientData);
             await refreshData();
             toast({ title: "Sucesso!", description: "Cliente adicionado com sucesso." });
+            form.reset();
             setClientDialogOpen(false);
-            (event.target as HTMLFormElement).reset();
         } catch (error) {
             toast({ variant: "destructive", title: "Erro", description: "Não foi possível adicionar o cliente." });
         }
@@ -174,7 +176,8 @@ export default function CrmPage() {
     // Simula a adição de um novo negócio
     const handleAddDeal = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        const formData = new FormData(event.currentTarget);
+        const form = event.currentTarget;
+        const formData = new FormData(form);
         const newDealData = {
             property: formData.get("property") as string,
             client: formData.get("client") as string,
@@ -187,8 +190,8 @@ export default function CrmPage() {
             await addDeal(newDealData);
             await refreshData();
             toast({ title: "Sucesso!", description: "Negócio adicionado com sucesso." });
+            form.reset();
             setDealDialogOpen(false);
-            (event.target as HTMLFormElement).reset();
         } catch (error) {
             toast({ variant: "destructive", title: "Erro", description: "Não foi possível adicionar o negócio." });
         }

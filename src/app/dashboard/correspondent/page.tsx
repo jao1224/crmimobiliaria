@@ -72,7 +72,8 @@ export default function CorrespondentPage() {
 
     const handleNewRequest = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        const formData = new FormData(event.currentTarget);
+        const form = event.currentTarget;
+        const formData = new FormData(form);
         
         const newRequest: Omit<ServiceRequest, 'id'> = {
             type: requestType,
@@ -87,8 +88,8 @@ export default function CorrespondentPage() {
         await fetchData();
         
         toast({ title: "Sucesso!", description: "Nova solicitação enviada ao correspondente." });
+        form.reset();
         setRequestModalOpen(false);
-        (event.currentTarget as HTMLFormElement).reset();
     };
 
 
