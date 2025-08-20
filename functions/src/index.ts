@@ -18,9 +18,9 @@ initializeApp();
 //    Execute no seu terminal:
 //    firebase functions:secrets:set EMAIL_USER
 //    firebase functions:secrets:set EMAIL_PASS
-// 3. Descomente a função `sendEventNotification` abaixo.
+// 3. Descomente as funções `sendEventNotification` e `sendPendencyNotification` abaixo.
 // 4. Preencha o campo `to` com o e-mail que deve receber as notificações.
-// 5. Faça o deploy da função: `firebase deploy --only functions`
+// 5. Faça o deploy das funções: `firebase deploy --only functions`
 
 /*
 import {defineString} from "firebase-functions/params";
@@ -78,6 +78,48 @@ export const sendEventNotification = functions.firestore
             console.log(`E-mail de notificação do evento '${title}' enviado com sucesso.`);
         } catch (error) {
             console.error("Erro ao enviar e-mail de notificação de evento:", error);
+        }
+
+        return null;
+    });
+
+// Gatilho: Função que é executada QUANDO um processo é ATUALIZADO no Firestore.
+export const sendPendencyNotification = functions.firestore
+    .document("processos/{processoId}")
+    .onUpdate(async (change, context) => {
+        const beforeData = change.before.data();
+        const afterData = change.after.data();
+
+        // Verifica se o estágio mudou para "Pendência"
+        if (beforeData.stage !== "Pendência" && afterData.stage === "Pendência") {
+            const processoId = context.params.processoId;
+            const propertyName = afterData.propertyName;
+            const propertyCode = afterData.propertyDisplayCode;
+            const salesperson = afterData.salespersonName;
+            const observation = afterData.observations;
+
+            const mailOptions = {
+                from: `Ideal Imóveis <${emailUser.value()}>`,
+                to: "email-do-admin-ou-gerente@example.com", // <-- IMPORTANTE: Defina o destinatário aqui
+                subject: `Alerta de Pendência no Processo: ${propertyCode}`,
+                html: `
+                    <h1>Alerta de Pendência em Processo</h1>
+                    <p>O processo do imóvel <strong>${propertyName} (${propertyCode})</strong> foi marcado com uma pendência.</p>
+                    <ul>
+                        <li><strong>Vendedor Responsável:</strong> ${salesperson}</li>
+                        <li><strong>Observação da Pendência:</strong> ${observation || "Nenhuma observação registrada."}</li>
+                    </ul>
+                    <p>Por favor, verifique o sistema para tomar as ações necessárias.</p>
+                    <p>ID do Processo: ${processoId}</p>
+                `,
+            };
+
+            try {
+                await transporter.sendMail(mailOptions);
+                console.log(`E-mail de pendência do processo '${processoId}' enviado com sucesso.`);
+            } catch (error) {
+                console.error("Erro ao enviar e-mail de notificação de pendência:", error);
+            }
         }
 
         return null;
