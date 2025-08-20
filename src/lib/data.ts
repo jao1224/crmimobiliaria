@@ -189,6 +189,19 @@ export type ServiceRequest = {
     date: string;
 };
 
+export type LegalRequestType = 'contract_review' | 'document_regularization' | 'due_diligence' | 'other';
+
+export type LegalRequest = {
+  id: string;
+  negotiationId?: string; // Vinculado a uma negociação
+  requestingUserId: string; // ID do usuário que solicitou
+  type: LegalRequestType;
+  description: string;
+  status: 'Pendente' | 'Em Análise' | 'Concluído';
+  createdAt: string;
+};
+
+
 export type EventType = 'personal' | 'company' | 'team_visit';
 
 export type Event = {
@@ -530,6 +543,30 @@ export const addServiceRequest = async (newRequest: Omit<ServiceRequest, 'id'>):
     const docRef = await addDoc(collection(db, 'solicitacoesServico'), newRequest);
     return docRef.id;
 };
+
+export const getLegalRequests = async (): Promise<LegalRequest[]> => {
+    const q = query(collection(db, 'juridico_solicitacoes'), orderBy('createdAt', 'desc'));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as LegalRequest));
+};
+
+export const addLegalRequest = async (newRequest: Omit<LegalRequest, 'id'>, users: User[], negotiations: Negotiation[]): Promise<string> => {
+    const docRef = await addDoc(collection(db, 'juridico_solicitacoes'), newRequest);
+    
+    // Create a notification
+    const requestingUser = users.find(u => u.id === newRequest.requestingUserId);
+    const negotiation = newRequest.negotiationId ? negotiations.find(n => n.id === newRequest.negotiationId) : null;
+    
+    const description = `Solicitante: ${requestingUser?.name || 'N/A'}. ${negotiation ? `Ref. Negociação: ${negotiation.property}`: ''}`;
+    
+    await addNotification({
+        title: "Nova Solicitação Jurídica",
+        description: description,
+    });
+
+    return docRef.id;
+};
+
 
 export const getFinancingProcesses = async (): Promise<FinancingProcess[]> => {
     const snapshot = await getDocs(collection(db, 'processosFinanciamento'));
