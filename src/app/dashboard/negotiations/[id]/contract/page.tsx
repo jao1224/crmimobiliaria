@@ -85,7 +85,7 @@ export default function ContractPage() {
             setIsLoading(true);
 
             try {
-                const negDocRef = doc(db, 'negotiations', negotiationId);
+                const negDocRef = doc(db, 'negociacoes', negotiationId);
                 const negDocSnap = await getDoc(negDocRef);
 
                 if (negDocSnap.exists()) {
@@ -93,8 +93,8 @@ export default function ContractPage() {
                     setNegotiation(foundNegotiation);
 
                     // Buscar imóvel, cliente e corretor
-                    const propDocRef = doc(db, 'properties', foundNegotiation.propertyId);
-                    const clientDocRef = doc(db, 'clients', foundNegotiation.clientId);
+                    const propDocRef = doc(db, 'propriedades', foundNegotiation.propertyId);
+                    const clientDocRef = doc(db, 'clientes', foundNegotiation.clientId);
                     
                     const [propDocSnap, clientDocSnap] = await Promise.all([
                         getDoc(propDocRef),
@@ -258,7 +258,9 @@ export default function ContractPage() {
                     </Button>
                     <div>
                         <h1 className="text-2xl font-bold">Gestão de Contratos</h1>
-                        <p className="text-muted-foreground">Negociação ID: {negotiationId}</p>
+                        <p className="text-muted-foreground">
+                          ID da Negociação: {negotiationId} | Cód. Imóvel: {negotiation.propertyDisplayCode}
+                        </p>
                     </div>
                 </div>
                 <div className="flex gap-2">
@@ -360,7 +362,7 @@ export default function ContractPage() {
                             <div className="space-y-2">
                                 <h3 className="font-semibold">CLÁUSULA PRIMEIRA - DO OBJETO</h3>
                                 <p className="text-justify text-sm">
-                                    O presente contrato tem por objeto a promessa de compra e venda do imóvel a seguir descrito: <strong>{property.name}</strong>, localizado na <strong>{property.address}</strong>.
+                                    O presente contrato tem por objeto a promessa de compra e venda do imóvel a seguir descrito: <strong>{property.name} (Cód. {property.displayCode})</strong>, localizado na <strong>{property.address}</strong>.
                                 </p>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div className="space-y-1">
@@ -430,3 +432,5 @@ export default function ContractPage() {
         </div>
     );
 }
+
+    
