@@ -6,6 +6,7 @@ import {beforeUserCreated} from "firebase-functions/v2/identity";
 import * as functions from "firebase-functions";
 import {PDFDocument, rgb, StandardFonts, PDFFont} from "pdf-lib";
 import * as nodemailer from "nodemailer";
+import {defineString} from "firebase-functions/params";
 
 initializeApp();
 
@@ -22,8 +23,7 @@ initializeApp();
 // 4. Preencha o campo `to` com o e-mail que deve receber as notificações.
 // 5. Faça o deploy das funções: `firebase deploy --only functions`
 
-/*
-import {defineString} from "firebase-functions/params";
+
 const emailUser = defineString("EMAIL_USER");
 const emailPass = defineString("EMAIL_PASS");
 
@@ -125,7 +125,7 @@ export const sendPendencyNotification = functions.firestore
         return null;
     });
 
-*/
+
 
 // --- INÍCIO: LÓGICA DE NOTIFICAÇÃO POR E-MAIL ---
 
@@ -447,3 +447,5 @@ export const generateContractPdf = onCall<ContractData, Promise<{pdfBase64: stri
 
   return {pdfBase64};
 });
+
+    
