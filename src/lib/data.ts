@@ -247,7 +247,6 @@ export type User = {
 
 
 // --- Dados estáticos ---
-export const realtors = ['Carlos Pereira', 'Sofia Lima', 'Joana Doe', 'Admin'];
 export const propertyTypes: PropertyType[] = ['Lançamento', 'Revenda', 'Terreno', 'Casa', 'Apartamento'];
 
 // --- FUNÇÕES DE MANIPULAÇÃO DE DADOS (FIRESTORE) ---
@@ -540,7 +539,6 @@ export const getFinancingProcesses = async (): Promise<FinancingProcess[]> => {
 export const addFinancingProcess = async (newProcess: Omit<FinancingProcess, 'id'>): Promise<string> => {
     const docRef = await addDoc(collection(db, 'processosFinanciamento'), newProcess);
 
-    // Adiciona a notificação aqui
     await addNotification({
         title: "Processo de Financiamento Criado",
         description: `Um novo processo para ${newProcess.clientName} (Vendedor: ${newProcess.realtorName}) foi iniciado.`,

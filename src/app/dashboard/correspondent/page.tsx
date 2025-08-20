@@ -15,7 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, PlusCircle, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { getFinancingProcesses, getServiceRequests, realtors, addServiceRequest, type FinancingProcess, type ServiceRequest, type ServiceRequestType, type FinancingStatus, type EngineeringStatus, type GeneralProcessStatus, updateFinancingProcess } from "@/lib/data";
+import { getFinancingProcesses, getServiceRequests, getUsers, addServiceRequest, type FinancingProcess, type ServiceRequest, type ServiceRequestType, type FinancingStatus, type EngineeringStatus, type GeneralProcessStatus, updateFinancingProcess, type User } from "@/lib/data";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import type { UserProfile } from "../layout";
 import { cn } from "@/lib/utils";
@@ -28,6 +28,7 @@ const correspondentPermissions: UserProfile[] = ['Admin', 'Imobiliária'];
 export default function CorrespondentPage() {
     const [processes, setProcesses] = useState<FinancingProcess[]>([]);
     const [requests, setRequests] = useState<ServiceRequest[]>([]);
+    const [users, setUsers] = useState<User[]>([]);
     const [selectedProcess, setSelectedProcess] = useState<FinancingProcess | null>(null);
     const [isDetailModalOpen, setDetailModalOpen] = useState(false);
     const [isRequestModalOpen, setRequestModalOpen] = useState(false);
@@ -40,8 +41,14 @@ export default function CorrespondentPage() {
     }, []);
 
     const fetchData = async () => {
-        setProcesses(await getFinancingProcesses());
-        setRequests(await getServiceRequests());
+        const [processesData, requestsData, usersData] = await Promise.all([
+            getFinancingProcesses(),
+            getServiceRequests(),
+            getUsers()
+        ]);
+        setProcesses(processesData);
+        setRequests(requestsData);
+        setUsers(usersData);
     }
 
     const handleRowClick = (process: FinancingProcess) => {
@@ -79,7 +86,7 @@ export default function CorrespondentPage() {
         await addServiceRequest(newRequest);
         await fetchData();
         
-        toast({ title: "Sucesso", description: "Nova solicitação enviada ao correspondente." });
+        toast({ title: "Sucesso!", description: "Nova solicitação enviada ao correspondente." });
         setRequestModalOpen(false);
         (event.currentTarget as HTMLFormElement).reset();
     };
@@ -168,7 +175,7 @@ export default function CorrespondentPage() {
                                                 <Select name="realtorName" required>
                                                     <SelectTrigger><SelectValue placeholder="Selecione seu nome"/></SelectTrigger>
                                                     <SelectContent>
-                                                        {realtors.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                                                        {users.map(u => <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>)}
                                                     </SelectContent>
                                                 </Select>
                                             </div>
