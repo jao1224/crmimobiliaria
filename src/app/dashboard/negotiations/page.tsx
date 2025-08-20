@@ -424,10 +424,14 @@ export default function NegotiationsPage() {
                                      <div className="space-y-2">
                                         <h4 className="font-semibold text-sm">Cliente Selecionado</h4>
                                          {foundClient ? (
-                                            <div className="text-sm text-muted-foreground">
+                                            <div className="text-sm text-muted-foreground space-y-1">
                                                 <p className="font-medium text-foreground">{foundClient.name}</p>
-                                                <p>Documento: {foundClient.document || 'N/A'}</p>
-                                                <p>Responsável: {foundClient.assignedTo}</p>
+                                                <p><strong>Doc:</strong> {foundClient.document || 'N/A'}</p>
+                                                <p><strong>Email:</strong> {foundClient.email}</p>
+                                                <p><strong>Tel:</strong> {foundClient.phone}</p>
+                                                <p><strong>End:</strong> {foundClient.address || 'N/A'}</p>
+                                                <p><strong>Renda:</strong> {foundClient.monthlyIncome ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(foundClient.monthlyIncome) : 'N/A'}</p>
+                                                <p><strong>Responsável:</strong> {foundClient.assignedTo}</p>
                                             </div>
                                         ) : <p className="text-sm text-destructive">Nenhum cliente selecionado.</p>}
                                     </div>
