@@ -193,6 +193,7 @@ export default function PropertiesPage() {
     event.preventDefault();
     
     if (!currentUser) {
+      setIsSaving(false);
       toast({
         variant: 'destructive',
         title: 'Erro de Autenticação',
