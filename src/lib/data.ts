@@ -220,7 +220,7 @@ export type RentalPayment = {
   rentalContractId: string;
   amount: number;
   paymentDate: string;
-  referenceMonth: string; // ex: "Janeiro/2024"
+  referenceMonth: string; // ex: "2024-01"
 };
 
 export type OtherServiceType = 'evaluation' | 'auction' | 'dispatcher';
@@ -889,5 +889,7 @@ export const updateActivityStatus = async (activityId: string, newStatus: Activi
     }
 };
 
+
+    
 
     
