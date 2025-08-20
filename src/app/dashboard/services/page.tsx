@@ -5,7 +5,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Scale, Gavel, Hammer, FileCheck2, Building, PlusCircle, Send, Wallet, Landmark } from "lucide-react";
+import { Scale, Gavel, Hammer, FileCheck2, Building, PlusCircle, Send, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { getLegalRequests, addLegalRequest, type LegalRequest, type LegalRequestType, getNegotiations, type Negotiation, getUsers, type User, getRentalContracts, addRentalContract, type RentalContract, addRentalPayment, getRentalPayments, type RentalPayment, getProperties, type Property } from "@/lib/data";
+import { getLegalRequests, addLegalRequest, type LegalRequest, type LegalRequestType, getNegotiations, type Negotiation, getUsers, type User, getRentalContracts, addRentalContract, type RentalContract, addRentalPayment, getRentalPayments, type RentalPayment, getProperties, type Property, getOtherServiceRequests, addOtherServiceRequest, type OtherServiceRequest, type OtherServiceType } from "@/lib/data";
 import { getClients, type Client } from "@/lib/crm-data";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -27,15 +27,28 @@ const services = [
     { id: "dispatcher", label: "Despachante", icon: FileCheck2, description: "Serviços de despachante para documentação." },
 ];
 
-const requestTypes: { id: LegalRequestType, label: string }[] = [
+const legalRequestTypes: { id: LegalRequestType, label: string }[] = [
     { id: 'contract_review', label: 'Análise Contratual' },
     { id: 'document_regularization', label: 'Regularização de Documentos' },
     { id: 'due_diligence', label: 'Due Diligence Imobiliária' },
     { id: 'other', label: 'Outra Solicitação' }
 ];
 
-const formatCurrency = (amount: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount);
+const otherServiceTypes: { id: OtherServiceType, label: string, buttonLabel: string, description: string }[] = [
+    { id: 'evaluation', label: 'Avaliação de Imóvel', buttonLabel: 'Solicitar Avaliação', description: 'Peça uma avaliação profissional para um imóvel.' },
+    { id: 'auction', label: 'Inclusão em Leilão', buttonLabel: 'Solicitar Inclusão', description: 'Solicite a inclusão de um imóvel no próximo leilão.' },
+    { id: 'dispatcher', label: 'Serviços de Despachante', buttonLabel: 'Solicitar Serviço', description: 'Peça ajuda com a burocracia e documentação.' }
+];
 
+const formatCurrency = (amount: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount);
+const getStatusVariant = (status: LegalRequest['status'] | OtherServiceRequest['status']) => {
+    switch(status) {
+        case 'Em Análise': return 'status-blue';
+        case 'Pendente': return 'status-orange';
+        case 'Concluído': return 'success';
+        default: return 'secondary';
+    }
+};
 
 function LegalTabContent() {
     const { toast } = useToast();
@@ -93,15 +106,6 @@ function LegalTabContent() {
             setIsSubmitting(false);
         }
     };
-    
-    const getStatusVariant = (status: LegalRequest['status']) => {
-        switch(status) {
-            case 'Em Análise': return 'status-blue';
-            case 'Pendente': return 'status-orange';
-            case 'Concluído': return 'success';
-            default: return 'secondary';
-        }
-    };
 
     return (
         <Card className="mt-4">
@@ -147,7 +151,7 @@ function LegalTabContent() {
                                     <Select name="type" required>
                                         <SelectTrigger><SelectValue placeholder="Selecione o tipo de serviço"/></SelectTrigger>
                                         <SelectContent>
-                                            {requestTypes.map(rt => <SelectItem key={rt.id} value={rt.id}>{rt.label}</SelectItem>)}
+                                            {legalRequestTypes.map(rt => <SelectItem key={rt.id} value={rt.id}>{rt.label}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -185,7 +189,7 @@ function LegalTabContent() {
                             requests.map(req => (
                                 <TableRow key={req.id}>
                                     <TableCell>{new Date(req.createdAt).toLocaleDateString()}</TableCell>
-                                    <TableCell className="font-medium">{requestTypes.find(rt => rt.id === req.type)?.label || req.type}</TableCell>
+                                    <TableCell className="font-medium">{legalRequestTypes.find(rt => rt.id === req.type)?.label || req.type}</TableCell>
                                     <TableCell>{users.find(u => u.id === req.requestingUserId)?.name || 'Desconhecido'}</TableCell>
                                     <TableCell className="text-xs text-muted-foreground">{negotiations.find(n => n.id === req.negotiationId)?.property || 'N/A'}</TableCell>
                                     <TableCell><Badge variant={getStatusVariant(req.status)}>{req.status}</Badge></TableCell>
@@ -208,7 +212,6 @@ function RentalTabContent() {
     const [properties, setProperties] = useState<Property[]>([]);
     const [clients, setClients] = useState<Client[]>([]);
 
-    // Estados para modais
     const [isContractOpen, setIsContractOpen] = useState(false);
     const [isPaymentOpen, setIsPaymentOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -223,7 +226,7 @@ function RentalTabContent() {
                 getClients()
             ]);
             setContracts(conData);
-            setProperties(propData.filter(p => p.status === 'Disponível')); // Apenas imóveis disponíveis
+            setProperties(propData.filter(p => p.status === 'Disponível')); 
             setClients(cliData);
         } catch (error) {
             toast({ variant: 'destructive', title: "Erro", description: "Não foi possível carregar os dados de locação." });
@@ -293,7 +296,6 @@ function RentalTabContent() {
 
         try {
             await addRentalPayment(newPayment);
-            // Poderíamos adicionar a lógica para buscar e exibir os pagamentos aqui
             toast({ title: "Sucesso!", description: "Pagamento registrado." });
             setIsPaymentOpen(false);
         } catch (error) {
@@ -421,6 +423,138 @@ function RentalTabContent() {
     )
 }
 
+function OtherServiceTabContent({ serviceType }: { serviceType: OtherServiceType }) {
+    const { toast } = useToast();
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [requests, setRequests] = useState<OtherServiceRequest[]>([]);
+    const [properties, setProperties] = useState<Property[]>([]);
+    const [users, setUsers] = useState<User[]>([]);
+    const [isRequestOpen, setIsRequestOpen] = useState(false);
+
+    const serviceInfo = otherServiceTypes.find(s => s.id === serviceType)!;
+    const Icon = services.find(s => s.id === serviceType)?.icon || Wallet;
+
+    useEffect(() => {
+        fetchData();
+    }, [serviceType]);
+
+    const fetchData = async () => {
+        setIsLoading(true);
+        try {
+            const [reqData, propData, usersData] = await Promise.all([
+                getOtherServiceRequests(),
+                getProperties(),
+                getUsers()
+            ]);
+            setRequests(reqData.filter(r => r.serviceType === serviceType));
+            setProperties(propData);
+            setUsers(usersData);
+        } catch (error) {
+            toast({ variant: 'destructive', title: "Erro", description: "Não foi possível carregar os dados do serviço." });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
+    const handleNewRequest = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        setIsSubmitting(true);
+        const formData = new FormData(event.currentTarget);
+        
+        const newRequest: Omit<OtherServiceRequest, 'id'> = {
+            serviceType: serviceType,
+            propertyId: formData.get('propertyId') as string,
+            requestingUserId: formData.get('requestingUserId') as string,
+            notes: formData.get('notes') as string,
+            status: 'Pendente',
+            createdAt: new Date().toISOString(),
+        };
+
+        try {
+            await addOtherServiceRequest(newRequest, users, properties);
+            await fetchData();
+            toast({ title: "Sucesso!", description: "Sua solicitação foi enviada." });
+            setIsRequestOpen(false);
+        } catch (error) {
+            toast({ variant: 'destructive', title: "Erro", description: "Não foi possível enviar a solicitação." });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+    
+    return (
+        <Card className="mt-4">
+            <CardHeader className="flex-row items-start justify-between">
+                 <div>
+                    <CardTitle className="flex items-center gap-2">
+                        <Icon className="h-6 w-6" />
+                        <span>{serviceInfo.label}</span>
+                    </CardTitle>
+                    <CardDescription>{serviceInfo.description}</CardDescription>
+                </div>
+                <Dialog open={isRequestOpen} onOpenChange={setIsRequestOpen}>
+                    <DialogTrigger asChild>
+                        <Button><PlusCircle className="mr-2 h-4 w-4"/>{serviceInfo.buttonLabel}</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>{serviceInfo.buttonLabel}</DialogTitle>
+                            <DialogDescription>Preencha os detalhes para abrir a solicitação.</DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={handleNewRequest}>
+                            <div className="py-4 space-y-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="propertyId">Imóvel</Label>
+                                    <Select name="propertyId" required><SelectTrigger><SelectValue placeholder="Selecione um imóvel"/></SelectTrigger><SelectContent>{properties.map(p => <SelectItem key={p.id} value={p.id}>{p.name} ({p.displayCode})</SelectItem>)}</SelectContent></Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="requestingUserId">Solicitante</Label>
+                                    <Select name="requestingUserId" required><SelectTrigger><SelectValue placeholder="Selecione seu nome"/></SelectTrigger><SelectContent>{users.map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}</SelectContent></Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="notes">Observações</Label>
+                                    <Textarea id="notes" name="notes" placeholder="Descreva detalhes importantes para esta solicitação."/>
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <Button type="submit" disabled={isSubmitting}><Send className="mr-2 h-4 w-4"/>{isSubmitting ? "Enviando..." : "Enviar Solicitação"}</Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
+            </CardHeader>
+            <CardContent>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Data</TableHead>
+                            <TableHead>Imóvel</TableHead>
+                            <TableHead>Solicitante</TableHead>
+                            <TableHead>Status</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {isLoading ? (
+                             Array.from({length: 3}).map((_, i) => <TableRow key={i}><TableCell colSpan={4}><Skeleton className="h-8 w-full"/></TableCell></TableRow>)
+                        ) : requests.length > 0 ? (
+                            requests.map(req => (
+                                <TableRow key={req.id}>
+                                    <TableCell>{new Date(req.createdAt).toLocaleDateString()}</TableCell>
+                                    <TableCell className="font-medium">{properties.find(p => p.id === req.propertyId)?.name || 'N/A'}</TableCell>
+                                    <TableCell>{users.find(u => u.id === req.requestingUserId)?.name || 'Desconhecido'}</TableCell>
+                                    <TableCell><Badge variant={getStatusVariant(req.status)}>{req.status}</Badge></TableCell>
+                                </TableRow>
+                            ))
+                        ) : (
+                            <TableRow><TableCell colSpan={4} className="h-24 text-center">Nenhuma solicitação deste tipo encontrada.</TableCell></TableRow>
+                        )}
+                    </TableBody>
+                </Table>
+            </CardContent>
+        </Card>
+    );
+}
 
 export default function ServicesPage() {
     return (
@@ -431,41 +565,17 @@ export default function ServicesPage() {
             </div>
 
             <Tabs defaultValue={services[0].id} className="w-full">
-                <TabsList className="flex-wrap h-auto">
+                <TabsList className="grid w-full grid-cols-5">
                     {services.map(service => (
                         <TabsTrigger key={service.id} value={service.id}>{service.label}</TabsTrigger>
                     ))}
                 </TabsList>
 
-                 <TabsContent value="rental">
-                    <RentalTabContent />
-                </TabsContent>
-
-                <TabsContent value="juridico">
-                    <LegalTabContent />
-                </TabsContent>
-
-                {services.filter(s => s.id !== 'juridico' && s.id !== 'rental').map(service => {
-                    const Icon = service.icon;
-                    return (
-                        <TabsContent key={service.id} value={service.id}>
-                            <Card className="mt-4">
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <Icon className="h-6 w-6" />
-                                        <span>{service.label}</span>
-                                    </CardTitle>
-                                    <CardDescription>
-                                        {service.description}
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent className="flex flex-col items-center justify-center h-64 text-center">
-                                    <p className="text-muted-foreground">O módulo de <span className="font-semibold">{service.label}</span> será implementado em breve.</p>
-                                </CardContent>
-                            </Card>
-                        </TabsContent>
-                    );
-                })}
+                 <TabsContent value="rental"><RentalTabContent /></TabsContent>
+                 <TabsContent value="juridico"><LegalTabContent /></TabsContent>
+                 <TabsContent value="evaluator"><OtherServiceTabContent serviceType="evaluation" /></TabsContent>
+                 <TabsContent value="auction"><OtherServiceTabContent serviceType="auction" /></TabsContent>
+                 <TabsContent value="dispatcher"><OtherServiceTabContent serviceType="dispatcher" /></TabsContent>
             </Tabs>
         </div>
     );

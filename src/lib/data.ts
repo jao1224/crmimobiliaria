@@ -201,7 +201,7 @@ export type LegalRequest = {
   createdAt: string;
 };
 
-// --- NOVOS TIPOS PARA LOCAÇÃO ---
+// --- NOVOS TIPOS PARA LOCAÇÃO E OUTROS SERVIÇOS ---
 export type RentalContract = {
   id: string;
   propertyId: string;
@@ -221,6 +221,18 @@ export type RentalPayment = {
   amount: number;
   paymentDate: string;
   referenceMonth: string; // ex: "Janeiro/2024"
+};
+
+export type OtherServiceType = 'evaluation' | 'auction' | 'dispatcher';
+
+export type OtherServiceRequest = {
+    id: string;
+    serviceType: OtherServiceType;
+    propertyId: string;
+    requestingUserId: string;
+    notes: string;
+    status: 'Pendente' | 'Em Análise' | 'Concluído';
+    createdAt: string;
 };
 
 
@@ -663,6 +675,35 @@ export const getRentalPayments = async (contractId: string): Promise<RentalPayme
 export const addRentalPayment = async (newPayment: Omit<RentalPayment, 'id'>): Promise<string> => {
     const docRef = await addDoc(collection(db, 'locacao_pagamentos'), newPayment);
     // Poderia gerar uma notificação aqui se necessário
+    return docRef.id;
+};
+
+// --- FUNÇÕES DE OUTROS SERVIÇOS ---
+export const getOtherServiceRequests = async (): Promise<OtherServiceRequest[]> => {
+    const q = query(collection(db, 'outros_servicos_solicitacoes'), orderBy('createdAt', 'desc'));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as OtherServiceRequest));
+};
+
+export const addOtherServiceRequest = async (newRequest: Omit<OtherServiceRequest, 'id'>, users: User[], properties: Property[]): Promise<string> => {
+    const docRef = await addDoc(collection(db, 'outros_servicos_solicitacoes'), newRequest);
+    
+    const requestingUser = users.find(u => u.id === newRequest.requestingUserId);
+    const property = properties.find(p => p.id === newRequest.propertyId);
+    
+    const serviceTypeLabels: Record<OtherServiceType, string> = {
+        'evaluation': 'Avaliação de Imóvel',
+        'auction': 'Inclusão em Leilão',
+        'dispatcher': 'Serviço de Despachante'
+    };
+
+    const description = `Solicitante: ${requestingUser?.name || 'N/A'}. Imóvel: ${property?.name || 'N/A'}`;
+    
+    await addNotification({
+        title: `Nova Solicitação: ${serviceTypeLabels[newRequest.serviceType]}`,
+        description: description,
+    });
+
     return docRef.id;
 };
 
