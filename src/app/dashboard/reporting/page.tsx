@@ -5,13 +5,13 @@
 import { useState, useMemo, useEffect, useContext } from "react";
 import { useRouter } from "next/navigation";
 import { SalesReport } from "@/components/dashboard/sales-report";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Download, Building, Users, Wand2, Sparkles, AlertTriangle, FileDown } from "lucide-react";
+import { Download, Building, Users, Wand2, Sparkles, AlertTriangle, FileDown, Trash2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
-import { getNegotiations, propertyTypes, type Negotiation, getProperties, type Property, getUsers, getPayments, type PaymentCLT, getExpenses, type Expense, updatePayment } from "@/lib/data";
+import { getNegotiations, propertyTypes, type Negotiation, getProperties, type Property, getUsers, getPayments, type PaymentCLT, getExpenses, type Expense, updatePayment, deletePayment } from "@/lib/data";
 import { getReportInsights as getReportInsightsAction } from "@/lib/actions";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,16 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 
 type Team = {
@@ -94,8 +104,8 @@ const processTeamPerformanceData = (negotiations: Negotiation[], teamsData: Team
     });
 
     negotiations.forEach(neg => {
-        if (neg.stage === 'Venda Concluída') {
-            const team = teamsData.find(t => t.memberIds && t.memberIds.includes(neg.salespersonId));
+        if (neg.stage === 'Venda Concluída' && neg.salespersonId) {
+            const team = teamsData.find(t => t.memberIds?.includes(neg.salespersonId));
             if (team) {
                 performanceData[team.name].revenue += neg.value;
                 performanceData[team.name].deals += 1;
@@ -106,7 +116,7 @@ const processTeamPerformanceData = (negotiations: Negotiation[], teamsData: Team
     return Object.entries(performanceData).map(([name, data]) => ({
         name,
         ...data,
-        conversionRate: "15%"
+        conversionRate: "15%" // Simulado
     })).sort((a,b) => b.revenue - a.revenue);
 };
 
@@ -138,9 +148,10 @@ export default function ReportingPage() {
     const [expenseCategoryFilter, setExpenseCategoryFilter] = useState('all');
     const [paymentTypeFilter, setPaymentTypeFilter] = useState('all');
     
-    // Edição
+    // Edição e Exclusão
     const [isEditPaymentOpen, setIsEditPaymentOpen] = useState(false);
     const [editingPayment, setEditingPayment] = useState<PaymentCLT | null>(null);
+    const [isDeletePaymentOpen, setIsDeletePaymentOpen] = useState(false);
 
     // Estados para IA
     const [isAiAnalysisLoading, setIsAiAnalysisLoading] = useState(false);
@@ -154,25 +165,28 @@ export default function ReportingPage() {
             setCurrentUser(user);
         });
 
-        const loadData = async () => {
-            const [negs, props, teamsSnapshot, usersData, paymentsData, expensesData] = await Promise.all([
-                getNegotiations(), 
-                getProperties(),
-                getDocs(collection(db, "teams")),
-                getUsers(),
-                getPayments(),
-                getExpenses(),
-            ]);
-            setAllNegotiations(negs);
-            setAllProperties(props);
-            setAllPayments(paymentsData);
-            setAllExpenses(expensesData);
-            setTeams(teamsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team)));
-            setUsers(usersData);
-        };
         loadData();
+        
         return () => unsubscribe();
     }, []);
+    
+    const loadData = async () => {
+        const [negs, props, teamsSnapshot, usersData, paymentsData, expensesData] = await Promise.all([
+            getNegotiations(), 
+            getProperties(),
+            getDocs(collection(db, "teams")),
+            getUsers(),
+            getPayments(),
+            getExpenses(),
+        ]);
+        setAllNegotiations(negs);
+        setAllProperties(props);
+        setAllPayments(paymentsData);
+        setAllExpenses(expensesData);
+        setTeams(teamsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team)));
+        setUsers(usersData);
+    };
+
 
     const userCanSeeAll = activeProfile === 'Admin' || activeProfile === 'Imobiliária';
     
@@ -384,7 +398,7 @@ export default function ReportingPage() {
         
         try {
             await updatePayment(editingPayment.id, updatedData);
-            setAllPayments(prev => prev.map(p => p.id === editingPayment.id ? { ...p, ...updatedData } : p));
+            await loadData(); // Recarrega todos os dados
             toast({ title: "Sucesso!", description: "Pagamento atualizado." });
             setIsEditPaymentOpen(false);
             setEditingPayment(null);
@@ -392,6 +406,21 @@ export default function ReportingPage() {
             toast({ variant: "destructive", title: "Erro", description: "Não foi possível atualizar o pagamento." });
         } finally {
             setIsSaving(false);
+        }
+    };
+    
+    const handleDeletePayment = async () => {
+        if (!editingPayment) return;
+        
+        try {
+            await deletePayment(editingPayment.id);
+            await loadData();
+            toast({ title: "Sucesso!", description: "Lançamento de pagamento excluído." });
+            setIsDeletePaymentOpen(false);
+            setIsEditPaymentOpen(false);
+            setEditingPayment(null);
+        } catch (error) {
+            toast({ variant: "destructive", title: "Erro", description: "Não foi possível excluir o pagamento." });
         }
     };
 
@@ -803,14 +832,36 @@ export default function ReportingPage() {
                                     </Select>
                                 </div>
                             </div>
-                            <DialogFooter>
-                                <Button type="button" variant="outline" onClick={() => setIsEditPaymentOpen(false)}>Cancelar</Button>
-                                <Button type="submit" disabled={isSaving}>{isSaving ? "Salvando..." : "Salvar Alterações"}</Button>
+                            <DialogFooter className="justify-between">
+                                <Button type="button" variant="destructive" onClick={() => setIsDeletePaymentOpen(true)}>
+                                    <Trash2 className="mr-2 h-4 w-4" /> Excluir
+                                </Button>
+                                <div className="flex gap-2">
+                                    <Button type="button" variant="outline" onClick={() => setIsEditPaymentOpen(false)}>Cancelar</Button>
+                                    <Button type="submit" disabled={isSaving}>{isSaving ? "Salvando..." : "Salvar Alterações"}</Button>
+                                </div>
                             </DialogFooter>
                         </form>
                     </DialogContent>
                 </Dialog>
             )}
+            
+            <AlertDialog open={isDeletePaymentOpen} onOpenChange={setIsDeletePaymentOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Esta ação não pode ser desfeita. Isso excluirá permanentemente o lançamento de pagamento.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeletePayment} className={cn(buttonVariants({ variant: "destructive" }))}>
+                            Excluir
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     )
 }
