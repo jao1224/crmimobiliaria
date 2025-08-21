@@ -341,7 +341,7 @@ export default function PropertiesPage() {
         return "destructive";
       case "Alugado":
         return "info";
-      case "Reservado":
+      case "Em Negociação":
         return "warning";
       default:
         return "secondary";
@@ -472,7 +472,7 @@ export default function PropertiesPage() {
                         <SelectItem value="Disponível">Disponível</SelectItem>
                         <SelectItem value="Vendido">Vendido</SelectItem>
                         <SelectItem value="Alugado">Alugado</SelectItem>
-                        <SelectItem value="Reservado">Reservado</SelectItem>
+                        <SelectItem value="Em Negociação">Em Negociação</SelectItem>
                     </SelectContent>
                 </Select>
                  <Select value={captadorFilter} onValueChange={setCaptadorFilter}>
@@ -557,10 +557,10 @@ export default function PropertiesPage() {
                             </div>
                         </div>
                     )}
-                    {property.status === "Reservado" && (
+                    {property.status === "Em Negociação" && (
                         <div className="absolute top-4 left-0 w-full">
                         <div className="bg-warning text-warning-foreground font-bold text-center py-1 px-4 shadow-lg">
-                                RESERVADO
+                                EM NEGOCIAÇÃO
                             </div>
                         </div>
                     )}
@@ -604,7 +604,7 @@ export default function PropertiesPage() {
                     </CardContent>
                     <CardFooter className="flex justify-between items-center text-xs text-muted-foreground">
                         <span>Captador: {property.capturedBy}</span>
-                        <Badge variant={getStatusVariant(property.status)} className={cn((property.status === 'Vendido' || property.status === 'Alugado' || property.status === 'Reservado') && 'hidden', getStatusClass(property.status))}>
+                        <Badge variant={getStatusVariant(property.status)} className={cn((property.status === 'Vendido' || property.status === 'Alugado' || property.status === 'Em Negociação') && 'hidden', getStatusClass(property.status))}>
                         {property.status}
                         </Badge>
                     </CardFooter>
@@ -766,7 +766,7 @@ export default function PropertiesPage() {
                               <SelectItem value="Disponível">Disponível</SelectItem>
                               <SelectItem value="Vendido">Vendido</SelectItem>
                               <SelectItem value="Alugado">Alugado</SelectItem>
-                              <SelectItem value="Reservado">Reservado</SelectItem>
+                              <SelectItem value="Em Negociação">Em Negociação</SelectItem>
                           </SelectContent>
                       </Select>
                   </div>

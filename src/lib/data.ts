@@ -390,9 +390,9 @@ export const addNegotiation = async (newNegotiation: Omit<Negotiation, 'id'>): P
     const negotiationRef = doc(collection(db, 'negociacoes'));
     batch.set(negotiationRef, newNegotiation);
     
-    // 2. Atualiza o status do imóvel para 'Reservado'
+    // 2. Atualiza o status do imóvel para 'Em Negociação'
     const propertyRef = doc(db, 'imoveis', newNegotiation.propertyId);
-    batch.update(propertyRef, { status: 'Reservado' });
+    batch.update(propertyRef, { status: 'Em Negociação' });
 
     // 3. Cria o processo administrativo correspondente
     const processoRef = doc(collection(db, 'processos'));
@@ -902,7 +902,7 @@ export const updateActivityStatus = async (activityId: string, newStatus: Activi
             if (propDoc.exists()) {
                  const statusMap: Record<ActivityStatus, string> = {
                     'Ativo': 'Disponível',
-                    'Pendente': 'Reservado', // Exemplo
+                    'Pendente': 'Em Negociação', // Exemplo
                     'Concluído': 'Vendido',
                     'Cancelado': 'Disponível' // Ou um status específico
                 }
@@ -916,6 +916,7 @@ export const updateActivityStatus = async (activityId: string, newStatus: Activi
     
 
     
+
 
 
 
