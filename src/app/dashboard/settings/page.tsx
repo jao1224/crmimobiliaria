@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect, useContext } from "react";
@@ -12,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { MoreHorizontal, UserPlus, Trash2, Eye, EyeOff } from "lucide-react";
+import { MoreHorizontal, UserPlus, Trash2, Eye, EyeOff, Search } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -67,6 +66,11 @@ export default function SettingsPage() {
     const [isTeamMemberDialogOpen, setTeamMemberDialogOpen] = useState(false);
     const [isTeamDialogOpen, setTeamDialogOpen] = useState(false);
     const [isManageMembersDialogOpen, setManageMembersDialogOpen] = useState(false);
+    
+    // Estados dos Filtros da Aba de Membros
+    const [searchQuery, setSearchQuery] = useState("");
+    const [teamFilter, setTeamFilter] = useState("all");
+
 
     // Estado das Permissões
     const [permissions, setPermissions] = useState<PermissionsState>(menuConfig);
@@ -330,6 +334,16 @@ export default function SettingsPage() {
         return team ? team.name : 'Sem Equipe';
     };
 
+    const filteredMembers = teamMembers.filter(member => {
+        const searchLower = searchQuery.toLowerCase();
+        const nameMatch = member.name.toLowerCase().includes(searchLower);
+        const emailMatch = member.email.toLowerCase().includes(searchLower);
+        
+        const teamMatch = teamFilter === 'all' || findTeamForMember(member.id) === teamFilter;
+        
+        return (nameMatch || emailMatch) && teamMatch;
+    });
+
 
     return (
         <div className="flex flex-col gap-6">
@@ -462,6 +476,30 @@ export default function SettingsPage() {
                             </Dialog>
                         </CardHeader>
                         <CardContent>
+                             <div className="mb-4 flex items-center gap-2">
+                                <div className="relative w-full">
+                                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        type="search"
+                                        placeholder="Buscar por nome ou e-mail..."
+                                        className="pl-8"
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                    />
+                                </div>
+                                <Select value={teamFilter} onValueChange={setTeamFilter}>
+                                    <SelectTrigger className="w-[180px]">
+                                        <SelectValue placeholder="Filtrar por equipe" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Todas as Equipes</SelectItem>
+                                        <SelectItem value="Sem Equipe">Sem Equipe</SelectItem>
+                                        {teams.map((team) => (
+                                            <SelectItem key={team.id} value={team.name}>{team.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
                             <Table>
                                 <TableHeader>
                                     <TableRow>
@@ -473,8 +511,8 @@ export default function SettingsPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {teamMembers.length > 0 ? (
-                                        teamMembers.map((member) => (
+                                    {filteredMembers.length > 0 ? (
+                                        filteredMembers.map((member) => (
                                             <TableRow key={member.id} className="transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1">
                                                 <TableCell className="font-medium">{member.name}</TableCell>
                                                 <TableCell>{member.email}</TableCell>
@@ -697,3 +735,5 @@ export default function SettingsPage() {
         </div>
     );
 }
+
+    
