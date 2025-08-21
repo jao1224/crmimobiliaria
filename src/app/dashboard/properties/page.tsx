@@ -559,7 +559,7 @@ export default function PropertiesPage() {
                     )}
                     {property.status === "Em Negociação" && (
                         <div className="absolute top-4 left-0 w-full">
-                        <div className="bg-warning text-warning-foreground font-bold text-center py-1 px-4 shadow-lg">
+                        <div className="bg-yellow-500 text-accent-foreground font-bold text-center py-1 px-4 shadow-lg">
                                 EM NEGOCIAÇÃO
                             </div>
                         </div>
