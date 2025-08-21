@@ -529,7 +529,7 @@ export default function PropertiesPage() {
                     onClick={() => handleCardClick(property)}
                     className={cn(
                     "overflow-hidden transition-all duration-200 flex flex-col",
-                    property.status === 'Disponível'
+                    property.status === 'Disponível' || property.status === 'Em Negociação'
                         ? 'cursor-pointer hover:shadow-xl hover:-translate-y-1'
                         : ''
                     )}
