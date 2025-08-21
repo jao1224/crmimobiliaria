@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useContext } from "react";
@@ -18,9 +19,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import { cn } from "@/lib/utils";
 import { type UserProfile, userProfiles, menuConfig, allModules } from "@/lib/permissions";
-import { auth, db } from "@/lib/firebase";
+import { auth, db, app } from "@/lib/firebase";
 import { collection, getDocs, doc, setDoc, addDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc } from "firebase/firestore";
 import { EmailAuthProvider, onAuthStateChanged, reauthenticateWithCredential, updatePassword, updateProfile, type User } from "firebase/auth";
+import { getFunctions, httpsCallable } from "firebase/functions";
 
 
 type TeamMember = {
@@ -147,14 +149,43 @@ export default function SettingsPage() {
         setIsSaving(true);
 
         const formData = new FormData(event.currentTarget);
-        const memberName = formData.get("name") as string;
-        const memberEmail = formData.get("email") as string;
-        const memberRole = formData.get("role") as string;
+        const newMemberData = {
+            email: formData.get("email") as string,
+            password: formData.get("password") as string,
+            name: formData.get("name") as string,
+            role: formData.get("role") as string,
+        };
 
-        toast({ title: "Atenção", description: "A criação de usuários via app está desabilitada por segurança. Adicione usuários pelo console do Firebase."});
+        if (!newMemberData.password) {
+            toast({ variant: 'destructive', title: 'Erro', description: 'O campo de senha é obrigatório.' });
+            setIsSaving(false);
+            return;
+        }
 
-        setIsSaving(false);
-        setTeamMemberDialogOpen(false);
+        try {
+            const functions = getFunctions(app);
+            const createUser = httpsCallable(functions, 'createUser');
+            const result = await createUser(newMemberData) as any;
+
+            if (result.data.success) {
+                await fetchTeamData();
+                toast({ title: "Sucesso!", description: "Novo membro da equipe criado." });
+                setTeamMemberDialogOpen(false);
+            } else {
+                throw new Error(result.data.error);
+            }
+        } catch (error: any) {
+            console.error("Error creating user:", error);
+            let description = "Ocorreu um erro ao criar o usuário.";
+            if (error.message.includes('auth/email-already-exists')) {
+                description = 'Este e-mail já está em uso por outra conta.';
+            } else if (error.message.includes('auth/weak-password')) {
+                description = 'A senha fornecida é muito fraca. Use pelo menos 6 caracteres.';
+            }
+            toast({ variant: "destructive", title: "Erro na Criação", description });
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const handleAddTeam = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -399,6 +430,10 @@ export default function SettingsPage() {
                                             <div className="space-y-2">
                                                 <Label htmlFor="email-member">E-mail</Label>
                                                 <Input id="email-member" name="email" type="email" placeholder="email@example.com" required />
+                                            </div>
+                                             <div className="space-y-2">
+                                                <Label htmlFor="password-member">Senha</Label>
+                                                <Input id="password-member" name="password" type="password" placeholder="••••••••" required />
                                             </div>
                                             <div className="space-y-2">
                                                 <Label htmlFor="role">Função</Label>
@@ -653,5 +688,3 @@ export default function SettingsPage() {
         </div>
     );
 }
-
-    

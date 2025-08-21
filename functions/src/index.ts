@@ -1,14 +1,18 @@
 
 
 import {initializeApp} from "firebase-admin/app";
-import {onCall} from "firebase-functions/v2/https";
+import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {beforeUserCreated} from "firebase-functions/v2/identity";
 import * as functions from "firebase-functions";
 import {PDFDocument, rgb, StandardFonts, PDFFont} from "pdf-lib";
 import * as nodemailer from "nodemailer";
 import {defineString} from "firebase-functions/params";
+import { getAuth } from "firebase-admin/auth";
+import { getFirestore } from "firebase-admin/firestore";
 
 initializeApp();
+const adminAuth = getAuth();
+const adminDb = getFirestore();
 
 
 // --- INÍCIO: LÓGICA DE NOTIFICAÇÃO DE EVENTOS ---
@@ -236,6 +240,42 @@ interface ReportData {
     }
 }
 
+export const createUser = onCall(async (request) => {
+    // Verifica se o usuário que está chamando a função é um admin.
+    if (request.auth?.token.role !== 'Admin' && request.auth?.token.role !== 'Imobiliária') {
+        throw new HttpsError('permission-denied', 'Apenas administradores podem criar usuários.');
+    }
+
+    const { email, password, name, role } = request.data;
+
+    try {
+        const userRecord = await adminAuth.createUser({
+            email,
+            password,
+            displayName: name,
+        });
+        
+        // Define a custom claim (role) para o novo usuário.
+        await adminAuth.setCustomUserClaims(userRecord.uid, { role });
+
+        // Salva informações adicionais no Firestore.
+        await adminDb.collection('users').doc(userRecord.uid).set({
+            uid: userRecord.uid,
+            name,
+            email,
+            role,
+            createdAt: new Date().toISOString(),
+        });
+
+        return { success: true, uid: userRecord.uid };
+    } catch (error: any) {
+        console.error('Error creating new user:', error);
+        // Lança um erro que pode ser pego no lado do cliente.
+        throw new HttpsError('internal', error.message, error);
+    }
+});
+
+
 // Helper function to draw wrapped text
 async function drawText(
   font: PDFFont,
@@ -439,7 +479,7 @@ export const generateContractPdf = onCall<ContractData, Promise<{pdfBase64: stri
   data.sellers.forEach((seller) => {
       page.drawText(line, {x: margin, y, font, size: 12});
       y -= 15;
-      page.drawText(seller.name, {x: margin, y, font, size: 10});
+      page.drawText(seller.name, {x: margin, y, font: size: 10});
       y -= 15;
       page.drawText("VENDEDOR(A)", {x: margin, y, font: boldFont, size: 10});
       y -= 30;
