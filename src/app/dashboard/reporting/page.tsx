@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useMemo, useEffect, useContext } from "react";
@@ -17,8 +18,8 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { collection, getDocs } from "firebase/firestore";
-import { db, auth, functions } from "@/lib/firebase";
-import { httpsCallable } from "firebase/functions";
+import { db, auth, app } from "@/lib/firebase";
+import { getFunctions, httpsCallable } from "firebase/functions";
 import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import { Badge } from "@/components/ui/badge";
@@ -307,6 +308,7 @@ export default function ReportingPage() {
             document.body.removeChild(link);
         } else if (format === 'pdf') {
             try {
+                const functions = getFunctions(app);
                 const generateReportPdf = httpsCallable(functions, 'generateReportPdf');
                 
                 const reportData = {

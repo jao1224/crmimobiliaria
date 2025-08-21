@@ -19,7 +19,7 @@ import type { UserProfile } from "@/app/dashboard/layout";
 import { getNegotiations, getProperties, type Property, type Negotiation, type ContractDetails, type Contrato, createOrUpdateContrato, getContrato } from "@/lib/data";
 import { getClients, type Client } from "@/lib/crm-data";
 import { doc, getDoc } from "firebase/firestore";
-import { db, auth, storage } from "@/lib/firebase";
+import { db, auth, app } from "@/lib/firebase";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
@@ -209,7 +209,7 @@ export default function ContractPage() {
         
         setIsGeneratingPdf(true);
         try {
-            const functions = getFunctions(db.app, 'southamerica-east1');
+            const functions = getFunctions(app);
             const generateContractPdf = httpsCallable(functions, 'generateContractPdf');
             
             const fullContractData = {
@@ -300,6 +300,7 @@ export default function ContractPage() {
         setIsUploading(true);
         
         try {
+            const storage = getStorage(app);
             const storageRef = ref(storage, `contracts/${negotiationId}/${selectedFile.name}`);
             await uploadBytes(storageRef, selectedFile);
             const downloadUrl = await getDownloadURL(storageRef);
