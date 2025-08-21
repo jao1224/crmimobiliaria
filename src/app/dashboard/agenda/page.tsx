@@ -131,7 +131,8 @@ export default function AgendaPage() {
         // Validação de Conflito de forma mais robusta
         const hasConflict = events.some(e => {
             // Compara a data como string 'YYYY-MM-DD' e o horário
-            const eventDateStr = new Date(e.date as any).toISOString().split('T')[0];
+            const eventDate = new Date(e.date as any);
+            const eventDateStr = `${eventDate.getUTCFullYear()}-${String(eventDate.getUTCMonth() + 1).padStart(2, '0')}-${String(eventDate.getUTCDate()).padStart(2, '0')}`;
             return e.type === activeTab && eventDateStr === dateStr && e.time === timeStr;
         });
 
@@ -162,6 +163,7 @@ export default function AgendaPage() {
             setAddDialogOpen(false);
             (event.currentTarget as HTMLFormElement).reset();
         } catch (error) {
+            console.error("Erro ao salvar evento: ", error);
             toast({ variant: 'destructive', title: "Erro", description: "Não foi possível salvar o evento." });
         }
     };
