@@ -31,7 +31,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 type Team = {
     id: string;
     name: string;
-    members: string[]; // member IDs
+    memberIds: string[];
 };
 
 type User = {
@@ -94,7 +94,7 @@ const processTeamPerformanceData = (negotiations: Negotiation[], teamsData: Team
 
     negotiations.forEach(neg => {
         if (neg.stage === 'Venda Concluída') {
-            const team = teamsData.find(t => t.members.includes(neg.salespersonId));
+            const team = teamsData.find(t => t.memberIds && t.memberIds.includes(neg.salespersonId));
             if (team) {
                 performanceData[team.name].revenue += neg.value;
                 performanceData[team.name].deals += 1;
@@ -204,7 +204,7 @@ export default function ReportingPage() {
 
         return negotiations.filter(neg => {
             const realtorMatch = realtorFilter === 'all' || neg.realtorId === realtorFilter || neg.salespersonId === realtorFilter;
-            const teamMatch = teamFilter === 'all' || teams.find(t => t.id === teamFilter)?.members.includes(neg.salespersonId);
+            const teamMatch = teamFilter === 'all' || teams.find(t => t.id === teamFilter)?.memberIds.includes(neg.salespersonId);
             const propertyTypeMatch = propertyTypeFilter === 'all' || neg.propertyType === propertyTypeFilter;
             const operationTypeMatch = operationTypeFilter === 'all' || (operationTypeFilter === 'venda' && neg.type === 'Venda');
             return realtorMatch && teamMatch && propertyTypeMatch && operationTypeMatch;
@@ -274,7 +274,7 @@ export default function ReportingPage() {
         const dataToExport = filteredNegotiations.map(neg => ({
             "ID Negociacao": neg.id, "Imovel": neg.property, "Cliente": neg.client,
             "Vendedor": neg.salesperson, "Captador": neg.realtor,
-            "Equipe": teams.find(t => t.members.includes(neg.salespersonId))?.name || 'Sem Equipe',
+            "Equipe": teams.find(t => t.memberIds.includes(neg.salespersonId))?.name || 'Sem Equipe',
             "Valor": neg.value,
             "Data Conclusao": neg.completionDate ? new Date(neg.completionDate).toLocaleDateString('pt-BR') : 'N/A',
         }));
