@@ -128,9 +128,10 @@ export default function AgendaPage() {
         const dateStr = formData.get("date") as string;
         const timeStr = formData.get("time") as string;
         
-        const date = new Date(dateStr);
-        const userTimezoneOffset = date.getTimezoneOffset() * 60000;
-        const correctDate = new Date(date.getTime() + userTimezoneOffset);
+        // Correctly handle date from input which is in 'YYYY-MM-DD' format
+        const [year, month, day] = dateStr.split('-').map(Number);
+        const correctDate = new Date(Date.UTC(year, month - 1, day));
+
 
         // Validação de Conflito
         const conflict = events.some(e => {
@@ -397,4 +398,3 @@ export default function AgendaPage() {
         </div>
     );
 }
-
