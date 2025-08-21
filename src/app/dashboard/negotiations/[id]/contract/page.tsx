@@ -194,7 +194,7 @@ export default function ContractPage() {
         );
     }
     
-    if (!negotiation || !property || !client || !realtor) {
+    if (!negotiation) {
         return (
              <div className="flex flex-col items-center justify-center h-full text-center">
                 <h2 className="text-xl font-semibold">Negociação não encontrada</h2>
@@ -203,9 +203,15 @@ export default function ContractPage() {
             </div>
         );
     }
+    
+    // Fallback para dados caso imóvel ou cliente sejam excluídos
+    const finalProperty = property || { name: "Imóvel Excluído", displayCode: "N/A", address: "N/A", value: negotiation.value, commission: 0, imageUrl: "https://placehold.co/600x400.png" };
+    const finalRealtor = realtor || { name: negotiation.realtor, creci: "N/A" };
+    const finalClient = client || { name: negotiation.client, document: "N/A", address: "N/A" };
+
 
     const handleDownloadPdf = async () => {
-        if (!property || !client || !realtor || !negotiation) return;
+        if (!negotiation) return;
         
         setIsGeneratingPdf(true);
         try {
@@ -215,11 +221,11 @@ export default function ContractPage() {
             const fullContractData = {
                 buyers: contractData.buyers,
                 sellers: contractData.sellers,
-                realtorName: realtor.name,
-                realtorCreci: realtor.creci,
-                propertyName: property.name,
-                propertyCode: property.displayCode,
-                propertyAddress: property.address,
+                realtorName: finalRealtor.name,
+                realtorCreci: finalRealtor.creci,
+                propertyName: finalProperty.name,
+                propertyCode: finalProperty.displayCode,
+                propertyAddress: finalProperty.address,
                 propertyArea: contractData.propertyArea,
                 propertyRegistration: contractData.propertyRegistration,
                 propertyRegistryOffice: contractData.propertyRegistryOffice,
@@ -245,7 +251,7 @@ export default function ContractPage() {
 
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = `Contrato-${property.displayCode}.pdf`;
+            link.download = `Contrato-${finalProperty.displayCode}.pdf`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -435,7 +441,7 @@ export default function ContractPage() {
                                      <div className="space-y-4">
                                         {(contractData.buyers || []).map((buyer, index) => (
                                              <div key={index} className="border p-4 rounded-md bg-muted/50">
-                                                <p><strong>Nome:</strong> {buyer.name}, <strong>CPF/CNPJ:</strong> {buyer.doc}, residente e domiciliado em {buyer.address}.</p>
+                                                <p><strong>Nome:</strong> {buyer.name || finalClient.name}, <strong>CPF/CNPJ:</strong> {buyer.doc || finalClient.document}, residente e domiciliado em {buyer.address || finalClient.address}.</p>
                                              </div>
                                         ))}
                                     </div>
@@ -444,7 +450,7 @@ export default function ContractPage() {
                                     <h3 className="font-semibold mb-2">INTERVENIENTE ANUENTE (IMOBILIÁRIA):</h3>
                                     <p className="border p-4 rounded-md bg-muted/50">
                                         <strong>Razão Social:</strong> Ideal Imóveis Ltda., <strong>CNPJ:</strong> 00.123.456/0001-00, com sede em [Endereço da Imobiliária], representada por seu corretor responsável.<br/>
-                                        <strong>Corretor Responsável:</strong> {realtor.name}, <strong>CRECI:</strong> {realtor.creci}.
+                                        <strong>Corretor Responsável:</strong> {finalRealtor.name}, <strong>CRECI:</strong> {finalRealtor.creci}.
                                     </p>
                                 </div>
                             </div>
@@ -455,7 +461,7 @@ export default function ContractPage() {
                             <div className="space-y-2">
                                 <h3 className="font-semibold">CLÁUSULA PRIMEIRA - DO OBJETO</h3>
                                 <p className="text-justify text-sm">
-                                    O presente contrato tem por objeto a promessa de compra e venda do imóvel a seguir descrito: <strong>{property.name} (Cód. {property.displayCode})</strong>, localizado na <strong>{property.address}</strong>.
+                                    O presente contrato tem por objeto a promessa de compra e venda do imóvel a seguir descrito: <strong>{finalProperty.name} (Cód. {finalProperty.displayCode})</strong>, localizado na <strong>{finalProperty.address}</strong>.
                                 </p>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div className="space-y-1">
@@ -509,7 +515,7 @@ export default function ContractPage() {
                              <div className="pt-8 text-center space-y-8">
                                 {(contractData.buyers || []).map((buyer, index) => (
                                     <div key={`buyer-sig-${index}`}>
-                                        _________________________<br/><strong>{buyer.name}</strong><br/>COMPRADOR(A)
+                                        _________________________<br/><strong>{buyer.name || finalClient.name}</strong><br/>COMPRADOR(A)
                                     </div>
                                 ))}
                                 {(contractData.sellers || []).map((seller, index) => (
@@ -518,7 +524,7 @@ export default function ContractPage() {
                                     </div>
                                 ))}
                                 <div>
-                                    _________________________<br/><strong>{realtor.name} (CRECI: {realtor.creci})</strong><br/>INTERVENIENTE ANUENTE
+                                    _________________________<br/><strong>{finalRealtor.name} (CRECI: {finalRealtor.creci})</strong><br/>INTERVENIENTE ANUENTE
                                 </div>
                             </div>
 
