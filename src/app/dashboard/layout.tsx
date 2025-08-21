@@ -133,7 +133,7 @@ export default function DashboardLayout({
       { href: "/dashboard/processes", icon: FileText, label: "Processos Admin", tooltip: "Processos Administrativos" },
       { href: "/dashboard/finance", icon: CircleDollarSign, label: "Financeiro", tooltip: "Financeiro" },
       { href: "/dashboard/agenda", icon: Calendar, label: "Agenda", tooltip: "Agenda" },
-      { href: "/dashboard/reporting", icon: BarChart3, label: "Relatórios", tooltip: "Relatórios" },
+      { href: "/dashboard/reporting", icon: BarChart3, label: "Relatórios & Metas", tooltip: "Relatórios & Metas" },
       { href: "/dashboard/correspondent", icon: Landmark, label: "Correspondente", tooltip: "Correspondente Bancário" },
       { href: "/dashboard/services", icon: FolderKanban, label: "Outros Serviços", tooltip: "Outros Serviços" },
   ];
