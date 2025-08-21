@@ -358,12 +358,12 @@ export default function AgendaPage() {
                                 </div>
                             </div>
                             <DialogFooter>
-                                <div>
-                                    <Button type="submit" className="mr-2">Salvar Alterações</Button>
+                                <div className="flex items-center gap-2">
+                                    <Button type="submit">Salvar Alterações</Button>
                                     <Button type="button" variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
                                         <Trash2 className="mr-2 h-4 w-4" /> Excluir
                                     </Button>
-                                    <Button type="button" variant="outline" className="ml-2" onClick={() => setEditDialogOpen(false)}>Cancelar</Button>
+                                    <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>Cancelar</Button>
                                 </div>
                             </DialogFooter>
                         </form>
