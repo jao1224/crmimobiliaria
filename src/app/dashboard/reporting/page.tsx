@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Download, Building, Users, Wand2, Sparkles, AlertTriangle, FileDown } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
-import { getNegotiations, propertyTypes, type Negotiation, getProperties, type Property, getUsers, getPayments, type PaymentCLT, getExpenses, type Expense } from "@/lib/data";
+import { getNegotiations, propertyTypes, type Negotiation, getProperties, type Property, getUsers, getPayments, type PaymentCLT, getExpenses, type Expense, updatePayment } from "@/lib/data";
 import { getReportInsights as getReportInsightsAction } from "@/lib/actions";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 
 
 type Team = {
@@ -136,11 +137,16 @@ export default function ReportingPage() {
     // Filtros Específicos
     const [expenseCategoryFilter, setExpenseCategoryFilter] = useState('all');
     const [paymentTypeFilter, setPaymentTypeFilter] = useState('all');
+    
+    // Edição
+    const [isEditPaymentOpen, setIsEditPaymentOpen] = useState(false);
+    const [editingPayment, setEditingPayment] = useState<PaymentCLT | null>(null);
 
     // Estados para IA
     const [isAiAnalysisLoading, setIsAiAnalysisLoading] = useState(false);
     const [aiInsights, setAiInsights] = useState<any | null>(null);
     const [isExporting, setIsExporting] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
 
     
     useEffect(() => {
@@ -353,6 +359,42 @@ export default function ReportingPage() {
         
         setIsExporting(false);
     };
+
+    const handleEditPayment = (payment: PaymentCLT) => {
+        setEditingPayment(payment);
+        setIsEditPaymentOpen(true);
+    };
+
+    const handleUpdatePayment = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        if (!editingPayment) return;
+
+        setIsSaving(true);
+        const formData = new FormData(event.currentTarget);
+        const employeeId = formData.get('employee') as string;
+        const employeeName = users.find(u => u.id === employeeId)?.name || 'N/A';
+
+        const updatedData: Partial<PaymentCLT> = {
+            employee: employeeName,
+            type: formData.get('type') as PaymentCLT['type'],
+            amount: parseFloat(formData.get('amount') as string),
+            paymentDate: formData.get('paymentDate') as string,
+            status: formData.get('status') as PaymentCLT['status'],
+        };
+        
+        try {
+            await updatePayment(editingPayment.id, updatedData);
+            setAllPayments(prev => prev.map(p => p.id === editingPayment.id ? { ...p, ...updatedData } : p));
+            toast({ title: "Sucesso!", description: "Pagamento atualizado." });
+            setIsEditPaymentOpen(false);
+            setEditingPayment(null);
+        } catch (error) {
+            toast({ variant: "destructive", title: "Erro", description: "Não foi possível atualizar o pagamento." });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
 
     return (
         <div className="flex flex-col gap-6">
@@ -689,7 +731,7 @@ export default function ReportingPage() {
                                 </TableHeader>
                                 <TableBody>
                                      {filteredPayments.length > 0 ? filteredPayments.map(payment => (
-                                        <TableRow key={payment.id}>
+                                        <TableRow key={payment.id} onClick={() => handleEditPayment(payment)} className="cursor-pointer">
                                             <TableCell className="font-medium">{payment.employee}</TableCell>
                                             <TableCell>{payment.type}</TableCell>
                                             <TableCell>{new Date(payment.paymentDate + 'T00:00:00').toLocaleDateString('pt-BR')}</TableCell>
@@ -711,6 +753,64 @@ export default function ReportingPage() {
                     </Card>
                 </TabsContent>
             </Tabs>
+
+            {editingPayment && (
+                <Dialog open={isEditPaymentOpen} onOpenChange={setIsEditPaymentOpen}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Editar Lançamento de Pagamento</DialogTitle>
+                            <DialogDescription>Atualize os detalhes do pagamento para {editingPayment.employee}.</DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={handleUpdatePayment}>
+                            <div className="grid gap-4 py-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="employee">Colaborador</Label>
+                                    <Select name="employee" required defaultValue={users.find(u => u.name === editingPayment.employee)?.id}>
+                                        <SelectTrigger><SelectValue/></SelectTrigger>
+                                        <SelectContent>
+                                            {users.map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="type">Tipo de Pagamento</Label>
+                                    <Select name="type" required defaultValue={editingPayment.type}>
+                                        <SelectTrigger><SelectValue/></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Salário">Salário</SelectItem>
+                                            <SelectItem value="13º Salário">13º Salário</SelectItem>
+                                            <SelectItem value="Férias">Férias</SelectItem>
+                                            <SelectItem value="Impostos">Impostos</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="amount_payment">Valor (R$)</Label>
+                                    <Input id="amount_payment" name="amount" type="number" step="0.01" min="0.01" required defaultValue={editingPayment.amount} />
+                                </div>
+                                 <div className="space-y-2">
+                                    <Label htmlFor="paymentDate_payment">Data de Pagamento</Label>
+                                    <Input id="paymentDate_payment" name="paymentDate" type="date" required defaultValue={editingPayment.paymentDate} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="status_payment">Status</Label>
+                                    <Select name="status" defaultValue={editingPayment.status} required>
+                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Agendado">Agendado</SelectItem>
+                                            <SelectItem value="Pago">Pago</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <Button type="button" variant="outline" onClick={() => setIsEditPaymentOpen(false)}>Cancelar</Button>
+                                <Button type="submit" disabled={isSaving}>{isSaving ? "Salvando..." : "Salvar Alterações"}</Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
+            )}
         </div>
     )
 }

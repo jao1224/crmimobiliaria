@@ -554,6 +554,11 @@ export const addPayment = async (newPayment: Omit<PaymentCLT, 'id'>): Promise<st
     return docRef.id;
 };
 
+export const updatePayment = async (id: string, data: Partial<PaymentCLT>): Promise<void> => {
+    const paymentRef = doc(db, 'pagamentos', id);
+    await updateDoc(paymentRef, data);
+};
+
 export const getExpenses = async (): Promise<Expense[]> => {
     const snapshot = await getDocs(collection(db, 'despesas'));
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Expense));
@@ -927,6 +932,7 @@ export const updateActivityStatus = async (activityId: string, newStatus: Activi
     
 
     
+
 
 
 
