@@ -2,7 +2,7 @@
 
 import { db, storage } from './firebase';
 import { collection, getDocs, addDoc, doc, updateDoc, writeBatch, serverTimestamp, query, orderBy, limit, where, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { type User as FirebaseUser } from 'firebase/auth';
 
 // Tipos para os dados de CRM
@@ -369,8 +369,47 @@ export const updateProperty = async (id: string, data: Partial<Property>, file?:
 };
 
 export const deleteProperty = async (id: string): Promise<void> => {
-    await deleteDoc(doc(db, 'imoveis', id));
+    const batch = writeBatch(db);
+
+    // 1. Marcar o imóvel para exclusão
+    const propertyRef = doc(db, 'imoveis', id);
+    batch.delete(propertyRef);
+
+    // 2. Encontrar e marcar as negociações e processos relacionados para exclusão
+    const negotiationsQuery = query(collection(db, 'negociacoes'), where('propertyId', '==', id));
+    const negotiationsSnapshot = await getDocs(negotiationsQuery);
+    
+    for (const negDoc of negotiationsSnapshot.docs) {
+        const negotiation = negDoc.data() as Negotiation;
+        
+        // Marcar a negociação para exclusão
+        batch.delete(negDoc.ref);
+        
+        // Se houver um processo administrativo, marcá-lo para exclusão
+        if (negotiation.processoId) {
+            const processRef = doc(db, 'processos', negotiation.processoId);
+            batch.delete(processRef);
+        }
+    }
+
+    // 3. Executar todas as exclusões em lote
+    await batch.commit();
+
+    // 4. (Opcional) Excluir a imagem do Storage. Adicionar lógica se necessário.
+    const propertyDoc = await getDoc(propertyRef);
+    if (propertyDoc.exists()) {
+       const propertyData = propertyDoc.data() as Property;
+       if (propertyData.imageUrl && !propertyData.imageUrl.includes('placehold.co')) {
+            const imageRef = ref(storage, propertyData.imageUrl);
+            try {
+                await deleteObject(imageRef);
+            } catch (error) {
+                console.error("Erro ao excluir a imagem do imóvel do Firebase Storage:", error);
+            }
+        }
+    }
 };
+
 
 export const getNegotiations = async (): Promise<Negotiation[]> => {
     const snapshot = await getDocs(collection(db, 'negociacoes'));
@@ -937,6 +976,7 @@ export const updateActivityStatus = async (activityId: string, newStatus: Activi
     
 
     
+
 
 
 
