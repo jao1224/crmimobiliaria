@@ -134,13 +134,16 @@ export default function AgendaPage() {
 
         // Validação de Conflito
         const conflict = events.some(e => {
+            if (e.type !== activeTab) return false;
+            
             const eventDate = new Date(e.date as any);
-            return e.type === activeTab &&
-                   eventDate.getUTCFullYear() === correctDate.getUTCFullYear() &&
-                   eventDate.getUTCMonth() === correctDate.getUTCMonth() &&
-                   eventDate.getUTCDate() === correctDate.getUTCDate() &&
-                   e.time === timeStr;
+            const isSameDay = eventDate.getUTCFullYear() === correctDate.getUTCFullYear() &&
+                              eventDate.getUTCMonth() === correctDate.getUTCMonth() &&
+                              eventDate.getUTCDate() === correctDate.getUTCDate();
+
+            return isSameDay && e.time === timeStr;
         });
+
 
         if (conflict) {
             toast({
