@@ -48,6 +48,7 @@ export default function ProcessesPage() {
     const [selectedProcess, setSelectedProcess] = useState<Processo | null>(null);
     const [isPendencyModalOpen, setPendencyModalOpen] = useState(false);
     const [isFinalizeModalOpen, setFinalizeModalOpen] = useState(false);
+    const [isDetailModalOpen, setDetailModalOpen] = useState(false);
     const [pendencyNote, setPendencyNote] = useState("");
     const [finalizationNote, setFinalizationNote] = useState("");
     const { toast } = useToast();
@@ -104,6 +105,11 @@ export default function ProcessesPage() {
         setSelectedProcess(process);
         setFinalizationNote("");
         setFinalizeModalOpen(true);
+    };
+
+    const handleOpenDetailModal = (process: Processo) => {
+        setSelectedProcess(process);
+        setDetailModalOpen(true);
     };
 
     const handleSavePendency = async () => {
@@ -184,7 +190,7 @@ export default function ProcessesPage() {
                                 ))
                             ) : filteredProcesses.length > 0 ? (
                                 filteredProcesses.map(process => (
-                                    <TableRow key={process.id} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
+                                    <TableRow key={process.id} onClick={() => handleOpenDetailModal(process)} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
                                         <TableCell><Badge variant={getStatusVariant(process.status)}>{process.status}</Badge></TableCell>
                                         <TableCell className="font-mono text-xs">{process.negotiationId.toUpperCase()}</TableCell>
                                         <TableCell className="whitespace-nowrap">
@@ -206,16 +212,16 @@ export default function ProcessesPage() {
                                         <TableCell>
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
-                                                    <Button aria-haspopup="true" size="icon" variant="ghost">
+                                                    <Button aria-haspopup="true" size="icon" variant="ghost" onClick={(e) => e.stopPropagation()}>
                                                         <MoreHorizontal className="h-4 w-4" />
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
                                                     <DropdownMenuLabel>Ações do Processo</DropdownMenuLabel>
-                                                    <DropdownMenuItem onClick={() => handleOpenPendencyModal(process)}>Marcar Pendência</DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenPendencyModal(process); }}>Marcar Pendência</DropdownMenuItem>
                                                     <DropdownMenuSeparator/>
                                                     <DropdownMenuItem 
-                                                        onClick={() => handleOpenFinalizeModal(process)}
+                                                        onClick={(e) => { e.stopPropagation(); handleOpenFinalizeModal(process); }}
                                                         className="text-green-600 focus:text-green-600 focus:bg-green-50"
                                                         disabled={process.status === 'Finalizado' || process.status === 'Cancelado'}
                                                     >
@@ -235,6 +241,57 @@ export default function ProcessesPage() {
                     </Table>
                 </CardContent>
             </Card>
+
+            {/* Modal de Detalhes */}
+            <Dialog open={isDetailModalOpen} onOpenChange={setDetailModalOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Detalhes do Processo</DialogTitle>
+                        <DialogDescription>
+                            Processo da Negociação: <span className="font-bold font-mono">{selectedProcess?.negotiationId.toUpperCase()}</span>
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4 space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                                <Label className="text-muted-foreground">Imóvel</Label>
+                                <p className="font-semibold">{selectedProcess?.propertyName} ({selectedProcess?.propertyDisplayCode})</p>
+                            </div>
+                            <div className="space-y-1">
+                                <Label className="text-muted-foreground">Cliente</Label>
+                                <p className="font-semibold">{selectedProcess?.clientName}</p>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                                <Label className="text-muted-foreground">Vendedor</Label>
+                                <p className="font-semibold">{selectedProcess?.salespersonName}</p>
+                            </div>
+                             <div className="space-y-1">
+                                <Label className="text-muted-foreground">Captador</Label>
+                                <p className="font-semibold">{selectedProcess?.realtorName}</p>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                             <div className="space-y-1">
+                                <Label className="text-muted-foreground">Status</Label>
+                                <div><Badge variant={getStatusVariant(selectedProcess?.status || 'Ativo')}>{selectedProcess?.status}</Badge></div>
+                            </div>
+                            <div className="space-y-1">
+                                <Label className="text-muted-foreground">Andamento</Label>
+                                <div><Badge variant={getStageVariant(selectedProcess?.stage || 'Em andamento')}>{selectedProcess?.stage}</Badge></div>
+                            </div>
+                        </div>
+                         <div className="space-y-1">
+                            <Label className="text-muted-foreground">Observações</Label>
+                            <p className="text-sm p-3 bg-muted rounded-md min-h-20">{selectedProcess?.observations || "Nenhuma observação registrada."}</p>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button onClick={() => setDetailModalOpen(false)}>Fechar</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             {/* Modal de Pendência */}
             <Dialog open={isPendencyModalOpen} onOpenChange={setPendencyModalOpen}>
