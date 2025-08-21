@@ -221,31 +221,30 @@ export default function AgendaPage() {
                                    ))}
                                 </TabsList>
                                 
-                                {isLoading ? (
-                                    <div className="flex justify-center items-center h-full">
-                                        <Skeleton className="w-full h-[300px]" />
-                                    </div>
-                                ) : visibleTabs.map(tab => (
-                                     <TabsContent key={tab.id} value={tab.id} forceMount>
-                                         <Calendar
+                                <TabsContent value={activeTab} className="mt-2">
+                                     {isLoading ? (
+                                        <div className="flex justify-center items-center h-full">
+                                            <Skeleton className="w-full h-[300px]" />
+                                        </div>
+                                    ) : (
+                                        <Calendar
                                             mode="single"
                                             selected={selectedDate}
                                             onSelect={setSelectedDate}
                                             className="rounded-md"
                                             locale={ptBR}
                                             modifiers={{
-                                                events: events.filter(e => e.type === tab.id).map(e => new Date(e.date as any))
+                                                events: events.filter(e => e.type === activeTab).map(e => new Date(e.date as any))
                                             }}
                                             modifiersStyles={{
                                                events: {
                                                     color: 'white',
-                                                    backgroundColor: getEventTypeLabel(tab.id).className
+                                                    backgroundColor: getEventTypeLabel(activeTab).className,
                                                 }
                                             }}
                                         />
-                                    </TabsContent>
-                                ))}
-
+                                    )}
+                                </TabsContent>
                             </Tabs>
 
                         </div>
