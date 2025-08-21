@@ -191,18 +191,17 @@ export default function PropertiesPage() {
 
   const handleAddProperty = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setIsSaving(true);
     
     if (!currentUser) {
-      setIsSaving(false);
       toast({
         variant: 'destructive',
         title: 'Erro de Autenticação',
         description: 'Você precisa estar logado para adicionar um imóvel.',
       });
+      setIsSaving(false);
       return;
     }
-    
-    setIsSaving(true);
     
     try {
       const formData = new FormData(event.currentTarget);
@@ -236,12 +235,13 @@ export default function PropertiesPage() {
 
   const handleUpdateProperty = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setIsSaving(true);
+
     if (!editingProperty || !currentUser) {
         toast({ variant: 'destructive', title: 'Erro', description: 'Imóvel ou usuário não encontrado para edição.' });
+        setIsSaving(false);
         return;
     }
-
-    setIsSaving(true);
 
     try {
         const formData = new FormData(event.currentTarget);

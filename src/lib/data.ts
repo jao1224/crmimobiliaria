@@ -324,17 +324,24 @@ export const addProperty = async (
   file: File | null,
   user: FirebaseUser
 ): Promise<string> => {
+    
   let imageUrl = 'https://placehold.co/600x400.png';
+  
   if (file) {
-    const storageRef = ref(storage, `properties/${Date.now()}_${file.name}`);
-    await uploadBytes(storageRef, file);
-    imageUrl = await getDownloadURL(storageRef);
+      try {
+        const storageRef = ref(storage, `properties/${Date.now()}_${file.name}`);
+        await uploadBytes(storageRef, file);
+        imageUrl = await getDownloadURL(storageRef);
+      } catch (error) {
+        console.error("Error uploading image, using placeholder.", error);
+        // A imagem padrão já está definida, então apenas logamos o erro e continuamos
+      }
   }
 
   const timestamp = Date.now();
   const displayCode = `ID-${String(timestamp).slice(-6)}`;
 
-  const finalPropertyData: Omit<Property, 'id'> = {
+  const finalPropertyData = {
     ...propertyData,
     imageUrl,
     displayCode,
@@ -345,6 +352,7 @@ export const addProperty = async (
   const docRef = await addDoc(collection(db, 'imoveis'), finalPropertyData);
   return docRef.id;
 };
+
 
 export const updateProperty = async (id: string, data: Partial<Property>, file?: File | null): Promise<void> => {
     const propertyRef = doc(db, 'imoveis', id);
@@ -904,6 +912,7 @@ export const updateActivityStatus = async (activityId: string, newStatus: Activi
     
 
     
+
 
 
 

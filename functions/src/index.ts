@@ -38,6 +38,7 @@ const transporter = nodemailer.createTransport({
 });
 
 // Gatilho: Função que é executada QUANDO um novo evento é criado no Firestore.
+/*
 export const sendEventNotification = functions.firestore
     .document("eventos/{eventId}")
     .onCreate(async (snap, context) => {
@@ -82,8 +83,10 @@ export const sendEventNotification = functions.firestore
 
         return null;
     });
+*/
 
 // Gatilho: Função que é executada QUANDO um processo é ATUALIZADO no Firestore.
+/*
 export const sendPendencyNotification = functions.firestore
     .document("processos/{processoId}")
     .onUpdate(async (change, context) => {
@@ -124,7 +127,7 @@ export const sendPendencyNotification = functions.firestore
 
         return null;
     });
-
+*/
 
 
 // --- INÍCIO: LÓGICA DE NOTIFICAÇÃO POR E-MAIL ---
