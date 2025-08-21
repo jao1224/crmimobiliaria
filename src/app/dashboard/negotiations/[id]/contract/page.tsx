@@ -6,7 +6,7 @@ import { useState, useEffect, useContext } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Printer, Save, Upload, FileText, Link as LinkIcon, ArrowLeft, Download } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -27,9 +27,8 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 const contractEditPermissions: UserProfile[] = ['Admin', 'Imobiliária'];
 
 
-export default function ContractPage() {
+export default function ContractPage({ params }: { params: { id: string } }) {
     const router = useRouter();
-    const params = useParams();
     const { toast } = useToast();
     const negotiationId = params.id as string;
     
