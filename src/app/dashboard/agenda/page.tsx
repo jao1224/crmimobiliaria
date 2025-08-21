@@ -124,7 +124,8 @@ export default function AgendaPage() {
     
     const handleAddEvent = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        const formData = new FormData(event.currentTarget);
+        const form = event.currentTarget;
+        const formData = new FormData(form);
         const dateStr = formData.get("date") as string;
         const timeStr = formData.get("time") as string;
 
@@ -161,7 +162,7 @@ export default function AgendaPage() {
             await refreshEvents();
             toast({ title: "Sucesso!", description: "Evento adicionado com sucesso." });
             setAddDialogOpen(false);
-            (event.currentTarget as HTMLFormElement).reset();
+            form.reset();
         } catch (error) {
             console.error("Erro ao salvar evento: ", error);
             toast({ variant: 'destructive', title: "Erro", description: "Não foi possível salvar o evento." });
