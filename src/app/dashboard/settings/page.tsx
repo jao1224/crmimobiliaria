@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { MoreHorizontal, UserPlus, Trash2, Eye, EyeOff, Search } from "lucide-react";
+import { MoreHorizontal, UserPlus, Trash2, Eye, EyeOff, Search, ChevronRight } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -22,6 +22,11 @@ import { auth, db, app } from "@/lib/firebase";
 import { collection, getDocs, doc, setDoc, addDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc } from "firebase/firestore";
 import { EmailAuthProvider, onAuthStateChanged, reauthenticateWithCredential, updatePassword, updateProfile, type User } from "firebase/auth";
 import { getFunctions, httpsCallable } from "firebase/functions";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 
 type TeamMember = {
@@ -595,23 +600,62 @@ export default function SettingsPage() {
                                 <TableBody>
                                     {teams.length > 0 ? (
                                         teams.map((team) => (
-                                            <TableRow key={team.id} className="transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1">
-                                                <TableCell className="font-medium">{team.name}</TableCell>
-                                                <TableCell>{team.memberIds.length}</TableCell>
-                                                <TableCell>
-                                                     <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button aria-haspopup="true" size="icon" variant="ghost"><MoreHorizontal className="h-4 w-4" /></Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                                                            <DropdownMenuItem onClick={() => handleManageMembers(team)}>Gerenciar Membros</DropdownMenuItem>
-                                                            <DropdownMenuItem disabled>Renomear</DropdownMenuItem>
-                                                            <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteTeam(team.id)}>Excluir</DropdownMenuItem>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                </TableCell>
-                                            </TableRow>
+                                            <Collapsible key={team.id} asChild>
+                                                <>
+                                                    <TableRow className="transition-all duration-200 hover:shadow-md">
+                                                        <TableCell className="font-medium">
+                                                            <CollapsibleTrigger className="flex items-center gap-2 w-full text-left">
+                                                                <ChevronRight className="h-4 w-4 transition-transform duration-200 [&[data-state=open]]:rotate-90" />
+                                                                {team.name}
+                                                            </CollapsibleTrigger>
+                                                        </TableCell>
+                                                        <TableCell>{team.memberIds.length}</TableCell>
+                                                        <TableCell className="text-right">
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger asChild>
+                                                                    <Button aria-haspopup="true" size="icon" variant="ghost"><MoreHorizontal className="h-4 w-4" /></Button>
+                                                                </DropdownMenuTrigger>
+                                                                <DropdownMenuContent align="end">
+                                                                    <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                                                                    <DropdownMenuItem onClick={() => handleManageMembers(team)}>Gerenciar Membros</DropdownMenuItem>
+                                                                    <DropdownMenuItem disabled>Renomear</DropdownMenuItem>
+                                                                    <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteTeam(team.id)}>Excluir</DropdownMenuItem>
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                    <CollapsibleContent asChild>
+                                                        <tr>
+                                                            <td colSpan={3} className="p-0">
+                                                                <div className="bg-muted/50 p-4">
+                                                                    {getMembersForTeam(team).length > 0 ? (
+                                                                        <Table>
+                                                                            <TableHeader>
+                                                                                <TableRow>
+                                                                                    <TableHead>Nome</TableHead>
+                                                                                    <TableHead>E-mail</TableHead>
+                                                                                    <TableHead>Função</TableHead>
+                                                                                </TableRow>
+                                                                            </TableHeader>
+                                                                            <TableBody>
+                                                                                {getMembersForTeam(team).map(member => (
+                                                                                    <TableRow key={member.id}>
+                                                                                        <TableCell>{member.name}</TableCell>
+                                                                                        <TableCell>{member.email}</TableCell>
+                                                                                        <TableCell><Badge variant="secondary">{member.role}</Badge></TableCell>
+                                                                                    </TableRow>
+                                                                                ))}
+                                                                            </TableBody>
+                                                                        </Table>
+                                                                    ) : (
+                                                                        <p className="text-center text-sm text-muted-foreground py-4">Nenhum membro nesta equipe.</p>
+                                                                    )}
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    </CollapsibleContent>
+                                                </>
+                                            </Collapsible>
                                         ))
                                     ) : (
                                         <TableRow><TableCell colSpan={3} className="text-center h-24">Nenhuma equipe encontrada.</TableCell></TableRow>
@@ -735,5 +779,3 @@ export default function SettingsPage() {
         </div>
     );
 }
-
-    
