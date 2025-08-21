@@ -325,6 +325,11 @@ export default function SettingsPage() {
         }
     };
 
+    const findTeamForMember = (memberId: string) => {
+        const team = teams.find(t => t.memberIds.includes(memberId));
+        return team ? team.name : 'Sem Equipe';
+    };
+
 
     return (
         <div className="flex flex-col gap-6">
@@ -462,6 +467,7 @@ export default function SettingsPage() {
                                     <TableRow>
                                         <TableHead>Nome</TableHead>
                                         <TableHead>E-mail</TableHead>
+                                        <TableHead>Equipe</TableHead>
                                         <TableHead>Função</TableHead>
                                         <TableHead className="text-right">Ações</TableHead>
                                     </TableRow>
@@ -472,6 +478,7 @@ export default function SettingsPage() {
                                             <TableRow key={member.id} className="transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1">
                                                 <TableCell className="font-medium">{member.name}</TableCell>
                                                 <TableCell>{member.email}</TableCell>
+                                                <TableCell>{findTeamForMember(member.id)}</TableCell>
                                                 <TableCell><Badge variant={member.role === 'Admin' || member.role === 'Imobiliária' ? 'default' : 'secondary'}>{member.role}</Badge></TableCell>
                                                 <TableCell className="text-right">
                                                     <DropdownMenu>
@@ -501,7 +508,7 @@ export default function SettingsPage() {
                                             </TableRow>
                                         ))
                                     ) : (
-                                        <TableRow><TableCell colSpan={4} className="text-center h-24">Nenhum membro encontrado.</TableCell></TableRow>
+                                        <TableRow><TableCell colSpan={5} className="text-center h-24">Nenhum membro encontrado.</TableCell></TableRow>
                                     )}
                                 </TableBody>
                             </Table>
