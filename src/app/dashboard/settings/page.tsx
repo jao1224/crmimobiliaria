@@ -341,7 +341,7 @@ export default function SettingsPage() {
             <Tabs defaultValue="profile" className="w-full">
                 <TabsList>
                     <TabsTrigger value="profile">Perfil</TabsTrigger>
-                     {hasPermission && <TabsTrigger value="team">Membros da Equipe</TabsTrigger>}
+                     {hasPermission && <TabsTrigger value="team">Membros</TabsTrigger>}
                      {hasPermission && <TabsTrigger value="teams">Equipes</TabsTrigger>}
                      {hasPermission && <TabsTrigger value="permissions">Permissões</TabsTrigger>}
                 </TabsList>
