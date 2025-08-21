@@ -19,7 +19,7 @@ import type { UserProfile } from "@/app/dashboard/layout";
 import { getNegotiations, getProperties, type Property, type Negotiation, type ContractDetails, type Contrato, createOrUpdateContrato, getContrato } from "@/lib/data";
 import { getClients, type Client } from "@/lib/crm-data";
 import { doc, getDoc } from "firebase/firestore";
-import { db, auth, app } from "@/lib/firebase";
+import { db, app } from "@/lib/firebase";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
@@ -437,12 +437,29 @@ export default function ContractPage() {
                                     </div>
                                 </div>
                                 <div>
-                                    <h3 className="font-semibold mb-2">COMPRADOR(A/ES):</h3>
-                                     <div className="space-y-4">
-                                        {(contractData.buyers || []).map((buyer, index) => (
-                                             <div key={index} className="border p-4 rounded-md bg-muted/50">
-                                                <p><strong>Nome:</strong> {buyer.name || finalClient.name}, <strong>CPF/CNPJ:</strong> {buyer.doc || finalClient.document}, residente e domiciliado em {buyer.address || finalClient.address}.</p>
-                                             </div>
+                                    <div className="flex justify-between items-center mb-2">
+                                        <h3 className="font-semibold">COMPRADOR(A/ES):</h3>
+                                        <Button type="button" size="sm" variant="outline" onClick={() => addParty('buyers')} disabled={!canEdit}>Adicionar Comprador</Button>
+                                    </div>
+                                    <div className="space-y-4">
+                                        {contractData.buyers?.map((buyer, index) => (
+                                            <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 border p-4 rounded-md relative">
+                                                <div className="space-y-1">
+                                                    <Label htmlFor={`buyerName-${index}`}>Nome</Label>
+                                                    <Input id={`buyerName-${index}`} placeholder="Nome do Comprador" value={buyer.name} onChange={(e) => handlePartyChange('buyers', index, 'name', e.target.value)} disabled={!canEdit} />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <Label htmlFor={`buyerDoc-${index}`}>CPF/CNPJ</Label>
+                                                    <Input id={`buyerDoc-${index}`} placeholder="Documento do Comprador" value={buyer.doc} onChange={(e) => handlePartyChange('buyers', index, 'doc', e.target.value)} disabled={!canEdit} />
+                                                </div>
+                                                <div className="col-span-1 md:col-span-2 space-y-1">
+                                                    <Label htmlFor={`buyerAddress-${index}`}>Endereço</Label>
+                                                    <Input id={`buyerAddress-${index}`} placeholder="Endereço Completo do Comprador" value={buyer.address} onChange={(e) => handlePartyChange('buyers', index, 'address', e.target.value)} disabled={!canEdit} />
+                                                </div>
+                                                {contractData.buyers.length > 1 && canEdit && (
+                                                    <Button type="button" size="sm" variant="destructive" className="absolute top-2 right-2" onClick={() => removeParty('buyers', index)}>Remover</Button>
+                                                )}
+                                            </div>
                                         ))}
                                     </div>
                                 </div>
