@@ -172,15 +172,17 @@ export default function SettingsPage() {
                 toast({ title: "Sucesso!", description: "Novo membro da equipe criado." });
                 setTeamMemberDialogOpen(false);
             } else {
-                throw new Error(result.data.error);
+                throw new Error(result.data.error || "A função de nuvem retornou um erro.");
             }
         } catch (error: any) {
             console.error("Error creating user:", error);
             let description = "Ocorreu um erro ao criar o usuário.";
-            if (error.message.includes('auth/email-already-exists')) {
+            if (error.message.includes('auth/email-already-exists') || (error.details && error.details.message.includes('EMAIL_EXISTS'))) {
                 description = 'Este e-mail já está em uso por outra conta.';
             } else if (error.message.includes('auth/weak-password')) {
                 description = 'A senha fornecida é muito fraca. Use pelo menos 6 caracteres.';
+            } else if (error.message.includes('permission-denied')) {
+                description = 'Você não tem permissão para executar esta ação.';
             }
             toast({ variant: "destructive", title: "Erro na Criação", description });
         } finally {

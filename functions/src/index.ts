@@ -490,5 +490,3 @@ export const generateContractPdf = onCall<ContractData, Promise<{pdfBase64: stri
 
   return {pdfBase64};
 });
-
-    
