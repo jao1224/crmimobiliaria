@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect, useContext, useMemo } from "react";
@@ -170,14 +169,13 @@ export default function ProcessesPage() {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Status</TableHead>
+                                <TableHead className="w-[100px]">Status</TableHead>
                                 <TableHead>Cód. Neg.</TableHead>
                                 <TableHead>Andamento</TableHead>
                                 <TableHead>Imóvel</TableHead>
                                 <TableHead>Vendedor</TableHead>
-                                <TableHead>Captador</TableHead>
-                                <TableHead>Equipe</TableHead>
-                                <TableHead>Observações</TableHead>
+                                <TableHead className="hidden md:table-cell">Captador</TableHead>
+                                <TableHead className="hidden md:table-cell">Equipe</TableHead>
                                 <TableHead><span className="sr-only">Ações</span></TableHead>
                             </TableRow>
                         </TableHeader>
@@ -185,7 +183,7 @@ export default function ProcessesPage() {
                             {isLoading ? (
                                 Array.from({ length: 5 }).map((_, i) => (
                                     <TableRow key={i}>
-                                        <TableCell colSpan={9}><Skeleton className="h-8 w-full" /></TableCell>
+                                        <TableCell colSpan={8}><Skeleton className="h-8 w-full" /></TableCell>
                                     </TableRow>
                                 ))
                             ) : filteredProcesses.length > 0 ? (
@@ -206,9 +204,8 @@ export default function ProcessesPage() {
                                             <div className="text-xs text-muted-foreground font-mono">{process.propertyDisplayCode}</div>
                                         </TableCell>
                                         <TableCell>{process.salespersonName}</TableCell>
-                                        <TableCell>{process.realtorName}</TableCell>
-                                        <TableCell>{process.team}</TableCell>
-                                        <TableCell className="text-muted-foreground text-xs max-w-xs truncate">{process.observations}</TableCell>
+                                        <TableCell className="hidden md:table-cell">{process.realtorName}</TableCell>
+                                        <TableCell className="hidden md:table-cell">{process.team}</TableCell>
                                         <TableCell>
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
@@ -234,7 +231,7 @@ export default function ProcessesPage() {
                                 ))
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={9} className="h-24 text-center">Nenhum processo encontrado.</TableCell>
+                                    <TableCell colSpan={8} className="h-24 text-center">Nenhum processo encontrado.</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>
