@@ -3,7 +3,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { getActivitiesForRealtor, updateActivityStatus, Activity, ActivityStatus } from "@/lib/data";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -37,8 +37,9 @@ const getStatusColor = (status: ActivityStatus) => {
     }
 }
 
-export default function RealtorKanbanPage({ params }: { params: { realtorName: string } }) {
+export default function RealtorKanbanPage() {
     const router = useRouter();
+    const params = useParams();
     const { toast } = useToast();
     const realtorName = params.realtorName ? formatUrlNameToRealtorName(params.realtorName as string) : "";
 
