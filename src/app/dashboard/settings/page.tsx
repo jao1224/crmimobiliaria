@@ -416,7 +416,7 @@ export default function SettingsPage() {
                     <Card>
                          <CardHeader className="flex flex-row items-center justify-between">
                             <div>
-                                <CardTitle>Membros da Equipe</CardTitle>
+                                <CardTitle>Membros</CardTitle>
                                 <CardDescription>Gerencie sua equipe e suas funções.</CardDescription>
                             </div>
                              <Dialog open={isTeamMemberDialogOpen} onOpenChange={setTeamMemberDialogOpen}>
