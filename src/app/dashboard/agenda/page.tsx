@@ -127,26 +127,15 @@ export default function AgendaPage() {
         const formData = new FormData(event.currentTarget);
         const dateStr = formData.get("date") as string;
         const timeStr = formData.get("time") as string;
-        
-        // Correctly handle date from input which is in 'YYYY-MM-DD' format
-        const [year, month, day] = dateStr.split('-').map(Number);
-        const correctDate = new Date(Date.UTC(year, month - 1, day));
 
-
-        // Validação de Conflito
-        const conflict = events.some(e => {
-            if (e.type !== activeTab) return false;
-            
-            const eventDate = new Date(e.date as any);
-            const isSameDay = eventDate.getUTCFullYear() === correctDate.getUTCFullYear() &&
-                              eventDate.getUTCMonth() === correctDate.getUTCMonth() &&
-                              eventDate.getUTCDate() === correctDate.getUTCDate();
-
-            return isSameDay && e.time === timeStr;
+        // Validação de Conflito de forma mais robusta
+        const hasConflict = events.some(e => {
+            // Compara a data como string 'YYYY-MM-DD' e o horário
+            const eventDateStr = new Date(e.date as any).toISOString().split('T')[0];
+            return e.type === activeTab && eventDateStr === dateStr && e.time === timeStr;
         });
 
-
-        if (conflict) {
+        if (hasConflict) {
             toast({
                 variant: 'destructive',
                 title: "Conflito de Horário",
@@ -155,6 +144,8 @@ export default function AgendaPage() {
             return;
         }
 
+        const [year, month, day] = dateStr.split('-').map(Number);
+        const correctDate = new Date(Date.UTC(year, month - 1, day));
 
         const newEventData: Omit<Event, 'id'> = {
             date: correctDate,
