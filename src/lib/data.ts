@@ -389,8 +389,12 @@ export const addNegotiation = async (newNegotiation: Omit<Negotiation, 'id'>): P
     // 1. Cria a negociação
     const negotiationRef = doc(collection(db, 'negociacoes'));
     batch.set(negotiationRef, newNegotiation);
+    
+    // 2. Atualiza o status do imóvel para 'Reservado'
+    const propertyRef = doc(db, 'imoveis', newNegotiation.propertyId);
+    batch.update(propertyRef, { status: 'Reservado' });
 
-    // 2. Cria o processo administrativo correspondente
+    // 3. Cria o processo administrativo correspondente
     const processoRef = doc(collection(db, 'processos'));
     const newProcesso: Omit<Processo, 'id'> = {
         negotiationId: negotiationRef.id,
@@ -406,7 +410,7 @@ export const addNegotiation = async (newNegotiation: Omit<Negotiation, 'id'>): P
     };
     batch.set(processoRef, newProcesso);
 
-    // 3. Atualiza a negociação com o ID do processo
+    // 4. Atualiza a negociação com o ID do processo
     batch.update(negotiationRef, { processoId: processoRef.id });
 
     // Executa as operações
@@ -912,6 +916,7 @@ export const updateActivityStatus = async (activityId: string, newStatus: Activi
     
 
     
+
 
 
 
