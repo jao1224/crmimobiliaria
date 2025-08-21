@@ -33,7 +33,7 @@ import { getClients, type Client } from "@/lib/crm-data";
 import { cn } from "@/lib/utils";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import { auth } from "@/lib/firebase";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
 import { AssignNegotiationDialog } from "@/components/dashboard/assign-negotiation-dialog";
 import Link from "next/link";
 import { deleteNegotiation } from "@/lib/data";
@@ -634,7 +634,6 @@ export default function NegotiationsPage() {
                                                     </DropdownMenuItem>
                                                 )}
                                                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleTriggerCorrespondent(neg); }}>
-                                                    <Landmark className="mr-2 h-4 w-4" />
                                                     Acionar Correspondente
                                                 </DropdownMenuItem>
                                                 {(activeProfile === 'Admin' || activeProfile === 'Imobiliária') && (
