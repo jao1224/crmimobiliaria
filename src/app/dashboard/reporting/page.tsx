@@ -152,6 +152,10 @@ export default function ReportingPage() {
     const [isEditPaymentOpen, setIsEditPaymentOpen] = useState(false);
     const [editingPayment, setEditingPayment] = useState<PaymentCLT | null>(null);
     const [isDeletePaymentOpen, setIsDeletePaymentOpen] = useState(false);
+    
+    // Detalhes da Equipe
+    const [isTeamDetailOpen, setIsTeamDetailOpen] = useState(false);
+    const [selectedTeamDetails, setSelectedTeamDetails] = useState<any | null>(null);
 
     // Estados para IA
     const [isAiAnalysisLoading, setIsAiAnalysisLoading] = useState(false);
@@ -423,6 +427,30 @@ export default function ReportingPage() {
             toast({ variant: "destructive", title: "Erro", description: "Não foi possível excluir o pagamento." });
         }
     };
+    
+    const handleTeamClick = (teamName: string) => {
+        const teamData = teams.find(t => t.name === teamName);
+        if (!teamData) return;
+
+        const teamMembers = users.filter(u => teamData.memberIds.includes(u.id));
+        const memberPerformance = teamMembers.map(member => {
+            const memberDeals = filteredNegotiations.filter(neg => neg.salespersonId === member.id && neg.stage === 'Venda Concluída');
+            return {
+                id: member.id,
+                name: member.name,
+                deals: memberDeals.length,
+                revenue: memberDeals.reduce((sum, deal) => sum + deal.value, 0)
+            };
+        }).sort((a,b) => b.revenue - a.revenue);
+
+        setSelectedTeamDetails({
+            name: teamName,
+            members: memberPerformance,
+            totalRevenue: memberPerformance.reduce((sum, m) => sum + m.revenue, 0),
+            totalDeals: memberPerformance.reduce((sum, m) => sum + m.deals, 0)
+        });
+        setIsTeamDetailOpen(true);
+    };
 
 
     return (
@@ -684,7 +712,7 @@ export default function ReportingPage() {
                                 </TableHeader>
                                 <TableBody>
                                     {teamPerformanceData.map(team => (
-                                        <TableRow key={team.name} className="transition-all duration-200 hover:bg-secondary">
+                                        <TableRow key={team.name} onClick={() => handleTeamClick(team.name)} className="transition-all duration-200 hover:bg-secondary cursor-pointer">
                                             <TableCell className="font-medium">{team.name}</TableCell>
                                             <TableCell>{formatCurrency(team.revenue)}</TableCell>
                                             <TableCell>{team.deals}</TableCell>
@@ -782,6 +810,48 @@ export default function ReportingPage() {
                     </Card>
                 </TabsContent>
             </Tabs>
+            
+            <Dialog open={isTeamDetailOpen} onOpenChange={setIsTeamDetailOpen}>
+                <DialogContent className="sm:max-w-xl">
+                    <DialogHeader>
+                        <DialogTitle>Detalhes da Equipe: {selectedTeamDetails?.name}</DialogTitle>
+                        <DialogDescription>
+                            Performance individual dos membros da equipe com base nos filtros atuais.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Membro</TableHead>
+                                    <TableHead className="text-right">Negócios</TableHead>
+                                    <TableHead className="text-right">Receita</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {selectedTeamDetails?.members.map((member: any) => (
+                                    <TableRow key={member.id}>
+                                        <TableCell className="font-medium">{member.name}</TableCell>
+                                        <TableCell className="text-right">{member.deals}</TableCell>
+                                        <TableCell className="text-right">{formatCurrency(member.revenue)}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                             <TableFooter>
+                                <TableRow>
+                                    <TableCell className="font-bold">Total da Equipe</TableCell>
+                                    <TableCell className="text-right font-bold">{selectedTeamDetails?.totalDeals}</TableCell>
+                                    <TableCell className="text-right font-bold">{formatCurrency(selectedTeamDetails?.totalRevenue)}</TableCell>
+                                </TableRow>
+                            </TableFooter>
+                        </Table>
+                    </div>
+                     <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsTeamDetailOpen(false)}>Fechar</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
 
             {editingPayment && (
                 <Dialog open={isEditPaymentOpen} onOpenChange={setIsEditPaymentOpen}>
@@ -865,3 +935,4 @@ export default function ReportingPage() {
         </div>
     )
 }
+
