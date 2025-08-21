@@ -7,16 +7,28 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, Trash2 } from "lucide-react";
 import { ptBR } from "date-fns/locale";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import type { UserProfile } from "../layout";
-import { addEvent, getEvents, type Event } from "@/lib/data";
+import { addEvent, getEvents, updateEvent, deleteEvent, type Event } from "@/lib/data";
 import { Skeleton } from "@/components/ui/skeleton";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 
 type EventType = 'personal' | 'company' | 'team_visit';
@@ -54,7 +66,10 @@ export default function AgendaPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
     const [activeTab, setActiveTab] = useState<EventType>(visibleTabs.length > 0 ? visibleTabs[0].id : 'personal');
-    const [isEventDialogOpen, setEventDialogOpen] = useState(false);
+    const [isAddDialogOpen, setAddDialogOpen] = useState(false);
+    const [isEditDialogOpen, setEditDialogOpen] = useState(false);
+    const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
     const { toast } = useToast();
 
     // Carrega os eventos iniciais
@@ -149,12 +164,55 @@ export default function AgendaPage() {
             await addEvent(newEventData);
             await refreshEvents();
             toast({ title: "Sucesso!", description: "Evento adicionado com sucesso." });
-            setEventDialogOpen(false);
+            setAddDialogOpen(false);
             (event.currentTarget as HTMLFormElement).reset();
         } catch (error) {
             toast({ variant: 'destructive', title: "Erro", description: "Não foi possível salvar o evento." });
         }
     };
+    
+     const handleUpdateEvent = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        if (!selectedEvent) return;
+
+        const formData = new FormData(event.currentTarget);
+        const updatedData: Partial<Event> = {
+            title: formData.get("title") as string,
+            time: formData.get("time") as string,
+            description: formData.get("description") as string,
+        };
+
+        try {
+            await updateEvent(selectedEvent.id, updatedData);
+            await refreshEvents();
+            toast({ title: "Sucesso!", description: "Evento atualizado com sucesso." });
+            setEditDialogOpen(false);
+            setSelectedEvent(null);
+        } catch (error) {
+            toast({ variant: 'destructive', title: "Erro", description: "Não foi possível atualizar o evento." });
+        }
+    };
+
+    const handleDeleteEvent = async () => {
+        if (!selectedEvent) return;
+
+        try {
+            await deleteEvent(selectedEvent.id);
+            await refreshEvents();
+            toast({ title: "Sucesso!", description: "Evento excluído com sucesso." });
+            setDeleteDialogOpen(false);
+            setEditDialogOpen(false); // Fecha o modal de edição também
+            setSelectedEvent(null);
+        } catch (error) {
+            toast({ variant: 'destructive', title: "Erro", description: "Não foi possível excluir o evento." });
+        }
+    };
+
+    const handleOpenEditDialog = (event: Event) => {
+        setSelectedEvent(event);
+        setEditDialogOpen(true);
+    };
+
 
     const getEventTypeLabel = (type: Event['type']) => {
         switch (type) {
@@ -172,7 +230,7 @@ export default function AgendaPage() {
                     <h1 className="text-2xl font-bold">Agenda</h1>
                     <p className="text-muted-foreground">Gerencie seus compromissos, visitas e eventos.</p>
                 </div>
-                 <Dialog open={isEventDialogOpen} onOpenChange={setEventDialogOpen}>
+                 <Dialog open={isAddDialogOpen} onOpenChange={setAddDialogOpen}>
                     <DialogTrigger asChild>
                         {canEditCurrentTab && (
                             <Button><PlusCircle className="mr-2 h-4 w-4"/>Adicionar Evento</Button>
@@ -221,7 +279,7 @@ export default function AgendaPage() {
                                    ))}
                                 </TabsList>
                                 
-                                <TabsContent value={activeTab} className="mt-2">
+                                <div className="mt-2">
                                      {isLoading ? (
                                         <div className="flex justify-center items-center h-full">
                                             <Skeleton className="w-full h-[300px]" />
@@ -244,7 +302,7 @@ export default function AgendaPage() {
                                             }}
                                         />
                                     )}
-                                </TabsContent>
+                                </div>
                             </Tabs>
 
                         </div>
@@ -255,13 +313,17 @@ export default function AgendaPage() {
                             <div className="space-y-4">
                                 {selectedDayEvents.length > 0 ? (
                                     selectedDayEvents.map(event => (
-                                        <div key={event.id} className="p-3 rounded-lg border bg-card shadow-sm transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
+                                        <div 
+                                            key={event.id}
+                                            onClick={() => handleOpenEditDialog(event)}
+                                            className="p-3 rounded-lg border bg-card shadow-sm transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg cursor-pointer"
+                                        >
                                             <div className="flex items-center justify-between mb-1">
                                                 <h3 className="font-semibold">{event.title}</h3>
                                                 <Badge style={{ backgroundColor: getEventTypeLabel(event.type).className }} className="text-white">{getEventTypeLabel(event.type).label}</Badge>
                                             </div>
                                             <p className="text-sm text-muted-foreground">{event.time}</p>
-                                            <p className="text-sm mt-2">{event.description}</p>
+                                            <p className="text-sm mt-2 truncate">{event.description}</p>
                                         </div>
                                     ))
                                 ) : (
@@ -272,6 +334,64 @@ export default function AgendaPage() {
                     </div>
                 </CardContent>
             </Card>
+            
+            {/* Modal de Edição/Visualização */}
+            <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Editar Evento</DialogTitle>
+                        <DialogDescription>
+                            Altere os detalhes do seu compromisso.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {selectedEvent && (
+                        <form onSubmit={handleUpdateEvent}>
+                            <div className="grid gap-4 py-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit-title">Título</Label>
+                                    <Input id="edit-title" name="title" defaultValue={selectedEvent.title} required />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit-time">Hora</Label>
+                                    <Input id="edit-time" name="time" type="time" defaultValue={selectedEvent.time} required />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit-description">Descrição</Label>
+                                    <Input id="edit-description" name="description" defaultValue={selectedEvent.description} />
+                                </div>
+                            </div>
+                            <DialogFooter className="justify-between">
+                                <Button type="button" variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
+                                    <Trash2 className="mr-2 h-4 w-4" /> Excluir
+                                </Button>
+                                <div>
+                                    <Button type="button" variant="outline" className="mr-2" onClick={() => setEditDialogOpen(false)}>Cancelar</Button>
+                                    <Button type="submit">Salvar Alterações</Button>
+                                </div>
+                            </DialogFooter>
+                        </form>
+                    )}
+                </DialogContent>
+            </Dialog>
+
+            {/* Modal de Confirmação de Exclusão */}
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Esta ação não pode ser desfeita. Isso excluirá permanentemente o evento da sua agenda.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteEvent} className={cn(buttonVariants({ variant: "destructive" }))}>
+                            Excluir
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }
+

@@ -662,6 +662,17 @@ export const addEvent = async (newEvent: Omit<Event, 'id'>): Promise<string> => 
     return docRef.id;
 };
 
+export const updateEvent = async (id: string, data: Partial<Event>): Promise<void> => {
+    const eventRef = doc(db, "eventos", id);
+    await updateDoc(eventRef, data);
+};
+
+export const deleteEvent = async (id: string): Promise<void> => {
+    const eventRef = doc(db, "eventos", id);
+    await deleteDoc(eventRef);
+};
+
+
 // --- FUNÇÕES DE LOCAÇÃO ---
 export const getRentalContracts = async (): Promise<RentalContract[]> => {
     const snapshot = await getDocs(collection(db, 'locacao_contratos'));
@@ -916,6 +927,7 @@ export const updateActivityStatus = async (activityId: string, newStatus: Activi
     
 
     
+
 
 
 
