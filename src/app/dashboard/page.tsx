@@ -12,6 +12,10 @@ import { getNegotiations, type Negotiation, getEvents, type Event } from "@/lib/
 import { getLeads } from "@/lib/crm-data";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
 const welcomeMessages: Record<UserProfile, { title: string; subtitle: string }> = {
   'Admin': { title: "Admin!", subtitle: "Visão geral completa do sistema. Monitore o desempenho e gerencie todas as operações." },
@@ -55,6 +59,10 @@ export default function DashboardPage() {
   const [leads, setLeads] = useState<any[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // State for event detail modal
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [isEventModalOpen, setIsEventModalOpen] = useState(false);
 
   useEffect(() => {
     const currentHour = new Date().getHours();
@@ -152,6 +160,10 @@ export default function DashboardPage() {
         }
     };
 
+  const handleEventClick = (event: Event) => {
+    setSelectedEvent(event);
+    setIsEventModalOpen(true);
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -211,8 +223,12 @@ export default function DashboardPage() {
                 ) : todaysEvents.length > 0 ? (
                     <div className="space-y-4">
                         {todaysEvents.map(event => (
-                            <div key={event.id} className="flex items-center gap-4">
-                                <div className="flex flex-col items-center justify-center p-2 bg-muted rounded-md">
+                            <div 
+                              key={event.id} 
+                              className="flex items-center gap-4 p-2 rounded-md hover:bg-muted cursor-pointer transition-colors"
+                              onClick={() => handleEventClick(event)}
+                            >
+                                <div className="flex flex-col items-center justify-center p-2 bg-muted/50 rounded-md">
                                     <Clock className="h-4 w-4 text-muted-foreground"/>
                                     <span className="text-sm font-semibold">{event.time}</span>
                                 </div>
@@ -235,6 +251,43 @@ export default function DashboardPage() {
             </Card>
         </div>
       </div>
+      
+      {/* Event Detail Modal */}
+      <Dialog open={isEventModalOpen} onOpenChange={setIsEventModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Detalhes do Agendamento</DialogTitle>
+            <DialogDescription>
+              Informações sobre o compromisso agendado.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedEvent && (
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label>Título</Label>
+                <p className="text-lg font-semibold">{selectedEvent.title}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                      <Label>Horário</Label>
+                      <p>{selectedEvent.time}</p>
+                  </div>
+                  <div className="space-y-2">
+                      <Label>Tipo de Agenda</Label>
+                      <p><Badge style={{ backgroundColor: getEventTypeLabel(selectedEvent.type).className }} className="text-white text-xs">{getEventTypeLabel(selectedEvent.type).label}</Badge></p>
+                  </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Descrição</Label>
+                <p className="text-sm text-muted-foreground">{selectedEvent.description || "Nenhuma descrição fornecida."}</p>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEventModalOpen(false)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
