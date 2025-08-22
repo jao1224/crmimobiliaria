@@ -1,19 +1,25 @@
-
 rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Permite leitura de todos os arquivos por qualquer usuário
-    match /{allPaths=**} {
-      allow read;
+    // Permite que qualquer usuário autenticado leia e escreva
+    // na pasta 'properties'. Isso é um ponto de partida seguro
+    // para a funcionalidade de upload de imagens da aplicação.
+    match /properties/{propertyId}/{allPaths=**} {
+      allow read: if true; // Permite que qualquer um veja as imagens
+      allow write: if request.auth != null; // Apenas usuários logados podem fazer upload
     }
 
-    // Permite escrita (upload/delete) na pasta 'properties'
-    // apenas para usuários autenticados.
-    match /properties/{allPaths=**} {
-      allow write: if request.auth != null;
+    // Permite que qualquer usuário autenticado leia e escreva
+    // na pasta 'legal_docs'.
+    match /legal_docs/{documentId}/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Permite que qualquer usuário autenticado leia e escreva
+    // na pasta 'contracts'.
+    match /contracts/{contractId}/{allPaths=**} {
+      allow read, write: if request.auth != null;
     }
   }
 }
-
-    
