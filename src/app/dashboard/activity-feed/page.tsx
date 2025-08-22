@@ -6,7 +6,7 @@ import { getNotifications, type Notification } from "@/lib/data";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertCircle, ArrowDown, ArrowUp, Briefcase, FileText, Handshake, Landmark, PlusCircle, UserPlus, Wand2, Archive, ArchiveRestore, Trash2 } from "lucide-react";
-import { formatDistanceToNow } from 'date-fns';
+import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 const iconMap: { [key: string]: React.ElementType } = {
@@ -98,7 +98,7 @@ export default function ActivityFeedPage() {
                                             <p className="font-semibold text-sm">{notification.title}</p>
                                             <p className="text-sm text-muted-foreground">{notification.description}</p>
                                             <p className="text-xs text-muted-foreground/80 mt-1">
-                                                {notification.createdAt?.seconds ? formatDistanceToNow(new Date(notification.createdAt.seconds * 1000), { addSuffix: true, locale: ptBR }) : 'agora'}
+                                                {notification.createdAt?.seconds ? format(new Date(notification.createdAt.seconds * 1000), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) : 'agora'}
                                             </p>
                                         </div>
                                     </div>
