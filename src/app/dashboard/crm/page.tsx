@@ -270,7 +270,10 @@ export default function CrmPage() {
                                     <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="phone-lead" className="text-right">Telefone</Label><Input id="phone-lead" name="phone" className="col-span-3" required /></div>
                                     <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="source-lead" className="text-right">Fonte</Label><Input id="source-lead" name="source" className="col-span-3" required /></div>
                                 </div>
-                                <DialogFooter><Button type="submit">Salvar Lead</Button></DialogFooter>
+                                <DialogFooter>
+                                    <Button type="button" variant="outline" onClick={() => setLeadDialogOpen(false)}>Cancelar</Button>
+                                    <Button type="submit">Salvar Lead</Button>
+                                </DialogFooter>
                             </form>
                         </DialogContent>
                     </Dialog>
@@ -293,7 +296,10 @@ export default function CrmPage() {
                                      <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="value" className="text-right">Valor</Label><Input id="value" name="value" type="number" className="col-span-3" required /></div>
                                     <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="closeDate" className="text-right">Data Estimada</Label><Input id="closeDate" name="closeDate" type="date" className="col-span-3" required /></div>
                                 </div>
-                                <DialogFooter><Button type="submit">Salvar Negócio</Button></DialogFooter>
+                                <DialogFooter>
+                                    <Button type="button" variant="outline" onClick={() => setDealDialogOpen(false)}>Cancelar</Button>
+                                    <Button type="submit">Salvar Negócio</Button>
+                                </DialogFooter>
                             </form>
                         </DialogContent>
                     </Dialog>
@@ -315,7 +321,10 @@ export default function CrmPage() {
                                     <div className="space-y-4 rounded-lg border p-4"><h3 className="text-lg font-medium">Contato e Endereço</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="space-y-2"><Label htmlFor="email-client">E-mail</Label><Input id="email-client" name="email" type="email" required/></div><div className="space-y-2"><Label htmlFor="phone-client">Telefone / WhatsApp</Label><Input id="phone-client" name="phone" required/></div></div><div className="space-y-2"><Label htmlFor="address-client">Endereço Completo</Label><Input id="address-client" name="address" placeholder="Rua, número, bairro, cidade, CEP" /></div></div>
                                     <div className="space-y-4 rounded-lg border p-4"><h3 className="text-lg font-medium">Informações Financeiras</h3><div className="space-y-2"><Label htmlFor="monthlyIncome-client">Renda Mensal Comprovada (R$)</Label><Input id="monthlyIncome-client" name="monthlyIncome" type="number" step="0.01" placeholder="5000.00" /></div></div>
                                 </div>
-                                <DialogFooter><Button type="submit" form="addClientForm">Salvar Cliente</Button></DialogFooter>
+                                <DialogFooter>
+                                    <Button type="button" variant="outline" onClick={() => setClientDialogOpen(false)}>Cancelar</Button>
+                                    <Button type="submit" form="addClientForm">Salvar Cliente</Button>
+                                </DialogFooter>
                             </form>
                         </DialogContent>
                     </Dialog>
@@ -599,8 +608,3 @@ export default function CrmPage() {
         </>
     )
 }
-
-    
-
-    
-
