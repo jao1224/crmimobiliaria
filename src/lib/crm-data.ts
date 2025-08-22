@@ -1,6 +1,6 @@
 
 import { db } from './firebase';
-import { collection, getDocs, addDoc, doc, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, setDoc, deleteDoc, writeBatch, query, where } from 'firebase/firestore';
 import { addNotification } from './data';
 import { type Property } from './data';
 
@@ -107,3 +107,52 @@ export const convertLeadToClient = async (lead: Lead): Promise<void> => {
     // 4. Executa as operações em lote
     await batch.commit();
 };
+
+export const deleteClient = async (clientId: string): Promise<void> => {
+    const batch = writeBatch(db);
+
+    const clientRef = doc(db, 'clients', clientId);
+    const clientSnap = await getDoc(clientRef);
+    if (!clientSnap.exists()) {
+        throw new Error("Cliente não encontrado.");
+    }
+    const clientData = clientSnap.data();
+
+    // 1. Marcar cliente para exclusão
+    batch.delete(clientRef);
+
+    // 2. Buscar e excluir negociações e processos de financiamento associados
+    const negotiationsQuery = query(collection(db, 'negociacoes'), where('clientId', '==', clientId));
+    const negotiationsSnapshot = await getDocs(negotiationsQuery);
+
+    for (const negDoc of negotiationsSnapshot.docs) {
+        const negotiation = negDoc.data();
+        
+        // Excluir negociação
+        batch.delete(negDoc.ref);
+        
+        // Excluir processo administrativo, se houver
+        if (negotiation.processoId) {
+            const processRef = doc(db, 'processos', negotiation.processoId);
+            batch.delete(processRef);
+        }
+        
+        // Excluir processo de financiamento, se houver
+        const financingQuery = query(collection(db, 'processosFinanciamento'), where('negotiationId', '==', negDoc.id));
+        const financingSnapshot = await getDocs(financingQuery);
+        financingSnapshot.forEach(finDoc => {
+            batch.delete(finDoc.ref);
+        });
+    }
+
+    // 3. Adicionar notificação de exclusão
+    await addNotification({
+        title: "Cliente Excluído",
+        description: `O cliente ${clientData.name} foi removido do sistema.`,
+    });
+    
+    // 4. Executar o batch
+    await batch.commit();
+};
+
+    

@@ -2,18 +2,28 @@
 "use client";
 
 import { useState, useEffect, useContext } from "react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { MoreHorizontal, History, Briefcase, Landmark } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { MoreHorizontal, History, Briefcase, Landmark, Trash2 } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { addClient, addDeal, addLead, getClients, getDeals, getLeads, convertLeadToClient, type Client, type Deal, type Lead } from "@/lib/crm-data";
+import { addClient, addDeal, addLead, getClients, getDeals, getLeads, convertLeadToClient, deleteClient, type Client, type Deal, type Lead } from "@/lib/crm-data";
 import { getFinancingProcesses, getNegotiations, type FinancingProcess, type Negotiation } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -40,6 +50,8 @@ export default function CrmPage() {
     // Estados para o Histórico do Cliente
     const [isHistoryOpen, setHistoryOpen] = useState(false);
     const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+    const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
+    const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [clientHistory, setClientHistory] = useState<{ negotiations: Negotiation[], financings: FinancingProcess[] }>({ negotiations: [], financings: [] });
     const [isHistoryLoading, setIsHistoryLoading] = useState(false);
     
@@ -212,6 +224,25 @@ export default function CrmPage() {
                 title: "Erro na Conversão",
                 description: "Não foi possível converter o lead em cliente.",
             });
+        }
+    };
+
+    const handleOpenDeleteDialog = (client: Client) => {
+        setClientToDelete(client);
+        setDeleteDialogOpen(true);
+    };
+    
+    const handleDeleteClientConfirm = async () => {
+        if (!clientToDelete) return;
+        try {
+            await deleteClient(clientToDelete.id);
+            await refreshData();
+            toast({ title: "Cliente Excluído", description: `O cliente "${clientToDelete.name}" e todos os seus dados foram removidos.`});
+        } catch (error) {
+            toast({ variant: "destructive", title: "Erro", description: "Não foi possível excluir o cliente." });
+        } finally {
+            setDeleteDialogOpen(false);
+            setClientToDelete(null);
         }
     };
 
@@ -507,7 +538,7 @@ export default function CrmPage() {
                                         ))
                                     ) : clients.length > 0 ? (
                                         clients.map(client => (
-                                            <TableRow key={client.id} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
+                                            <TableRow key={client.id} className={cn("transition-all duration-200")}>
                                                 <TableCell className="font-medium">{client.name}</TableCell>
                                                 <TableCell className="hidden sm:table-cell">{client.email}</TableCell>
                                                 <TableCell className="hidden md:table-cell">{client.phone}</TableCell>
@@ -520,8 +551,13 @@ export default function CrmPage() {
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                                                            <DropdownMenuItem onClick={() => handleShowHistory(client)}>
+                                                            <DropdownMenuItem onSelect={() => handleShowHistory(client)}>
                                                                 <History className="mr-2 h-4 w-4"/>Ver Histórico
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuSeparator />
+                                                            <DropdownMenuItem onSelect={() => handleOpenDeleteDialog(client)} className="text-destructive focus:text-destructive">
+                                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                                Excluir Cliente
                                                             </DropdownMenuItem>
                                                         </DropdownMenuContent>
                                                     </DropdownMenu>
@@ -603,8 +639,31 @@ export default function CrmPage() {
                 </DialogFooter>
             </DialogContent>
         </Dialog>
+        
+         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Esta ação não pode ser desfeita. Isso excluirá permanentemente o cliente
+                        "{clientToDelete?.name}" e todas as suas negociações associadas.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setDeleteDialogOpen(false)}>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction
+                        onClick={handleDeleteClientConfirm}
+                        className={cn(buttonVariants({ variant: "destructive" }))}
+                    >
+                        Excluir Cliente
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
         </>
     )
 }
+
+    
 
     
