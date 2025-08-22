@@ -196,6 +196,10 @@ export default function PropertiesPage() {
     
     try {
         const formData = new FormData(event.currentTarget);
+        if (currentUser) {
+            formData.append('currentUser', JSON.stringify(currentUser));
+        }
+
         const result = await addPropertyAction(formData);
 
         if (result.success) {

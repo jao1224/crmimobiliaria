@@ -6,13 +6,16 @@ import { matchProperties as matchPropertiesFlow, type MatchPropertiesInput } fro
 import { getReportInsights as getReportInsightsFlow, type ReportInsightsInput, type ReportInsightsOutput } from '@/ai/flows/reporting-insights';
 import { getProperties, addProperty as addPropertyToDb, type Property } from './data';
 import { auth } from '@/lib/firebase';
+import type { User } from 'firebase/auth';
 
 export async function addProperty(formData: FormData) {
     try {
-        const { currentUser } = auth;
-        if (!currentUser) {
+        const userPayload = formData.get('currentUser') as string;
+        if (!userPayload) {
             return { success: false, error: 'Usuário não autenticado.' };
         }
+        
+        const currentUser = JSON.parse(userPayload) as User;
 
         const newPropertyData: Omit<Property, 'id' | 'imageUrl' | 'displayCode' | 'capturedById' | 'capturedBy' | 'price' | 'commission'> & { price: number; commission: number } = {
             name: formData.get('name') as string,
