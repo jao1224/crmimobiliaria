@@ -35,6 +35,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 type CrmTab = "leads" | "deals" | "clients";
+const formatCurrency = (amount: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount);
+
 
 export default function CrmPage() {
     const { activeProfile } = useContext(ProfileContext);
@@ -51,8 +53,9 @@ export default function CrmPage() {
     
     const [activeTab, setActiveTab] = useState<CrmTab>("leads");
 
-    // Estados para o Histórico do Cliente
+    // Estados para os Modais de Detalhes e Histórico
     const [isHistoryOpen, setHistoryOpen] = useState(false);
+    const [isDetailOpen, setDetailOpen] = useState(false);
     const [selectedClient, setSelectedClient] = useState<Client | null>(null);
     const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
     const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -112,6 +115,11 @@ export default function CrmPage() {
         }
     };
     
+    const handleShowDetails = (client: Client) => {
+        setSelectedClient(client);
+        setDetailOpen(true);
+    };
+
     const handleShowHistory = async (client: Client) => {
         setSelectedClient(client);
         setHistoryOpen(true);
@@ -483,7 +491,7 @@ export default function CrmPage() {
                                         ))
                                     ) : clients.length > 0 ? (
                                         clients.map(client => (
-                                            <TableRow key={client.id} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
+                                            <TableRow key={client.id} onClick={() => handleShowDetails(client)} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
                                                 <TableCell className="font-medium">{client.name}</TableCell>
                                                 <TableCell className="hidden sm:table-cell">{client.email}</TableCell>
                                                 <TableCell className="hidden md:table-cell">{client.phone}</TableCell>
@@ -492,9 +500,9 @@ export default function CrmPage() {
                                                 <TableCell>
                                                      <DropdownMenu>
                                                         <DropdownMenuTrigger asChild>
-                                                            <Button aria-haspopup="true" size="icon" variant="ghost"><MoreHorizontal className="h-4 w-4" /></Button>
+                                                            <Button aria-haspopup="true" size="icon" variant="ghost" onClick={(e) => e.stopPropagation()}><MoreHorizontal className="h-4 w-4" /></Button>
                                                         </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
+                                                        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                                                             <DropdownMenuLabel>Ações</DropdownMenuLabel>
                                                             <DropdownMenuItem onSelect={() => handleShowHistory(client)}>
                                                                 <History className="mr-2 h-4 w-4"/>Ver Histórico
@@ -522,6 +530,59 @@ export default function CrmPage() {
             </Tabs>
         </div>
         
+        {/* Modal de Detalhes do Cliente */}
+         <Dialog open={isDetailOpen} onOpenChange={setDetailOpen}>
+            <DialogContent className="sm:max-w-xl">
+                {selectedClient && (
+                    <>
+                    <DialogHeader>
+                        <DialogTitle>Detalhes do Cliente</DialogTitle>
+                        <DialogDescription>
+                            Informações completas de {selectedClient.name}.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="space-y-4 rounded-lg border p-4">
+                            <h3 className="font-semibold text-lg">Informações Pessoais</h3>
+                             <div className="grid grid-cols-2 gap-4 text-sm">
+                                <div><Label className="text-muted-foreground">Nome</Label><p>{selectedClient.name}</p></div>
+                                <div><Label className="text-muted-foreground">CPF/CNPJ</Label><p>{selectedClient.document || "Não informado"}</p></div>
+                                <div><Label className="text-muted-foreground">Data de Nascimento</Label><p>{selectedClient.birthDate ? new Date(selectedClient.birthDate + "T00:00:00").toLocaleDateString('pt-BR') : "Não informado"}</p></div>
+                                <div><Label className="text-muted-foreground">Estado Civil</Label><p>{selectedClient.civilStatus || "Não informado"}</p></div>
+                             </div>
+                        </div>
+                         <div className="space-y-4 rounded-lg border p-4">
+                            <h3 className="font-semibold text-lg">Contato e Origem</h3>
+                             <div className="grid grid-cols-2 gap-4 text-sm">
+                                <div><Label className="text-muted-foreground">E-mail</Label><p>{selectedClient.email}</p></div>
+                                <div><Label className="text-muted-foreground">Telefone</Label><p>{selectedClient.phone}</p></div>
+                                <div className="col-span-2"><Label className="text-muted-foreground">Endereço</Label><p>{selectedClient.address || "Não informado"}</p></div>
+                                <div><Label className="text-muted-foreground">Fonte</Label><p>{selectedClient.source}</p></div>
+                                <div><Label className="text-muted-foreground">Corretor Responsável</Label><p>{selectedClient.assignedTo}</p></div>
+                             </div>
+                        </div>
+                        <div className="space-y-4 rounded-lg border p-4">
+                            <h3 className="font-semibold text-lg">Informações Financeiras</h3>
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                    <Label className="text-muted-foreground">Renda Mensal</Label>
+                                    <p>{selectedClient.monthlyIncome ? formatCurrency(selectedClient.monthlyIncome) : "Não informado"}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                         <Button variant="secondary" onClick={() => { setDetailOpen(false); handleShowHistory(selectedClient); }}>
+                            <History className="mr-2 h-4 w-4"/>Ver Histórico
+                        </Button>
+                        <Button variant="outline" onClick={() => setDetailOpen(false)}>Fechar</Button>
+                    </DialogFooter>
+                    </>
+                )}
+            </DialogContent>
+        </Dialog>
+
+
         {/* Modal de Histórico do Cliente */}
         <Dialog open={isHistoryOpen} onOpenChange={setHistoryOpen}>
             <DialogContent className="sm:max-w-2xl">
