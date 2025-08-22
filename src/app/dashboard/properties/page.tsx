@@ -42,13 +42,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 import { getProperties, deleteProperty, propertyTypes, type Property, type PropertyType, getUsers, type User, updateProperty as updatePropertyInDb } from "@/lib/data";
-import { addProperty as addPropertyAction } from "@/lib/actions";
+import { addProperty as addPropertyAction, updateProperty as updatePropertyAction } from "@/lib/actions";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { auth, storage, db } from "@/lib/firebase";
 import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
 import { ProfileContext } from "@/contexts/ProfileContext";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { collection, getDocs } from "firebase/firestore";
+import { collection } from "firebase/firestore";
 
 
 export default function PropertiesPage() {
@@ -236,7 +235,7 @@ export default function PropertiesPage() {
     }
   };
 
-  const handleUpdateProperty = async (event: React.FormEvent<HTMLFormElement>) => {
+const handleUpdateProperty = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     
     if (!editingProperty || !currentUser) {
@@ -252,17 +251,23 @@ export default function PropertiesPage() {
         if (selectedFile) {
             formData.append('image', selectedFile, selectedFile.name);
         } else if (imagePreview) {
+            // Se não houver novo arquivo, mas houver preview (imagem existente), passe a URL
             formData.append('imageUrl', imagePreview);
         }
         
-        await updatePropertyInDb(formData);
-        
-        await refreshProperties();
-        toast({ title: "Sucesso!", description: "Imóvel atualizado com sucesso." });
-        setEditDialogOpen(false);
-    } catch (error) {
+        const result = await updatePropertyAction(formData);
+
+        if (result.success) {
+            await refreshProperties();
+            toast({ title: "Sucesso!", description: "Imóvel atualizado com sucesso." });
+            setEditDialogOpen(false);
+        } else {
+            throw new Error(result.error);
+        }
+
+    } catch (error: any) {
         console.error('Error updating property:', error);
-        toast({ variant: "destructive", title: "Erro ao Atualizar", description: "Não foi possível atualizar o imóvel. Verifique o console." });
+        toast({ variant: "destructive", title: "Erro ao Atualizar", description: error.message || "Não foi possível atualizar o imóvel. Verifique o console." });
     } finally {
         setIsSaving(false);
     }

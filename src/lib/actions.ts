@@ -4,9 +4,8 @@
 
 import { matchProperties as matchPropertiesFlow, type MatchPropertiesInput } from '@/ai/flows/property-matching';
 import { getReportInsights as getReportInsightsFlow, type ReportInsightsInput, type ReportInsightsOutput } from '@/ai/flows/reporting-insights';
-import { addProperty as addPropertyToDb } from './data';
-import { auth } from '@/lib/firebase';
-import type { User } from 'firebase/auth';
+import { addProperty as addPropertyToDb, updateProperty as updatePropertyToDb, getProperties } from './data';
+
 
 export async function addProperty(formData: FormData) {
     try {
@@ -15,6 +14,16 @@ export async function addProperty(formData: FormData) {
     } catch (error: any) {
         console.error('Erro na Server Action addProperty:', error);
         return { success: false, error: error.message || 'Falha ao adicionar imóvel.' };
+    }
+}
+
+export async function updateProperty(formData: FormData) {
+    try {
+        await updatePropertyToDb(formData);
+        return { success: true };
+    } catch (error: any) {
+        console.error('Erro na Server Action updateProperty:', error);
+        return { success: false, error: error.message || 'Falha ao atualizar imóvel.' };
     }
 }
 
@@ -66,4 +75,3 @@ export async function getReportInsights(salesData: string, captureData: string, 
         return { success: false, error: 'Falha ao gerar análise de relatório devido a um erro no servidor.' };
     }
 }
-
