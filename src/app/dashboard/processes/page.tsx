@@ -32,7 +32,7 @@ const getStatusVariant = (status: ProcessStatus) => {
 
 const getStageVariant = (stage: ProcessStage) => {
     switch (stage) {
-        case 'Em andamento': return 'status-blue';
+        case 'Em andamento': return 'warning';
         case 'Pendência': return 'status-orange';
         case 'Finalizado': return 'default';
         default: return 'secondary';
