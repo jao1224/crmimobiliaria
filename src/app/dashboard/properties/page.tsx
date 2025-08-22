@@ -44,10 +44,11 @@ import { cn } from "@/lib/utils";
 import { getProperties, deleteProperty, propertyTypes, type Property, type PropertyType, getUsers, type User, updateProperty as updatePropertyInDb } from "@/lib/data";
 import { addProperty as addPropertyAction } from "@/lib/actions";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { auth, storage } from "@/lib/firebase";
+import { auth, storage, db } from "@/lib/firebase";
 import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { collection } from "firebase/firestore";
 
 
 export default function PropertiesPage() {
@@ -82,9 +83,6 @@ export default function PropertiesPage() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
         setCurrentUser(user);
-        if (user) {
-          fetchTeamData();
-        }
     });
     return () => unsubscribe();
   }, []);
@@ -116,14 +114,6 @@ export default function PropertiesPage() {
     }
   };
   
-  const fetchTeamData = async () => {
-        const usersSnapshot = await getDocs(collection(db, "users"));
-        setTeamMembers(usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeamMember)));
-
-        const teamsSnapshot = await getDocs(collection(db, "teams"));
-        setTeams(teamsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team)));
-  };
-
 
   const captadores = useMemo(() => {
     const captadorMap = new Map<string, { name: string; role: string }>();
@@ -203,19 +193,17 @@ export default function PropertiesPage() {
 
   const handleAddProperty = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setIsSaving(true);
     
+    const formData = new FormData(event.currentTarget);
+    if (currentUser) {
+        formData.append('currentUser', JSON.stringify(currentUser));
+    }
+    if (selectedFile) {
+        formData.append('image', selectedFile, selectedFile.name);
+    }
+
+    setIsSaving(true);
     try {
-        const formData = new FormData(event.currentTarget);
-        if (currentUser) {
-            formData.append('currentUser', JSON.stringify(currentUser));
-        }
-
-        // Garante que o arquivo do estado seja anexado ao FormData
-        if (selectedFile) {
-            formData.append('image', selectedFile, selectedFile.name);
-        }
-
         const result = await addPropertyAction(formData);
 
         if (result.success) {
@@ -254,8 +242,9 @@ export default function PropertiesPage() {
 
         if (selectedFile) {
             formData.append('image', selectedFile, selectedFile.name);
-        } else {
-            formData.append('imageUrl', editingProperty.imageUrl); // Mantém a imagem existente se nenhuma nova for selecionada
+        } else if (imagePreview) {
+            // Se não há arquivo novo mas há um preview (que pode ser a URL existente ou placeholder), envie a URL
+            formData.append('imageUrl', imagePreview);
         }
         
         await updatePropertyInDb(formData);
