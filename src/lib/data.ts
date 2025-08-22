@@ -1,6 +1,7 @@
 
 
 
+
 import { db, storage } from './firebase';
 import { collection, getDocs, addDoc, doc, updateDoc, writeBatch, serverTimestamp, query, orderBy, limit, where, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -305,8 +306,8 @@ export const propertyTypes: PropertyType[] = ['Lançamento', 'Revenda', 'Terreno
 
 // Helper function to sanitize filenames
 const sanitizeFileName = (filename: string) => {
-  const fileExtension = filename.split('.').pop();
-  const nameWithoutExtension = filename.substring(0, filename.lastIndexOf('.'));
+  const fileExtension = filename.split('.').pop() || '';
+  const nameWithoutExtension = filename.substring(0, filename.lastIndexOf('.')) || filename;
   
   const sanitized = nameWithoutExtension
     .normalize("NFD") // Normalize to decompose combined characters
@@ -337,15 +338,17 @@ export const getPropertiesByRealtor = async (realtorName: string): Promise<Prope
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Property));
 };
 
-export const addProperty = async (
-  propertyData: Omit<Property, 'id' | 'imageUrl' | 'displayCode' | 'capturedById' | 'capturedBy'>,
-  file: File | null,
-  user: FirebaseUser
-): Promise<string> => {
-    
-  let imageUrl = 'https://placehold.co/600x400.png';
+export const addProperty = async (formData: FormData): Promise<string> => {
+    const userPayload = formData.get('currentUser') as string;
+    if (!userPayload) {
+      throw new Error('Usuário não autenticado.');
+    }
+    const user = JSON.parse(userPayload) as FirebaseUser;
+    const file = formData.get('image') as File | null;
   
-  if (file && file.size > 0) {
+    let imageUrl = 'https://placehold.co/600x400.png';
+  
+    if (file && file.size > 0) {
       try {
         const sanitizedName = sanitizeFileName(file.name);
         const storageRef = ref(storage, `properties/${Date.now()}_${sanitizedName}`);
@@ -353,40 +356,75 @@ export const addProperty = async (
         imageUrl = await getDownloadURL(storageRef);
       } catch (error) {
         console.error("Error uploading image, using placeholder.", error);
-        // A imagem padrão já está definida, então apenas logamos o erro e continuamos
       }
-  }
-
-  const timestamp = Date.now();
-  const displayCode = `ID-${String(timestamp).slice(-6)}`;
-
-  const finalPropertyData = {
-    ...propertyData,
-    imageUrl,
-    displayCode,
-    capturedById: user.uid,
-    capturedBy: user.displayName || 'N/A',
-  };
-
-  const docRef = await addDoc(collection(db, 'imoveis'), finalPropertyData);
-  return docRef.id;
+    }
+  
+    const timestamp = Date.now();
+    const displayCode = `ID-${String(timestamp).slice(-6)}`;
+  
+    const newPropertyData: Omit<Property, 'id'> = {
+      name: formData.get('name') as string,
+      address: formData.get('address') as string,
+      status: 'Disponível',
+      price: Number(formData.get('price')),
+      commission: Number(formData.get('commission')),
+      type: formData.get('type') as PropertyType,
+      description: formData.get('description') as string,
+      ownerInfo: formData.get('owner') as string,
+      imageUrl,
+      displayCode,
+      imageHint: 'novo imovel',
+      capturedById: user.uid,
+      capturedBy: user.displayName || 'N/A',
+    };
+  
+    const docRef = await addDoc(collection(db, 'imoveis'), newPropertyData);
+    return docRef.id;
 };
 
 
-export const updateProperty = async (id: string, data: Partial<Property>, file?: File | null): Promise<void> => {
-    const propertyRef = doc(db, 'imoveis', id);
-    let updatedData = { ...data };
+export const updateProperty = async (formData: FormData): Promise<void> => {
+    const propertyId = formData.get('id') as string;
+    if (!propertyId) throw new Error("ID do imóvel não fornecido.");
+
+    const propertyRef = doc(db, 'imoveis', propertyId);
+    
+    // Extrair todos os campos de texto do FormData
+    const updatedData: Partial<Property> = {
+        name: formData.get("name") as string,
+        address: formData.get("address") as string,
+        price: Number(formData.get("price")),
+        commission: Number(formData.get("commission")),
+        capturedById: formData.get("capturedBy") as string,
+        description: formData.get("description") as string,
+        ownerInfo: formData.get("owner") as string,
+        type: formData.get("type") as PropertyType,
+        status: formData.get("status") as Property['status'],
+    };
+
+    // Obter o nome do captador
+    if (updatedData.capturedById) {
+        const userDoc = await getDoc(doc(db, 'users', updatedData.capturedById));
+        if (userDoc.exists()) {
+            updatedData.capturedBy = userDoc.data().name;
+        }
+    }
+
+    const file = formData.get('image') as File | null;
+    const existingImageUrl = formData.get('imageUrl') as string;
 
     if (file) {
         const sanitizedName = sanitizeFileName(file.name);
         const storageRef = ref(storage, `properties/${Date.now()}_${sanitizedName}`);
         await uploadBytes(storageRef, file);
-        const newImageUrl = await getDownloadURL(storageRef);
-        updatedData.imageUrl = newImageUrl;
+        updatedData.imageUrl = await getDownloadURL(storageRef);
+    } else if (existingImageUrl) {
+        updatedData.imageUrl = existingImageUrl;
     }
-
+    
     await updateDoc(propertyRef, updatedData);
 };
+
 
 export const deleteProperty = async (id: string): Promise<void> => {
     const batch = writeBatch(db);
@@ -1015,6 +1053,7 @@ export const updateActivityStatus = async (activityId: string, newStatus: Activi
     
 
     
+
 
 
 

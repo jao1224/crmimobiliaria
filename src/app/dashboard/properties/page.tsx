@@ -41,7 +41,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
-import { getProperties, deleteProperty, propertyTypes, type Property, type PropertyType, getUsers, type User, updateProperty } from "@/lib/data";
+import { getProperties, deleteProperty, propertyTypes, type Property, type PropertyType, getUsers, type User, updateProperty as updatePropertyInDb } from "@/lib/data";
 import { addProperty as addPropertyAction } from "@/lib/actions";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { auth, storage } from "@/lib/firebase";
@@ -200,8 +200,9 @@ export default function PropertiesPage() {
             formData.append('currentUser', JSON.stringify(currentUser));
         }
 
+        // Garante que o arquivo do estado seja anexado ao FormData
         if (selectedFile) {
-            formData.append('image', selectedFile);
+            formData.append('image', selectedFile, selectedFile.name);
         }
 
         const result = await addPropertyAction(formData);
@@ -238,23 +239,23 @@ export default function PropertiesPage() {
 
     try {
         const formData = new FormData(event.currentTarget);
-        const capturedById = formData.get("capturedBy") as string;
-        const selectedCaptador = users.find(u => u.id === capturedById);
-
-        const updatedPropertyData: Partial<Property> = {
-            name: formData.get("name") as string,
-            address: formData.get("address") as string,
-            price: Number(formData.get("price")),
-            commission: Number(formData.get("commission")),
-            capturedById: capturedById,
-            capturedBy: selectedCaptador?.name || editingProperty.capturedBy,
-            description: formData.get("description") as string,
-            ownerInfo: formData.get("owner") as string,
-            type: (editType || editingProperty.type) as PropertyType,
-            status: (editStatus || editingProperty.status) as Property['status'],
-        };
         
-        await updateProperty(editingProperty.id, updatedPropertyData, selectedFile);
+        // Adiciona campos que não estão no formulário ou que precisam de tratamento
+        formData.append('id', editingProperty.id);
+        formData.append('type', editType || editingProperty.type);
+        formData.append('status', editStatus || editingProperty.status);
+        
+        if (selectedFile) {
+            formData.append('image', selectedFile, selectedFile.name);
+        } else if (imagePreview && imagePreview.startsWith('https://placehold.co')) {
+            formData.append('imageUrl', imagePreview); // Indica para usar a imagem de placeholder
+        } else if (editingProperty.imageUrl) {
+            formData.append('imageUrl', editingProperty.imageUrl); // Mantém a imagem existente
+        }
+        
+        // A função de backend `updatePropertyInDb` agora precisa lidar com FormData
+        await updatePropertyInDb(formData);
+        
         await refreshProperties();
         toast({ title: "Sucesso!", description: "Imóvel atualizado com sucesso." });
         setEditDialogOpen(false);
@@ -286,6 +287,8 @@ export default function PropertiesPage() {
   const handleRemoveImage = () => {
     setImagePreview("https://placehold.co/600x400.png");
     setSelectedFile(null);
+    const inputFile = document.getElementById('edit-image') as HTMLInputElement;
+    if (inputFile) inputFile.value = '';
     toast({ title: "Imagem Removida", description: "A imagem do imóvel foi redefinida para a padrão. Salve para confirmar." });
   };
 
@@ -414,7 +417,7 @@ export default function PropertiesPage() {
                   {/* Coluna 2: Imagem e Textareas */}
                   <div className="space-y-4">
                      <div className="space-y-2">
-                        <Label htmlFor="image">Imagem do Imóvel</Label>
+                        <Label htmlFor="image-add">Imagem do Imóvel</Label>
                         <div className="flex items-center gap-4">
                             {imagePreview ? (
                                 <Image src={imagePreview} alt="Preview do imóvel" width={80} height={80} className="rounded-md object-cover aspect-square"/>
@@ -423,7 +426,7 @@ export default function PropertiesPage() {
                                     <Upload className="h-6 w-6"/>
                                 </div>
                             )}
-                            <Input id="image" name="image" type="file" onChange={handleFileChange} accept="image/png, image/jpeg, image/gif, image/webp" />
+                            <Input id="image-add" name="image" type="file" onChange={handleFileChange} accept="image/png, image/jpeg, image/gif, image/webp" />
                         </div>
                     </div>
                     <div className="space-y-2">
@@ -696,7 +699,7 @@ export default function PropertiesPage() {
                     )}
                     <div className="flex w-full gap-2 pt-2">
                       <Input id="edit-image" name="image" type="file" onChange={handleFileChange} className="w-full" accept="image/png, image/jpeg, image/gif, image/webp" />
-                      <Button type="button" variant="outline" size="icon" onClick={handleRemoveImage} disabled={!imagePreview || imagePreview.includes('placehold.co')}>
+                      <Button type="button" variant="outline" size="icon" onClick={handleRemoveImage}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -740,8 +743,8 @@ export default function PropertiesPage() {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="type">Tipo de Imóvel</Label>
-                        <Select value={editType || editingProperty.type} onValueChange={(v) => setEditType(v as PropertyType)}>
+                        <Label htmlFor="edit-type">Tipo de Imóvel</Label>
+                        <Select value={editType || editingProperty.type} onValueChange={(v) => setEditType(v as PropertyType)} name="type">
                             <SelectTrigger><SelectValue /></SelectTrigger>
                             <SelectContent>
                                 {propertyTypes.map(type => (
@@ -753,7 +756,7 @@ export default function PropertiesPage() {
                   </div>
                   <div className="space-y-2">
                       <Label htmlFor="edit-status">Status</Label>
-                      <Select value={editStatus || editingProperty.status} onValueChange={setEditStatus}>
+                      <Select value={editStatus || editingProperty.status} onValueChange={setEditStatus} name="status">
                           <SelectTrigger><SelectValue /></SelectTrigger>
                           <SelectContent>
                               <SelectItem value="Disponível">Disponível</SelectItem>
