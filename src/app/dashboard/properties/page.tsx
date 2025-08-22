@@ -41,8 +41,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
-import { getProperties, deleteProperty, propertyTypes, type Property, type PropertyType, getUsers, type User } from "@/lib/data";
-import { addProperty as addPropertyAction, updateProperty as updatePropertyAction } from "@/lib/actions";
+import { getProperties, deleteProperty, propertyTypes, type Property, type PropertyType, getUsers, type User, addProperty, updateProperty, uploadImage } from "@/lib/data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
@@ -207,20 +206,44 @@ export default function PropertiesPage() {
     setIsSaving(true);
     try {
         const formData = new FormData(event.currentTarget);
-        formData.append('currentUser', JSON.stringify(currentUser));
+        const timestamp = Date.now();
+        const displayCode = `ID-${String(timestamp).slice(-6)}`;
+        
+        const newPropertyData: Omit<Property, 'id'> = {
+            name: formData.get('name') as string,
+            address: formData.get('address') as string,
+            status: 'Disponível',
+            price: Number(formData.get('price')),
+            commission: Number(formData.get('commission')),
+            type: formData.get('type') as PropertyType,
+            description: formData.get('description') as string,
+            ownerInfo: formData.get('owner') as string,
+            imageUrl: 'https://placehold.co/600x400.png',
+            displayCode,
+            imageHint: 'novo imovel',
+            capturedById: currentUser.uid,
+            capturedBy: currentUser.displayName || 'N/A',
+        };
+
+        const propertyId = await addProperty(newPropertyData);
+
         if (selectedFile) {
-            formData.append('image', selectedFile, selectedFile.name);
+            try {
+                const imageUrl = await uploadImage(selectedFile, propertyId);
+                await updateProperty(propertyId, { imageUrl });
+            } catch (uploadError) {
+                console.error("Upload error:", uploadError);
+                toast({ 
+                    variant: "warning", 
+                    title: "Imóvel salvo, mas imagem falhou", 
+                    description: "O imóvel foi cadastrado, mas houve um problema com a imagem. Você pode editá-lo para tentar novamente." 
+                });
+            }
         }
-
-        const result = await addPropertyAction(formData);
-
-        if (result.success) {
-            await refreshProperties();
-            toast({title: 'Sucesso!', description: 'Imóvel adicionado com sucesso.'});
-            setPropertyDialogOpen(false);
-        } else {
-            throw new Error(result.error);
-        }
+        
+        await refreshProperties();
+        toast({title: 'Sucesso!', description: 'Imóvel adicionado com sucesso.'});
+        setPropertyDialogOpen(false);
 
     } catch (error: any) {
       console.error('Error adding property:', error);
@@ -245,25 +268,38 @@ const handleUpdateProperty = async (event: React.FormEvent<HTMLFormElement>) => 
     setIsSaving(true);
     try {
         const formData = new FormData(event.currentTarget);
-        formData.append('id', editingProperty.id);
-
-        if (selectedFile) {
-            formData.append('image', selectedFile, selectedFile.name);
-        } else if (imagePreview) {
-            // Se não houver um novo arquivo, mas houver uma imagem de preview (a existente),
-            // passe a URL para que o backend saiba que não deve excluí-la.
-            formData.append('imageUrl', imagePreview);
+        
+        const dataToUpdate: Partial<Property> = {
+            name: formData.get("name") as string,
+            address: formData.get("address") as string,
+            price: Number(formData.get("price")),
+            commission: Number(formData.get("commission")),
+            capturedById: formData.get("capturedBy") as string,
+            description: formData.get("description") as string,
+            ownerInfo: formData.get("owner") as string,
+            type: formData.get("type") as PropertyType,
+            status: formData.get("status") as Property['status'],
+        };
+        
+        // Obter o nome do captador
+        if (dataToUpdate.capturedById) {
+            const user = users.find(u => u.id === dataToUpdate.capturedById);
+            if (user) {
+                dataToUpdate.capturedBy = user.name;
+            }
         }
         
-        const result = await updatePropertyAction(formData);
-
-        if (result.success) {
-            await refreshProperties();
-            toast({ title: "Sucesso!", description: "Imóvel atualizado com sucesso." });
-            setEditDialogOpen(false);
-        } else {
-            throw new Error(result.error);
+        if (selectedFile) {
+            dataToUpdate.imageUrl = await uploadImage(selectedFile, editingProperty.id);
+        } else if (imagePreview) {
+            dataToUpdate.imageUrl = imagePreview;
         }
+
+        await updateProperty(editingProperty.id, dataToUpdate);
+
+        await refreshProperties();
+        toast({ title: "Sucesso!", description: "Imóvel atualizado com sucesso." });
+        setEditDialogOpen(false);
 
     } catch (error: any) {
         console.error('Error updating property:', error);
