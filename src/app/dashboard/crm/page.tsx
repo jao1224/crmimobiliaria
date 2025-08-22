@@ -6,7 +6,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { MoreHorizontal, History, Briefcase, Landmark, Trash2 } from "lucide-react";
+import { MoreHorizontal, History, Briefcase, Landmark, Trash2, PlusCircle, UserPlus, Handshake } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
@@ -34,6 +34,8 @@ import { onAuthStateChanged, type User } from "firebase/auth";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+type CrmTab = "leads" | "deals" | "clients";
+
 export default function CrmPage() {
     const { activeProfile } = useContext(ProfileContext);
     const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -46,6 +48,8 @@ export default function CrmPage() {
     const [isDealDialogOpen, setDealDialogOpen] = useState(false);
     const [isClientDialogOpen, setClientDialogOpen] = useState(false);
     const { toast } = useToast();
+    
+    const [activeTab, setActiveTab] = useState<CrmTab>("leads");
 
     // Estados para o Histórico do Cliente
     const [isHistoryOpen, setHistoryOpen] = useState(false);
@@ -245,6 +249,82 @@ export default function CrmPage() {
             setClientToDelete(null);
         }
     };
+    
+    const renderAddButton = () => {
+        switch (activeTab) {
+            case 'leads':
+                return (
+                    <Dialog open={isLeadDialogOpen} onOpenChange={setLeadDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button><PlusCircle className="mr-2 h-4 w-4" /> Adicionar Lead</Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Adicionar Novo Lead</DialogTitle>
+                                <DialogDescription>Preencha os detalhes abaixo para criar um novo lead.</DialogDescription>
+                            </DialogHeader>
+                            <form onSubmit={handleAddLead}>
+                                <div className="grid gap-4 py-4">
+                                    <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="name-lead" className="text-right">Nome</Label><Input id="name-lead" name="name" className="col-span-3" required /></div>
+                                    <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="email-lead" className="text-right">E-mail</Label><Input id="email-lead" name="email" type="email" className="col-span-3" required /></div>
+                                    <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="phone-lead" className="text-right">Telefone</Label><Input id="phone-lead" name="phone" className="col-span-3" required /></div>
+                                    <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="source-lead" className="text-right">Fonte</Label><Input id="source-lead" name="source" className="col-span-3" required /></div>
+                                </div>
+                                <DialogFooter><Button type="submit">Salvar Lead</Button></DialogFooter>
+                            </form>
+                        </DialogContent>
+                    </Dialog>
+                );
+            case 'deals':
+                return (
+                    <Dialog open={isDealDialogOpen} onOpenChange={setDealDialogOpen}>
+                        <DialogTrigger asChild>
+                             <Button><Handshake className="mr-2 h-4 w-4" /> Adicionar Negócio</Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Criar Novo Negócio</DialogTitle>
+                                <DialogDescription>Preencha os detalhes para registrar um novo negócio.</DialogDescription>
+                            </DialogHeader>
+                            <form onSubmit={handleAddDeal}>
+                                <div className="grid gap-4 py-4">
+                                     <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="property" className="text-right">Imóvel</Label><Input id="property" name="property" className="col-span-3" required /></div>
+                                     <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="client" className="text-right">Cliente</Label><Input id="client" name="client" className="col-span-3" required /></div>
+                                     <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="value" className="text-right">Valor</Label><Input id="value" name="value" type="number" className="col-span-3" required /></div>
+                                    <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="closeDate" className="text-right">Data Estimada</Label><Input id="closeDate" name="closeDate" type="date" className="col-span-3" required /></div>
+                                </div>
+                                <DialogFooter><Button type="submit">Salvar Negócio</Button></DialogFooter>
+                            </form>
+                        </DialogContent>
+                    </Dialog>
+                );
+            case 'clients':
+                 return (
+                    <Dialog open={isClientDialogOpen} onOpenChange={setClientDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button><UserPlus className="mr-2 h-4 w-4" /> Adicionar Cliente</Button>
+                        </DialogTrigger>
+                         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+                            <DialogHeader>
+                                <DialogTitle>Adicionar Novo Cliente</DialogTitle>
+                                <DialogDescription>Preencha os detalhes abaixo para criar um novo cliente diretamente.</DialogDescription>
+                            </DialogHeader>
+                            <form id="addClientForm" onSubmit={handleAddClient}>
+                                <div className="space-y-6 py-4">
+                                    <div className="space-y-4 rounded-lg border p-4"><h3 className="text-lg font-medium">Informações Pessoais</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="space-y-2"><Label htmlFor="name-client">Nome Completo</Label><Input id="name-client" name="name" required /></div><div className="space-y-2"><Label htmlFor="document-client">CPF / CNPJ</Label><Input id="document-client" name="document" /></div><div className="space-y-2"><Label htmlFor="birthDate-client">Data de Nascimento</Label><Input id="birthDate-client" name="birthDate" type="date" /></div><div className="space-y-2"><Label htmlFor="civilStatus-client">Estado Civil</Label><Select name="civilStatus"><SelectTrigger id="civilStatus-client"><SelectValue placeholder="Selecione..." /></SelectTrigger><SelectContent><SelectItem value="Solteiro(a)">Solteiro(a)</SelectItem><SelectItem value="Casado(a)">Casado(a)</SelectItem><SelectItem value="Divorciado(a)">Divorciado(a)</SelectItem><SelectItem value="Viúvo(a)">Viúvo(a)</SelectItem><SelectItem value="União Estável">União Estável</SelectItem></SelectContent></Select></div></div></div>
+                                    <div className="space-y-4 rounded-lg border p-4"><h3 className="text-lg font-medium">Contato e Endereço</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="space-y-2"><Label htmlFor="email-client">E-mail</Label><Input id="email-client" name="email" type="email" required/></div><div className="space-y-2"><Label htmlFor="phone-client">Telefone / WhatsApp</Label><Input id="phone-client" name="phone" required/></div></div><div className="space-y-2"><Label htmlFor="address-client">Endereço Completo</Label><Input id="address-client" name="address" placeholder="Rua, número, bairro, cidade, CEP" /></div></div>
+                                    <div className="space-y-4 rounded-lg border p-4"><h3 className="text-lg font-medium">Informações Financeiras</h3><div className="space-y-2"><Label htmlFor="monthlyIncome-client">Renda Mensal Comprovada (R$)</Label><Input id="monthlyIncome-client" name="monthlyIncome" type="number" step="0.01" placeholder="5000.00" /></div></div>
+                                </div>
+                                <DialogFooter><Button type="submit" form="addClientForm">Salvar Cliente</Button></DialogFooter>
+                            </form>
+                        </DialogContent>
+                    </Dialog>
+                );
+            default:
+                return null;
+        }
+    };
+
 
     return (
         <>
@@ -255,154 +335,10 @@ export default function CrmPage() {
                     <p className="text-muted-foreground">Supervisione seus leads, negócios e relacionamentos com clientes.</p>
                 </div>
                 <div className="flex gap-2">
-                     <Dialog open={isLeadDialogOpen} onOpenChange={setLeadDialogOpen}>
-                        <DialogTrigger asChild>
-                            <Button variant="outline">Adicionar Lead</Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>Adicionar Novo Lead</DialogTitle>
-                                <DialogDescription>Preencha os detalhes abaixo para criar um novo lead.</DialogDescription>
-                            </DialogHeader>
-                            <form onSubmit={handleAddLead}>
-                                <div className="grid gap-4 py-4">
-                                    <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="name-lead" className="text-right">Nome</Label>
-                                        <Input id="name-lead" name="name" className="col-span-3" required />
-                                    </div>
-                                    <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="email-lead" className="text-right">E-mail</Label>
-                                        <Input id="email-lead" name="email" type="email" className="col-span-3" required />
-                                    </div>
-                                    <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="phone-lead" className="text-right">Telefone</Label>
-                                        <Input id="phone-lead" name="phone" className="col-span-3" required />
-                                    </div>
-                                    <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="source-lead" className="text-right">Fonte</Label>
-                                        <Input id="source-lead" name="source" className="col-span-3" required />
-                                    </div>
-                                </div>
-                                <DialogFooter>
-                                    <Button type="submit">Salvar Lead</Button>
-                                </DialogFooter>
-                            </form>
-                        </DialogContent>
-                    </Dialog>
-                    <Dialog open={isClientDialogOpen} onOpenChange={setClientDialogOpen}>
-                        <DialogTrigger asChild>
-                            <Button variant="outline">Adicionar Cliente</Button>
-                        </DialogTrigger>
-                         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-                            <DialogHeader>
-                                <DialogTitle>Adicionar Novo Cliente</DialogTitle>
-                                <DialogDescription>Preencha os detalhes abaixo para criar um novo cliente diretamente.</DialogDescription>
-                            </DialogHeader>
-                            <form id="addClientForm" onSubmit={handleAddClient}>
-                                <div className="space-y-6 py-4">
-                                    {/* Informações Pessoais */}
-                                    <div className="space-y-4 rounded-lg border p-4">
-                                        <h3 className="text-lg font-medium">Informações Pessoais</h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div className="space-y-2">
-                                                <Label htmlFor="name-client">Nome Completo</Label>
-                                                <Input id="name-client" name="name" required />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="document-client">CPF / CNPJ</Label>
-                                                <Input id="document-client" name="document" />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="birthDate-client">Data de Nascimento</Label>
-                                                <Input id="birthDate-client" name="birthDate" type="date" />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="civilStatus-client">Estado Civil</Label>
-                                                <Select name="civilStatus">
-                                                    <SelectTrigger id="civilStatus-client"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="Solteiro(a)">Solteiro(a)</SelectItem>
-                                                        <SelectItem value="Casado(a)">Casado(a)</SelectItem>
-                                                        <SelectItem value="Divorciado(a)">Divorciado(a)</SelectItem>
-                                                        <SelectItem value="Viúvo(a)">Viúvo(a)</SelectItem>
-                                                        <SelectItem value="União Estável">União Estável</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Informações de Contato */}
-                                    <div className="space-y-4 rounded-lg border p-4">
-                                        <h3 className="text-lg font-medium">Contato e Endereço</h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div className="space-y-2">
-                                                <Label htmlFor="email-client">E-mail</Label>
-                                                <Input id="email-client" name="email" type="email" required/>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="phone-client">Telefone / WhatsApp</Label>
-                                                <Input id="phone-client" name="phone" required/>
-                                            </div>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="address-client">Endereço Completo</Label>
-                                            <Input id="address-client" name="address" placeholder="Rua, número, bairro, cidade, CEP" />
-                                        </div>
-                                    </div>
-                                    
-                                    {/* Informações Financeiras */}
-                                    <div className="space-y-4 rounded-lg border p-4">
-                                        <h3 className="text-lg font-medium">Informações Financeiras</h3>
-                                         <div className="space-y-2">
-                                            <Label htmlFor="monthlyIncome-client">Renda Mensal Comprovada (R$)</Label>
-                                            <Input id="monthlyIncome-client" name="monthlyIncome" type="number" step="0.01" placeholder="5000.00" />
-                                        </div>
-                                    </div>
-                                </div>
-                                <DialogFooter>
-                                    <Button type="submit" form="addClientForm">Salvar Cliente</Button>
-                                </DialogFooter>
-                            </form>
-                        </DialogContent>
-                    </Dialog>
-                    <Dialog open={isDealDialogOpen} onOpenChange={setDealDialogOpen}>
-                        <DialogTrigger asChild>
-                             <Button>Novo Negócio</Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>Criar Novo Negócio</DialogTitle>
-                                <DialogDescription>Preencha os detalhes para registrar um novo negócio.</DialogDescription>
-                            </DialogHeader>
-                            <form onSubmit={handleAddDeal}>
-                                <div className="grid gap-4 py-4">
-                                     <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="property" className="text-right">Imóvel</Label>
-                                        <Input id="property" name="property" className="col-span-3" required />
-                                    </div>
-                                     <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="client" className="text-right">Cliente</Label>
-                                        <Input id="client" name="client" className="col-span-3" required />
-                                    </div>
-                                     <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="value" className="text-right">Valor</Label>
-                                        <Input id="value" name="value" type="number" className="col-span-3" required />
-                                    </div>
-                                    <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="closeDate" className="text-right">Data Estimada</Label>
-                                        <Input id="closeDate" name="closeDate" type="date" className="col-span-3" required />
-                                    </div>
-                                </div>
-                                <DialogFooter>
-                                    <Button type="submit">Salvar Negócio</Button>
-                                </DialogFooter>
-                            </form>
-                        </DialogContent>
-                    </Dialog>
+                    {renderAddButton()}
                 </div>
             </div>
-            <Tabs defaultValue="leads">
+            <Tabs defaultValue="leads" onValueChange={(value) => setActiveTab(value as CrmTab)}>
                 <TabsList>
                     <TabsTrigger value="leads">Leads</TabsTrigger>
                     <TabsTrigger value="deals">Negócios em Andamento</TabsTrigger>
@@ -667,3 +603,4 @@ export default function CrmPage() {
     
 
     
+
