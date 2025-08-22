@@ -29,6 +29,7 @@ import { addEvent, getEvents, updateEvent, deleteEvent, type Event } from "@/lib
 import { Skeleton } from "@/components/ui/skeleton";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { Separator } from "@/components/ui/separator";
 
 
 type EventType = 'personal' | 'company' | 'team_visit';
@@ -267,44 +268,42 @@ export default function AgendaPage() {
             </div>
             
             <Card>
-                <CardContent className="p-0">
-                    <div className="flex flex-col md:flex-row">
-                        <div className="flex-1 p-4 md:p-6">
-                            <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as EventType)}>
-                                <TabsList className="mb-4">
-                                   {visibleTabs.map(tab => (
-                                        <TabsTrigger key={tab.id} value={tab.id}>{tab.label}</TabsTrigger>
-                                   ))}
-                                </TabsList>
-                                
-                                <div className="mt-2">
-                                     {isLoading ? (
-                                        <div className="flex justify-center items-center h-full">
-                                            <Skeleton className="w-full h-[300px]" />
-                                        </div>
-                                    ) : (
-                                        <Calendar
-                                            mode="single"
-                                            selected={selectedDate}
-                                            onSelect={setSelectedDate}
-                                            className="rounded-md"
-                                            locale={ptBR}
-                                            modifiers={{
-                                                events: events.filter(e => e.type === activeTab).map(e => new Date(e.date as any))
-                                            }}
-                                            modifiersStyles={{
-                                               events: {
-                                                    color: 'white',
-                                                    backgroundColor: getEventTypeLabel(activeTab).className,
-                                                }
-                                            }}
-                                        />
-                                    )}
-                                </div>
-                            </Tabs>
-
+                <CardContent className="p-4 md:p-6">
+                    <div className="flex flex-col gap-6">
+                         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as EventType)}>
+                            <TabsList>
+                               {visibleTabs.map(tab => (
+                                    <TabsTrigger key={tab.id} value={tab.id}>{tab.label}</TabsTrigger>
+                               ))}
+                            </TabsList>
+                        </Tabs>
+                        
+                        <div className="flex justify-center">
+                             {isLoading ? (
+                                <Skeleton className="w-full h-[300px]" />
+                            ) : (
+                                <Calendar
+                                    mode="single"
+                                    selected={selectedDate}
+                                    onSelect={setSelectedDate}
+                                    className="rounded-md w-full"
+                                    locale={ptBR}
+                                    modifiers={{
+                                        events: events.filter(e => e.type === activeTab).map(e => new Date(e.date as any))
+                                    }}
+                                    modifiersStyles={{
+                                       events: {
+                                            color: 'white',
+                                            backgroundColor: getEventTypeLabel(activeTab).className,
+                                        }
+                                    }}
+                                />
+                            )}
                         </div>
-                        <aside className="w-full md:w-1/3 border-l bg-muted/20 p-4 md:p-6">
+
+                        <Separator />
+                        
+                        <div>
                             <h2 className="text-lg font-semibold mb-4">
                                 {selectedDate ? `Compromissos para ${selectedDate.toLocaleDateString('pt-BR', { timeZone: 'UTC' })}` : 'Selecione uma data'}
                             </h2>
@@ -328,7 +327,7 @@ export default function AgendaPage() {
                                     <p className="text-sm text-muted-foreground text-center py-8">Nenhum evento para esta data nesta agenda.</p>
                                 )}
                             </div>
-                        </aside>
+                        </div>
                     </div>
                 </CardContent>
             </Card>
