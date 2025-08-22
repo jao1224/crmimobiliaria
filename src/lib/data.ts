@@ -3,6 +3,7 @@
 
 
 
+
 import { db, storage } from './firebase';
 import { collection, getDocs, addDoc, doc, updateDoc, writeBatch, serverTimestamp, query, orderBy, limit, where, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -357,6 +358,7 @@ export const addProperty = async (formData: FormData): Promise<string> => {
         imageUrl = await getDownloadURL(storageRef);
       } catch (error) {
         console.error("Error uploading image, using placeholder.", error);
+        // A imageUrl continua sendo a do placeholder se o upload falhar
       }
     }
   
@@ -372,7 +374,7 @@ export const addProperty = async (formData: FormData): Promise<string> => {
       type: formData.get('type') as PropertyType,
       description: formData.get('description') as string,
       ownerInfo: formData.get('owner') as string,
-      imageUrl,
+      imageUrl: imageUrl, // Usa a URL do upload ou o placeholder
       displayCode,
       imageHint: 'novo imovel',
       capturedById: user.uid,
@@ -414,7 +416,7 @@ export const updateProperty = async (formData: FormData): Promise<void> => {
     const file = formData.get('image') as File | null;
     const existingImageUrl = formData.get('imageUrl') as string;
 
-    if (file) {
+    if (file && file.size > 0) {
         const sanitizedName = sanitizeFileName(file.name);
         const storageRef = ref(storage, `properties/${Date.now()}_${sanitizedName}`);
         await uploadBytes(storageRef, file);
@@ -1054,6 +1056,7 @@ export const updateActivityStatus = async (activityId: string, newStatus: Activi
     
 
     
+
 
 
 
