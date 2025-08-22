@@ -48,7 +48,7 @@ import { auth, storage, db } from "@/lib/firebase";
 import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { collection } from "firebase/firestore";
+import { collection, getDocs } from "firebase/firestore";
 
 
 export default function PropertiesPage() {
@@ -84,6 +84,18 @@ export default function PropertiesPage() {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
         setCurrentUser(user);
     });
+
+    const loadUsers = async () => {
+        try {
+            const fetchedUsers = await getUsers();
+            setUsers(fetchedUsers);
+        } catch (error) {
+             console.error("Failed to fetch users:", error);
+        }
+    }
+    
+    loadUsers();
+    
     return () => unsubscribe();
   }, []);
 
@@ -96,18 +108,14 @@ export default function PropertiesPage() {
   const refreshProperties = async () => {
     setIsLoading(true);
     try {
-      const [fetchedProperties, fetchedUsers] = await Promise.all([
-        getProperties(),
-        getUsers()
-      ]);
+      const fetchedProperties = await getProperties();
       setProperties(fetchedProperties);
-      setUsers(fetchedUsers);
     } catch (error) {
       console.error("Failed to fetch properties:", error);
       toast({
         variant: "destructive",
-        title: "Erro ao Carregar Dados",
-        description: "Não foi possível buscar os imóveis ou usuários.",
+        title: "Erro ao Carregar Imóveis",
+        description: "Não foi possível buscar os imóveis.",
       });
     } finally {
       setIsLoading(false);
@@ -193,11 +201,13 @@ export default function PropertiesPage() {
 
   const handleAddProperty = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!currentUser) {
+        toast({ variant: 'destructive', title: 'Erro', description: 'Você precisa estar logado para adicionar um imóvel.' });
+        return;
+    }
     
     const formData = new FormData(event.currentTarget);
-    if (currentUser) {
-        formData.append('currentUser', JSON.stringify(currentUser));
-    }
+    formData.append('currentUser', JSON.stringify(currentUser));
     if (selectedFile) {
         formData.append('image', selectedFile, selectedFile.name);
     }
@@ -243,7 +253,6 @@ export default function PropertiesPage() {
         if (selectedFile) {
             formData.append('image', selectedFile, selectedFile.name);
         } else if (imagePreview) {
-            // Se não há arquivo novo mas há um preview (que pode ser a URL existente ou placeholder), envie a URL
             formData.append('imageUrl', imagePreview);
         }
         
@@ -795,4 +804,3 @@ export default function PropertiesPage() {
     </div>
   );
 }
-

@@ -66,3 +66,4 @@ export async function getReportInsights(salesData: string, captureData: string, 
         return { success: false, error: 'Falha ao gerar análise de relatório devido a um erro no servidor.' };
     }
 }
+
