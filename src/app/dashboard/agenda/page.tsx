@@ -278,54 +278,55 @@ export default function AgendaPage() {
                             </TabsList>
                         </Tabs>
                         
-                        <div className="flex justify-center">
-                             {isLoading ? (
-                                <Skeleton className="w-full h-[300px]" />
-                            ) : (
-                                <Calendar
-                                    mode="single"
-                                    selected={selectedDate}
-                                    onSelect={setSelectedDate}
-                                    className="rounded-md w-full"
-                                    locale={ptBR}
-                                    modifiers={{
-                                        events: events.filter(e => e.type === activeTab).map(e => new Date(e.date as any))
-                                    }}
-                                    modifiersStyles={{
-                                       events: {
-                                            color: 'white',
-                                            backgroundColor: getEventTypeLabel(activeTab).className,
-                                        }
-                                    }}
-                                />
-                            )}
-                        </div>
-
-                        <Separator />
-                        
-                        <div>
-                            <h2 className="text-lg font-semibold mb-4">
-                                {selectedDate ? `Compromissos para ${selectedDate.toLocaleDateString('pt-BR', { timeZone: 'UTC' })}` : 'Selecione uma data'}
-                            </h2>
-                            <div className="space-y-4">
-                                {selectedDayEvents.length > 0 ? (
-                                    selectedDayEvents.map(event => (
-                                        <div 
-                                            key={event.id}
-                                            onClick={() => handleOpenEditDialog(event)}
-                                            className="p-3 rounded-lg border bg-card shadow-sm transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg cursor-pointer"
-                                        >
-                                            <div className="flex items-center justify-between mb-1">
-                                                <h3 className="font-semibold">{event.title}</h3>
-                                                <Badge style={{ backgroundColor: getEventTypeLabel(event.type).className }} className="text-white">{getEventTypeLabel(event.type).label}</Badge>
-                                            </div>
-                                            <p className="text-sm text-muted-foreground">{event.time}</p>
-                                            <p className="text-sm mt-2 truncate">{event.description}</p>
-                                        </div>
-                                    ))
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="flex justify-center">
+                                {isLoading ? (
+                                    <Skeleton className="w-full h-[300px]" />
                                 ) : (
-                                    <p className="text-sm text-muted-foreground text-center py-8">Nenhum evento para esta data nesta agenda.</p>
+                                    <Calendar
+                                        mode="single"
+                                        selected={selectedDate}
+                                        onSelect={setSelectedDate}
+                                        className="rounded-md w-full border"
+                                        locale={ptBR}
+                                        modifiers={{
+                                            events: events.filter(e => e.type === activeTab).map(e => new Date(e.date as any))
+                                        }}
+                                        modifiersStyles={{
+                                        events: {
+                                                color: 'white',
+                                                backgroundColor: getEventTypeLabel(activeTab).className,
+                                            }
+                                        }}
+                                    />
                                 )}
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-semibold mb-4">
+                                    {selectedDate ? `Compromissos para ${selectedDate.toLocaleDateString('pt-BR', { timeZone: 'UTC' })}` : 'Selecione uma data'}
+                                </h2>
+                                <div className="space-y-4 max-h-[300px] overflow-y-auto pr-4">
+                                    {selectedDayEvents.length > 0 ? (
+                                        selectedDayEvents.map(event => (
+                                            <div 
+                                                key={event.id}
+                                                onClick={() => handleOpenEditDialog(event)}
+                                                className="p-3 rounded-lg border bg-card shadow-sm transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg cursor-pointer"
+                                            >
+                                                <div className="flex items-center justify-between mb-1">
+                                                    <h3 className="font-semibold">{event.title}</h3>
+                                                    <Badge style={{ backgroundColor: getEventTypeLabel(event.type).className }} className="text-white">{getEventTypeLabel(event.type).label}</Badge>
+                                                </div>
+                                                <p className="text-sm text-muted-foreground">{event.time}</p>
+                                                <p className="text-sm mt-2 truncate">{event.description}</p>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="flex flex-col items-center justify-center h-full text-sm text-muted-foreground text-center py-8">
+                                            <p>Nenhum evento para esta data nesta agenda.</p>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </div>
