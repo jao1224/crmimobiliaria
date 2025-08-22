@@ -245,7 +245,6 @@ export default function PropertiesPage() {
     }
     
     setIsSaving(true);
-
     try {
         const formData = new FormData(event.currentTarget);
         formData.append('id', editingProperty.id);
