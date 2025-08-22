@@ -538,7 +538,7 @@ export default function CrmPage() {
                                         ))
                                     ) : clients.length > 0 ? (
                                         clients.map(client => (
-                                            <TableRow key={client.id} className={cn("transition-all duration-200")}>
+                                            <TableRow key={client.id} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
                                                 <TableCell className="font-medium">{client.name}</TableCell>
                                                 <TableCell className="hidden sm:table-cell">{client.email}</TableCell>
                                                 <TableCell className="hidden md:table-cell">{client.phone}</TableCell>
