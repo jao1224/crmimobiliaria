@@ -277,13 +277,13 @@ export default function FinancePage() {
                                     <DialogTrigger asChild>
                                         <Button><PlusCircle className="mr-2 h-4 w-4" />Lançar Comissão</Button>
                                     </DialogTrigger>
-                                    <DialogContent className="sm:max-w-2xl">
+                                    <DialogContent className="sm:max-w-3xl">
                                         <DialogHeader>
                                             <DialogTitle>Lançar Nova Comissão</DialogTitle>
                                             <DialogDescription>Preencha os detalhes para registrar uma nova comissão de um negócio concluído.</DialogDescription>
                                         </DialogHeader>
                                         <form onSubmit={handleAddCommission} key={selectedNegotiation?.id}>
-                                            <div className="grid gap-4 py-4">
+                                            <div className="space-y-4 py-4">
                                                 <div className="space-y-2">
                                                     <Label htmlFor="negotiationId">Cód. do Processo</Label>
                                                     <Select name="negotiationId" required onValueChange={handleNegotiationSelect}>
@@ -291,14 +291,14 @@ export default function FinancePage() {
                                                         <SelectContent>
                                                             {negotiations.map(n => (
                                                                 <SelectItem key={n.id} value={n.id}>
-                                                                    {n.property} ({n.id.toUpperCase()})
+                                                                    {n.property} ({n.id.toUpperCase().substring(0,6)})
                                                                 </SelectItem>
                                                             ))}
                                                         </SelectContent>
                                                     </Select>
                                                 </div>
                                                 
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                                      <div className="space-y-2">
                                                         <Label>Valor do Imóvel</Label>
                                                         <Input value={selectedNegotiation ? formatCurrency(selectedNegotiation.value) : ''} readOnly placeholder="Selecione um processo"/>
@@ -307,9 +307,10 @@ export default function FinancePage() {
                                                         <Label htmlFor="clientSignal">Sinal do Cliente (R$)</Label>
                                                         <Input id="clientSignal" name="clientSignal" type="number" step="0.01" min="0" placeholder="Opcional" />
                                                     </div>
-                                                </div>
-
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="managerName">Gerente</Label>
+                                                        <Input id="managerName" name="managerName" placeholder="Nome do gerente (opcional)" />
+                                                    </div>
                                                     <div className="space-y-2">
                                                         <Label>Captador</Label>
                                                         <Input value={selectedNegotiation?.realtor || ''} readOnly placeholder="Selecione um processo" />
@@ -318,20 +319,16 @@ export default function FinancePage() {
                                                         <Label>Vendedor</Label>
                                                         <Input value={selectedNegotiation?.salesperson || ''} readOnly placeholder="Selecione um processo" />
                                                     </div>
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="managerName">Gerente</Label>
-                                                        <Input id="managerName" name="managerName" placeholder="Nome do gerente (opcional)" />
-                                                    </div>
                                                 </div>
                                                 
-                                                <div className="border-t pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div className="border-t pt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                                      <div className="space-y-2">
                                                         <Label htmlFor="commissionRate">Taxa de Comissão (%)</Label>
                                                         <Input id="commissionRate" name="commissionRate" type="number" step="0.1" min="0" required defaultValue={selectedNegotiation ? 5 : ''}/>
                                                     </div>
                                                     <div className="space-y-2">
                                                         <Label htmlFor="commissionValue">Valor da Comissão (R$)</Label>
-                                                        <Input id="commissionValue" name="commissionValue" type="number" step="0.01" min="0" required defaultValue={selectedNegotiation ? (selectedNegotiation.value * 0.05).toFixed(2) : ''}/>
+                                                        <Input id="commissionValue" name="commissionValue" type="number" step="0.01" min="0.01" required defaultValue={selectedNegotiation ? (selectedNegotiation.value * 0.05).toFixed(2) : ''}/>
                                                     </div>
                                                     <div className="space-y-2">
                                                         <Label htmlFor="paymentDate">Data de Pagamento</Label>
