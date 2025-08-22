@@ -41,10 +41,10 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
-import { getProperties, deleteProperty, propertyTypes, type Property, type PropertyType, getUsers, type User, updateProperty as updatePropertyInDb } from "@/lib/data";
+import { getProperties, deleteProperty, propertyTypes, type Property, type PropertyType, getUsers, type User } from "@/lib/data";
 import { addProperty as addPropertyAction, updateProperty as updatePropertyAction } from "@/lib/actions";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { auth, storage, db } from "@/lib/firebase";
+import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
 import { ProfileContext } from "@/contexts/ProfileContext";
 
