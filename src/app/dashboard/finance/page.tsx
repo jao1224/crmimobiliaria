@@ -353,6 +353,7 @@ export default function FinancePage() {
                                                 </div>
                                             </div>
                                             <DialogFooter>
+                                                <Button type="button" variant="outline" onClick={() => setCommissionDialogOpen(false)}>Cancelar</Button>
                                                 <Button type="submit">Salvar Comissão</Button>
                                             </DialogFooter>
                                         </form>
@@ -494,6 +495,7 @@ export default function FinancePage() {
                                             </div>
                                         </div>
                                         <DialogFooter>
+                                            <Button type="button" variant="outline" onClick={() => setPaymentDialogOpen(false)}>Cancelar</Button>
                                             <Button type="submit">Lançar Pagamento</Button>
                                         </DialogFooter>
                                     </form>
@@ -577,6 +579,7 @@ export default function FinancePage() {
                                             </div>
                                         </div>
                                         <DialogFooter>
+                                            <Button type="button" variant="outline" onClick={() => setExpenseDialogOpen(false)}>Cancelar</Button>
                                             <Button type="submit">Lançar Despesa</Button>
                                         </DialogFooter>
                                     </form>
