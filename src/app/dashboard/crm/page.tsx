@@ -23,7 +23,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { addClient, addDeal, addLead, getClients, getDeals, getLeads, convertLeadToClient, deleteClient, type Client, type Deal, type Lead } from "@/lib/crm-data";
+import { addClient, addLead, getClients, getLeads, convertLeadToClient, deleteClient, type Client, type Lead } from "@/lib/crm-data";
 import { getFinancingProcesses, getNegotiations, type FinancingProcess, type Negotiation } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -34,7 +34,7 @@ import { onAuthStateChanged, type User } from "firebase/auth";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-type CrmTab = "leads" | "deals" | "clients";
+type CrmTab = "leads" | "clients";
 const formatCurrency = (amount: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount);
 
 
@@ -43,11 +43,9 @@ export default function CrmPage() {
     const [currentUser, setCurrentUser] = useState<User | null>(null);
 
     const [leads, setLeads] = useState<Lead[]>([]);
-    const [deals, setDeals] = useState<Deal[]>([]);
     const [clients, setClients] = useState<Client[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isLeadDialogOpen, setLeadDialogOpen] = useState(false);
-    const [isDealDialogOpen, setDealDialogOpen] = useState(false);
     const [isClientDialogOpen, setClientDialogOpen] = useState(false);
     const { toast } = useToast();
     
@@ -79,9 +77,8 @@ export default function CrmPage() {
     const refreshData = async () => {
         setIsLoading(true);
         try {
-            const [leadsData, dealsData, clientsData] = await Promise.all([
+            const [leadsData, clientsData] = await Promise.all([
                 getLeads(),
-                getDeals(),
                 getClients(),
             ]);
 
@@ -89,17 +86,13 @@ export default function CrmPage() {
             
             if (canSeeAll || !currentUser?.displayName) {
                 setLeads(leadsData);
-                setDeals(dealsData);
                 setClients(clientsData);
             } else {
                 // Filtra para mostrar apenas os itens atribuídos ao usuário logado
                 const myLeads = leadsData.filter(lead => lead.assignedTo === currentUser.displayName);
                 const myClients = clientsData.filter(client => client.assignedTo === currentUser.displayName);
-                // Para negócios, a lógica pode ser mais complexa. Por enquanto, mantemos todos visíveis ou filtramos por cliente.
-                const myDeals = dealsData.filter(deal => myClients.some(c => c.name === deal.client));
-
+                
                 setLeads(myLeads);
-                setDeals(myDeals);
                 setClients(myClients);
             }
 
@@ -197,30 +190,6 @@ export default function CrmPage() {
         }
     };
     
-    // Simula a adição de um novo negócio
-    const handleAddDeal = async (event: React.FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        const form = event.currentTarget;
-        const formData = new FormData(form);
-        const newDealData = {
-            property: formData.get("property") as string,
-            client: formData.get("client") as string,
-            stage: "Proposta Enviada",
-            value: Number(formData.get("value")),
-            closeDate: formData.get("closeDate") as string,
-        };
-        
-        try {
-            await addDeal(newDealData);
-            await refreshData();
-            toast({ title: "Sucesso!", description: "Negócio adicionado com sucesso." });
-            form.reset();
-            setDealDialogOpen(false);
-        } catch (error) {
-            toast({ variant: "destructive", title: "Erro", description: "Não foi possível adicionar o negócio." });
-        }
-    };
-
     // Simula a conversão de lead em cliente
     const handleConvertLeadToClient = async (lead: Lead) => {
         try {
@@ -286,32 +255,6 @@ export default function CrmPage() {
                         </DialogContent>
                     </Dialog>
                 );
-            case 'deals':
-                return (
-                    <Dialog open={isDealDialogOpen} onOpenChange={setDealDialogOpen}>
-                        <DialogTrigger asChild>
-                             <Button><Handshake className="mr-2 h-4 w-4" /> Adicionar Negócio</Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>Criar Novo Negócio</DialogTitle>
-                                <DialogDescription>Preencha os detalhes para registrar um novo negócio.</DialogDescription>
-                            </DialogHeader>
-                            <form onSubmit={handleAddDeal}>
-                                <div className="grid gap-4 py-4">
-                                     <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="property" className="text-right">Imóvel</Label><Input id="property" name="property" className="col-span-3" required /></div>
-                                     <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="client" className="text-right">Cliente</Label><Input id="client" name="client" className="col-span-3" required /></div>
-                                     <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="value" className="text-right">Valor</Label><Input id="value" name="value" type="number" className="col-span-3" required /></div>
-                                    <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="closeDate" className="text-right">Data Estimada</Label><Input id="closeDate" name="closeDate" type="date" className="col-span-3" required /></div>
-                                </div>
-                                <DialogFooter>
-                                    <Button type="button" variant="outline" onClick={() => setDealDialogOpen(false)}>Cancelar</Button>
-                                    <Button type="submit">Salvar Negócio</Button>
-                                </DialogFooter>
-                            </form>
-                        </DialogContent>
-                    </Dialog>
-                );
             case 'clients':
                  return (
                     <Dialog open={isClientDialogOpen} onOpenChange={setClientDialogOpen}>
@@ -358,7 +301,6 @@ export default function CrmPage() {
             <Tabs defaultValue="leads" onValueChange={(value) => setActiveTab(value as CrmTab)}>
                 <TabsList>
                     <TabsTrigger value="leads">Leads</TabsTrigger>
-                    <TabsTrigger value="deals">Negócios em Andamento</TabsTrigger>
                     <TabsTrigger value="clients">Clientes</TabsTrigger>
                 </TabsList>
                 <TabsContent value="leads">
@@ -413,50 +355,6 @@ export default function CrmPage() {
                                     ) : (
                                         <TableRow>
                                             <TableCell colSpan={7} className="h-24 text-center">Nenhum lead encontrado.</TableCell>
-                                        </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-                <TabsContent value="deals">
-                <Card>
-                        <CardHeader>
-                            <CardTitle>Negócios em Andamento</CardTitle>
-                            <CardDescription>Negociações e processos de vendas ativos.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Imóvel</TableHead>
-                                        <TableHead>Cliente</TableHead>
-                                        <TableHead>Fase</TableHead>
-                                        <TableHead>Valor</TableHead>
-                                        <TableHead>Data Estimada</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                     {isLoading ? (
-                                        Array.from({ length: 1 }).map((_, i) => (
-                                            <TableRow key={i}>
-                                                <TableCell colSpan={5}><Skeleton className="h-8 w-full" /></TableCell>
-                                            </TableRow>
-                                        ))
-                                    ) : deals.length > 0 ? (
-                                        deals.map(deal => (
-                                            <TableRow key={deal.id} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
-                                                <TableCell className="font-medium">{deal.property}</TableCell>
-                                                <TableCell>{deal.client}</TableCell>
-                                                <TableCell><Badge variant="outline">{deal.stage}</Badge></TableCell>
-                                                <TableCell>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(deal.value)}</TableCell>
-                                                <TableCell>{new Date(deal.closeDate).toLocaleDateString('pt-BR', {timeZone: 'UTC'})}</TableCell>
-                                            </TableRow>
-                                        ))
-                                     ) : (
-                                        <TableRow>
-                                            <TableCell colSpan={5} className="h-24 text-center">Nenhum negócio em andamento.</TableCell>
                                         </TableRow>
                                     )}
                                 </TableBody>

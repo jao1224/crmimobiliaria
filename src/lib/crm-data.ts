@@ -15,15 +15,6 @@ export type Lead = {
     assignedTo: string;
 };
 
-export type Deal = {
-    id: string;
-    property: string;
-    client: string;
-    stage: string;
-    value: number;
-    closeDate: string;
-};
-
 export type Client = {
     id: string;
     name: string;
@@ -47,12 +38,6 @@ export const getLeads = async (): Promise<Lead[]> => {
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Lead));
 };
 
-export const getDeals = async (): Promise<Deal[]> => {
-    const dealsCollection = collection(db, 'deals');
-    const snapshot = await getDocs(dealsCollection);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Deal));
-};
-
 export const getClients = async (): Promise<Client[]> => {
     const clientsCollection = collection(db, 'clients');
     const snapshot = await getDocs(clientsCollection);
@@ -67,11 +52,6 @@ export const addLead = async (newLead: Omit<Lead, 'id'>): Promise<string> => {
         description: `${newLead.name} foi adicionado como um novo lead de ${newLead.source}.`,
     });
 
-    return docRef.id;
-};
-
-export const addDeal = async (newDeal: Omit<Deal, 'id'>): Promise<string> => {
-    const docRef = await addDoc(collection(db, 'deals'), newDeal);
     return docRef.id;
 };
 
