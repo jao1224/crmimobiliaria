@@ -41,7 +41,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
-import { getProperties, addProperty, updateProperty, deleteProperty, propertyTypes, type Property, type PropertyType, getUsers, type User } from "@/lib/data";
+import { getProperties, deleteProperty, propertyTypes, type Property, type PropertyType, getUsers, type User, updateProperty } from "@/lib/data";
+import { addProperty as addPropertyAction } from "@/lib/actions";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { auth, storage } from "@/lib/firebase";
 import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
@@ -193,40 +194,24 @@ export default function PropertiesPage() {
     event.preventDefault();
     setIsSaving(true);
     
-    if (!currentUser) {
-      toast({
-        variant: 'destructive',
-        title: 'Erro de Autenticação',
-        description: 'Você precisa estar logado para adicionar um imóvel.',
-      });
-      setIsSaving(false);
-      return;
-    }
-    
     try {
-      const formData = new FormData(event.currentTarget);
-      const newPropertyData = {
-        name: formData.get('name') as string,
-        address: formData.get('address') as string,
-        status: 'Disponível',
-        price: Number(formData.get('price')),
-        commission: Number(formData.get('commission')),
-        imageHint: 'novo imovel',
-        description: formData.get('description') as string,
-        ownerInfo: formData.get('owner') as string,
-        type: formData.get('type') as PropertyType,
-      };
+        const formData = new FormData(event.currentTarget);
+        const result = await addPropertyAction(formData);
 
-      await addProperty(newPropertyData, selectedFile, currentUser);
-      await refreshProperties();
-      toast({title: 'Sucesso!', description: 'Imóvel adicionado com sucesso.'});
-      setPropertyDialogOpen(false);
-    } catch (error) {
+        if (result.success) {
+            await refreshProperties();
+            toast({title: 'Sucesso!', description: 'Imóvel adicionado com sucesso.'});
+            setPropertyDialogOpen(false);
+        } else {
+            throw new Error(result.error);
+        }
+
+    } catch (error: any) {
       console.error('Error adding property:', error);
       toast({
         variant: 'destructive',
         title: 'Erro ao Salvar',
-        description: 'Não foi possível adicionar o imóvel. Verifique o console para mais detalhes.',
+        description: error.message || 'Não foi possível adicionar o imóvel. Verifique o console para mais detalhes.',
       });
     } finally {
       setIsSaving(false);

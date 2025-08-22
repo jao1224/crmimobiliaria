@@ -1,5 +1,6 @@
 
 
+
 import { db, storage } from './firebase';
 import { collection, getDocs, addDoc, doc, updateDoc, writeBatch, serverTimestamp, query, orderBy, limit, where, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -344,7 +345,7 @@ export const addProperty = async (
     
   let imageUrl = 'https://placehold.co/600x400.png';
   
-  if (file) {
+  if (file && file.size > 0) {
       try {
         const sanitizedName = sanitizeFileName(file.name);
         const storageRef = ref(storage, `properties/${Date.now()}_${sanitizedName}`);
@@ -1014,6 +1015,7 @@ export const updateActivityStatus = async (activityId: string, newStatus: Activi
     
 
     
+
 
 
 

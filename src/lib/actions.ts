@@ -1,9 +1,42 @@
 
+
 'use server';
 
 import { matchProperties as matchPropertiesFlow, type MatchPropertiesInput } from '@/ai/flows/property-matching';
 import { getReportInsights as getReportInsightsFlow, type ReportInsightsInput, type ReportInsightsOutput } from '@/ai/flows/reporting-insights';
-import { getProperties } from './data';
+import { getProperties, addProperty as addPropertyToDb, type Property } from './data';
+import { auth } from '@/lib/firebase';
+
+export async function addProperty(formData: FormData) {
+    try {
+        const { currentUser } = auth;
+        if (!currentUser) {
+            return { success: false, error: 'Usuário não autenticado.' };
+        }
+
+        const newPropertyData: Omit<Property, 'id' | 'imageUrl' | 'displayCode' | 'capturedById' | 'capturedBy' | 'price' | 'commission'> & { price: number; commission: number } = {
+            name: formData.get('name') as string,
+            address: formData.get('address') as string,
+            status: 'Disponível',
+            price: Number(formData.get('price')),
+            commission: Number(formData.get('commission')),
+            imageHint: 'novo imovel',
+            description: formData.get('description') as string,
+            ownerInfo: formData.get('owner') as string,
+            type: formData.get('type') as Property['type'],
+        };
+        
+        const file = formData.get('image') as File | null;
+
+        await addPropertyToDb(newPropertyData, file, currentUser);
+
+        return { success: true };
+    } catch (error: any) {
+        console.error('Erro na Server Action addProperty:', error);
+        return { success: false, error: error.message || 'Falha ao adicionar imóvel.' };
+    }
+}
+
 
 export async function findMatchingProperties(clientRequirements: string) {
   try {
