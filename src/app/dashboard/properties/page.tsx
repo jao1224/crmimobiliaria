@@ -47,7 +47,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { auth, storage, db } from "@/lib/firebase";
 import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
 import { ProfileContext } from "@/contexts/ProfileContext";
-import { collection } from "firebase/firestore";
 
 
 export default function PropertiesPage() {
@@ -205,14 +204,14 @@ export default function PropertiesPage() {
         return;
     }
     
-    const formData = new FormData(event.currentTarget);
-    formData.append('currentUser', JSON.stringify(currentUser));
-    if (selectedFile) {
-        formData.append('image', selectedFile, selectedFile.name);
-    }
-
     setIsSaving(true);
     try {
+        const formData = new FormData(event.currentTarget);
+        formData.append('currentUser', JSON.stringify(currentUser));
+        if (selectedFile) {
+            formData.append('image', selectedFile, selectedFile.name);
+        }
+
         const result = await addPropertyAction(formData);
 
         if (result.success) {
@@ -238,8 +237,8 @@ export default function PropertiesPage() {
 const handleUpdateProperty = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     
-    if (!editingProperty || !currentUser) {
-        toast({ variant: 'destructive', title: 'Erro', description: 'Imóvel ou usuário não encontrado para edição.' });
+    if (!editingProperty) {
+        toast({ variant: 'destructive', title: 'Erro', description: 'Nenhum imóvel selecionado para edição.' });
         return;
     }
     
@@ -251,7 +250,8 @@ const handleUpdateProperty = async (event: React.FormEvent<HTMLFormElement>) => 
         if (selectedFile) {
             formData.append('image', selectedFile, selectedFile.name);
         } else if (imagePreview) {
-            // Se não houver novo arquivo, mas houver preview (imagem existente), passe a URL
+            // Se não houver um novo arquivo, mas houver uma imagem de preview (a existente),
+            // passe a URL para que o backend saiba que não deve excluí-la.
             formData.append('imageUrl', imagePreview);
         }
         
