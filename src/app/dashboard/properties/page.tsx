@@ -82,6 +82,9 @@ export default function PropertiesPage() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
         setCurrentUser(user);
+        if (user) {
+          fetchTeamData();
+        }
     });
     return () => unsubscribe();
   }, []);
@@ -111,6 +114,14 @@ export default function PropertiesPage() {
     } finally {
       setIsLoading(false);
     }
+  };
+  
+  const fetchTeamData = async () => {
+        const usersSnapshot = await getDocs(collection(db, "users"));
+        setTeamMembers(usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeamMember)));
+
+        const teamsSnapshot = await getDocs(collection(db, "teams"));
+        setTeams(teamsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team)));
   };
 
 
@@ -229,37 +240,29 @@ export default function PropertiesPage() {
 
   const handleUpdateProperty = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setIsSaving(true);
-
+    
     if (!editingProperty || !currentUser) {
         toast({ variant: 'destructive', title: 'Erro', description: 'Imóvel ou usuário não encontrado para edição.' });
-        setIsSaving(false);
         return;
     }
+    
+    setIsSaving(true);
 
     try {
         const formData = new FormData(event.currentTarget);
-        
-        // Adiciona campos que não estão no formulário ou que precisam de tratamento
         formData.append('id', editingProperty.id);
-        formData.append('type', editType || editingProperty.type);
-        formData.append('status', editStatus || editingProperty.status);
-        
+
         if (selectedFile) {
             formData.append('image', selectedFile, selectedFile.name);
-        } else if (imagePreview && imagePreview.startsWith('https://placehold.co')) {
-            formData.append('imageUrl', imagePreview); // Indica para usar a imagem de placeholder
-        } else if (editingProperty.imageUrl) {
-            formData.append('imageUrl', editingProperty.imageUrl); // Mantém a imagem existente
+        } else {
+            formData.append('imageUrl', editingProperty.imageUrl); // Mantém a imagem existente se nenhuma nova for selecionada
         }
         
-        // A função de backend `updatePropertyInDb` agora precisa lidar com FormData
         await updatePropertyInDb(formData);
         
         await refreshProperties();
         toast({ title: "Sucesso!", description: "Imóvel atualizado com sucesso." });
         setEditDialogOpen(false);
-        setEditingProperty(null);
     } catch (error) {
         console.error('Error updating property:', error);
         toast({ variant: "destructive", title: "Erro ao Atualizar", description: "Não foi possível atualizar o imóvel. Verifique o console." });
@@ -326,6 +329,7 @@ export default function PropertiesPage() {
         setEditCapturedBy("");
         setEditType("");
         setEditStatus("");
+        setEditingProperty(null);
     }
   }, [isPropertyDialogOpen, isEditDialogOpen]);
 
@@ -802,3 +806,4 @@ export default function PropertiesPage() {
     </div>
   );
 }
+
