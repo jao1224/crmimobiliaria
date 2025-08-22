@@ -200,6 +200,10 @@ export default function PropertiesPage() {
             formData.append('currentUser', JSON.stringify(currentUser));
         }
 
+        if (selectedFile) {
+            formData.append('image', selectedFile);
+        }
+
         const result = await addPropertyAction(formData);
 
         if (result.success) {
