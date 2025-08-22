@@ -1,6 +1,6 @@
 
 import { db } from './firebase';
-import { collection, getDocs, addDoc, doc, setDoc, deleteDoc, writeBatch, query, where } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, setDoc, deleteDoc, writeBatch, query, where, getDoc } from 'firebase/firestore';
 import { addNotification } from './data';
 import { type Property } from './data';
 
@@ -154,5 +154,3 @@ export const deleteClient = async (clientId: string): Promise<void> => {
     // 4. Executar o batch
     await batch.commit();
 };
-
-    
