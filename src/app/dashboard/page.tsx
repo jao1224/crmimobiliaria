@@ -98,12 +98,17 @@ export default function DashboardPage() {
 
   const todaysEvents = useMemo(() => {
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const todayYear = today.getUTCFullYear();
+    const todayMonth = today.getUTCMonth();
+    const todayDate = today.getUTCDate();
 
     return events.filter(event => {
-        const eventDate = new Date(event.date as any);
-        eventDate.setHours(0, 0, 0, 0);
-        return eventDate.getTime() === today.getTime();
+        const eventDate = new Date(event.date as any); // event.date is already a Date object
+        const eventYear = eventDate.getUTCFullYear();
+        const eventMonth = eventDate.getUTCMonth();
+        const eventDay = eventDate.getUTCDate();
+        
+        return eventYear === todayYear && eventMonth === todayMonth && eventDay === todayDate;
     }).sort((a,b) => a.time.localeCompare(b.time));
   }, [events]);
 
