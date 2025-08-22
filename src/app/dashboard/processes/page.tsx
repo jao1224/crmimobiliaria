@@ -22,7 +22,7 @@ import { onAuthStateChanged, type User } from "firebase/auth";
 
 const getStatusVariant = (status: ProcessStatus) => {
     switch (status) {
-        case 'Ativo': return 'success';
+        case 'Ativo': return 'default';
         case 'Suspenso': return 'warning';
         case 'Cancelado': return 'destructive';
         case 'Finalizado': return 'default';
