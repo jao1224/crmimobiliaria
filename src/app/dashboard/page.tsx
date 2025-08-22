@@ -274,7 +274,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="space-y-2">
                       <Label>Tipo de Agenda</Label>
-                      <p><Badge style={{ backgroundColor: getEventTypeLabel(selectedEvent.type).className }} className="text-white text-xs">{getEventTypeLabel(selectedEvent.type).label}</Badge></p>
+                      <div><Badge style={{ backgroundColor: getEventTypeLabel(selectedEvent.type).className }} className="text-white text-xs">{getEventTypeLabel(selectedEvent.type).label}</Badge></div>
                   </div>
               </div>
               <div className="space-y-2">
