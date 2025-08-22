@@ -171,7 +171,7 @@ export default function ProcessesPage() {
                             <TableRow>
                                 <TableHead className="w-[100px]">Status</TableHead>
                                 <TableHead>Cód. Neg.</TableHead>
-                                <TableHead>Andamento</TableHead>
+                                <TableHead>Fase Atual</TableHead>
                                 <TableHead>Imóvel</TableHead>
                                 <TableHead>Vendedor</TableHead>
                                 <TableHead className="hidden md:table-cell">Captador</TableHead>
@@ -346,3 +346,5 @@ export default function ProcessesPage() {
         </div>
     );
 }
+
+    
