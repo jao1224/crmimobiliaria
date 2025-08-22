@@ -801,10 +801,29 @@ export const addNotification = async (notification: Omit<Notification, 'id' | 'c
 };
 
 export const getNotifications = async (): Promise<Notification[]> => {
-    const q = query(collection(db, 'notificacoes'), orderBy('createdAt', 'desc'), limit(10));
+    const q = query(collection(db, 'notificacoes'), orderBy('createdAt', 'desc'), limit(15));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
 };
+
+export const markNotificationsAsRead = async (): Promise<void> => {
+    const notificationsRef = collection(db, 'notificacoes');
+    const q = query(notificationsRef, where('read', '==', false));
+    
+    const querySnapshot = await getDocs(q);
+    
+    if (querySnapshot.empty) {
+        return;
+    }
+
+    const batch = writeBatch(db);
+    querySnapshot.forEach(docSnapshot => {
+        batch.update(docSnapshot.ref, { read: true });
+    });
+
+    await batch.commit();
+};
+
 
 export async function completeSaleAndGenerateCommission(negotiation: Negotiation, finalizationNote?: string) {
     if (negotiation.stage === 'Venda Concluída' || negotiation.stage === 'Aluguel Ativo') {
@@ -976,6 +995,7 @@ export const updateActivityStatus = async (activityId: string, newStatus: Activi
     
 
     
+
 
 
 
