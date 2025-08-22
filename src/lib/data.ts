@@ -302,6 +302,23 @@ export const propertyTypes: PropertyType[] = ['Lançamento', 'Revenda', 'Terreno
 
 // --- FUNÇÕES DE MANIPULAÇÃO DE DADOS (FIRESTORE) ---
 
+// Helper function to sanitize filenames
+const sanitizeFileName = (filename: string) => {
+  const fileExtension = filename.split('.').pop();
+  const nameWithoutExtension = filename.substring(0, filename.lastIndexOf('.'));
+  
+  const sanitized = nameWithoutExtension
+    .normalize("NFD") // Normalize to decompose combined characters
+    .replace(/[\u0300-\u036f]/g, "") // Remove diacritical marks
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '') // Remove non-alphanumeric, non-space, non-hyphen characters
+    .trim()
+    .replace(/\s+/g, '-'); // Replace spaces with hyphens
+    
+  return `${sanitized}.${fileExtension}`;
+};
+
+
 export const getUsers = async (): Promise<User[]> => {
     const snapshot = await getDocs(collection(db, 'users'));
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
@@ -329,7 +346,8 @@ export const addProperty = async (
   
   if (file) {
       try {
-        const storageRef = ref(storage, `properties/${Date.now()}_${file.name}`);
+        const sanitizedName = sanitizeFileName(file.name);
+        const storageRef = ref(storage, `properties/${Date.now()}_${sanitizedName}`);
         await uploadBytes(storageRef, file);
         imageUrl = await getDownloadURL(storageRef);
       } catch (error) {
@@ -359,7 +377,8 @@ export const updateProperty = async (id: string, data: Partial<Property>, file?:
     let updatedData = { ...data };
 
     if (file) {
-        const storageRef = ref(storage, `properties/${Date.now()}_${file.name}`);
+        const sanitizedName = sanitizeFileName(file.name);
+        const storageRef = ref(storage, `properties/${Date.now()}_${sanitizedName}`);
         await uploadBytes(storageRef, file);
         const newImageUrl = await getDownloadURL(storageRef);
         updatedData.imageUrl = newImageUrl;
@@ -995,6 +1014,7 @@ export const updateActivityStatus = async (activityId: string, newStatus: Activi
     
 
     
+
 
 
 
