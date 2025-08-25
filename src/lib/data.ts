@@ -899,7 +899,7 @@ export const getActivitiesForRealtor = async (realtorName: string): Promise<Acti
         if (itemStatus === 'Cancelado') {
             return 'Cancelado';
         }
-        if (itemStatus === 'Pendente') { // Exemplo, pode ser outro status
+        if (itemStatus === 'Pendente' || itemStatus === 'Em Negociação') { 
             return 'Pendente';
         }
         return 'Ativo';
@@ -933,7 +933,7 @@ export const getActivitiesForRealtor = async (realtorName: string): Promise<Acti
             type: 'negotiation',
             name: neg.property,
             value: neg.value,
-            status: 'Ativo', // O status da negociação é mais complexo, simplificando aqui
+            status: determineActivityStatus(neg.stage),
         });
     });
 
@@ -943,74 +943,43 @@ export const getActivitiesForRealtor = async (realtorName: string): Promise<Acti
 
 export const updateActivityStatus = async (activityId: string, newStatus: ActivityStatus): Promise<void> => {
     // Como a atividade é uma representação, precisamos atualizar o item original
-    // Primeiro, tentamos atualizar um documento na coleção 'negotiations'
-    const negotiationRef = doc(db, "negociacoes", activityId);
-    let updated = false;
-
-    try {
-        const negDoc = await getDoc(negotiationRef);
-        if (negDoc.exists()) {
-            const negData = negDoc.data() as Negotiation;
-            const statusMap: Record<ActivityStatus, Partial<Negotiation>> = {
-                'Ativo': { stage: 'Em Negociação' },
-                'Pendente': { stage: 'Em Negociação' }, // Mapear para um status de negociação
-                'Concluído': { stage: 'Venda Concluída' },
-                'Cancelado': { stage: 'Proposta Enviada' } // Mapear para um status de negociação
-            };
-            if(negData.processoId) {
-                await updateDoc(doc(db, 'processos', negData.processoId), { stage: newStatus === 'Concluído' ? 'Finalizado' : 'Em andamento' });
-            }
-            await updateDoc(negotiationRef, statusMap[newStatus]);
-            updated = true;
+    
+    // Helper para mapear ActivityStatus para os status específicos de cada coleção
+    const mapStatusForNegotiation = (status: ActivityStatus): Partial<Negotiation> => {
+        switch (status) {
+            case 'Ativo': return { stage: 'Em Negociação' };
+            case 'Pendente': return { stage: 'Proposta Enviada' };
+            case 'Concluído': return { stage: 'Venda Concluída' };
+            case 'Cancelado': return { contractStatus: 'Cancelado' }; // Exemplo
+            default: return {};
         }
-    } catch (e) {}
+    };
     
-    // Se não for uma negociação, tentamos atualizar um imóvel (captação)
-    if (!updated) {
-        const propertyRef = doc(db, "imoveis", activityId);
-        try {
-            const propDoc = await getDoc(propertyRef);
-            if (propDoc.exists()) {
-                 const statusMap: Record<ActivityStatus, string> = {
-                    'Ativo': 'Disponível',
-                    'Pendente': 'Em Negociação', // Exemplo
-                    'Concluído': 'Vendido',
-                    'Cancelado': 'Disponível' // Ou um status específico
-                }
-                await updateDoc(propertyRef, { status: statusMap[newStatus] });
-            }
-        } catch(e) {}
+    const mapStatusForProperty = (status: ActivityStatus): string => {
+        switch(status) {
+            case 'Ativo': return 'Disponível';
+            case 'Pendente': return 'Em Negociação';
+            case 'Concluído': return 'Vendido';
+            case 'Cancelado': return 'Disponível'; // Ou um status específico como 'Cancelado'
+            default: return 'Disponível';
+        }
+    };
+
+    const negotiationRef = doc(db, "negociacoes", activityId);
+    const negDoc = await getDoc(negotiationRef);
+    if (negDoc.exists()) {
+        const updateData = mapStatusForNegotiation(newStatus);
+        await updateDoc(negotiationRef, updateData);
+        return;
     }
+
+    const propertyRef = doc(db, "imoveis", activityId);
+    const propDoc = await getDoc(propertyRef);
+    if (propDoc.exists()) {
+        const newPropertyStatus = mapStatusForProperty(newStatus);
+        await updateDoc(propertyRef, { status: newPropertyStatus });
+        return;
+    }
+    
+    console.warn(`Activity with ID ${activityId} not found in 'negotiations' or 'imoveis'.`);
 };
-
-    
-
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
