@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, AlertCircle, CheckCircle, Hourglass } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { getProcessos, type Processo, type ProcessStatus, type ProcessStage, updateProcesso, addNotification } from "@/lib/data";
+import { getProcessos, type Processo, type ProcessStatus, type ProcessStage, updateProcesso, addNotification, getNegotiations, type Negotiation, completeSaleAndGenerateCommission } from "@/lib/data";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -43,6 +43,7 @@ export default function ProcessesPage() {
     const { activeProfile } = useContext(ProfileContext);
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [processes, setProcesses] = useState<Processo[]>([]);
+    const [negotiations, setNegotiations] = useState<Negotiation[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [selectedProcess, setSelectedProcess] = useState<Processo | null>(null);
     const [isPendencyModalOpen, setPendencyModalOpen] = useState(false);
@@ -61,15 +62,19 @@ export default function ProcessesPage() {
 
     useEffect(() => {
         if (currentUser !== undefined) {
-            refreshProcesses();
+            refreshData();
         }
     }, [currentUser]);
 
-    const refreshProcesses = async () => {
+    const refreshData = async () => {
         setIsLoading(true);
         try {
-            const data = await getProcessos();
-            setProcesses(data);
+            const [processesData, negotiationsData] = await Promise.all([
+                getProcessos(),
+                getNegotiations()
+            ]);
+            setProcesses(processesData);
+            setNegotiations(negotiationsData);
         } catch (error) {
             toast({ variant: 'destructive', title: "Erro", description: "Não foi possível carregar os processos."});
         } finally {
@@ -122,7 +127,7 @@ export default function ProcessesPage() {
                 title: "Pendência Registrada!",
                 description: `No processo do imóvel ${selectedProcess.propertyName} (${selectedProcess.propertyDisplayCode}) - Vendedor: ${selectedProcess.salespersonName}.`,
             });
-            await refreshProcesses();
+            await refreshData();
             toast({ title: "Pendência Registrada!", description: `Uma nova observação foi adicionada ao processo ${selectedProcess.negotiationId.toUpperCase()}.` });
         } catch (error) {
             toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível salvar a pendência.'});
@@ -133,20 +138,25 @@ export default function ProcessesPage() {
     const handleFinalizeProcess = async () => {
         if (!selectedProcess) return;
 
+        // Encontra a negociação correspondente
+        const negotiation = negotiations.find(n => n.id === selectedProcess.negotiationId);
+        if (!negotiation) {
+            toast({ variant: 'destructive', title: "Erro Crítico", description: "A negociação vinculada a este processo não foi encontrada." });
+            return;
+        }
+
         try {
-            await updateProcesso(selectedProcess.id, {
-                stage: 'Finalizado',
-                status: 'Finalizado',
-                observations: finalizationNote || "Processo finalizado manualmente."
-            });
-             await addNotification({
-                title: "Processo Finalizado!",
-                description: `O processo do imóvel ${selectedProcess.propertyName} (${selectedProcess.propertyDisplayCode}) foi concluído.`,
-            });
-            await refreshProcesses();
-            toast({ title: "Processo Finalizado!", description: "O processo foi marcado como finalizado." });
+            const { success, message } = await completeSaleAndGenerateCommission(negotiation, finalizationNote);
+            
+            if (success) {
+                await refreshData();
+                toast({ title: "Processo Finalizado!", description: message });
+            } else {
+                 toast({ variant: 'destructive', title: "Atenção", description: message });
+            }
+
         } catch(error) {
-            toast({ variant: "destructive", title: "Erro ao Finalizar", description: "Não foi possível finalizar o processo." });
+            toast({ variant: "destructive", title: "Erro ao Finalizar", description: "Não foi possível finalizar o processo e gerar comissões." });
         }
         
         setFinalizeModalOpen(false);
