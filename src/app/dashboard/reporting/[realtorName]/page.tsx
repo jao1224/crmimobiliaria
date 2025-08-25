@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { getActivitiesForRealtor, updateActivityStatus, Activity, ActivityStatus } from "@/lib/data";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,16 +11,6 @@ import { ArrowLeft, Target, Handshake } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-
-type Column = {
-    id: ActivityStatus;
-    title: string;
-    activityIds: string[];
-};
-
-type Columns = {
-    [key in ActivityStatus]: Column;
-};
 
 const formatUrlNameToRealtorName = (urlName: string) => {
     return urlName.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
@@ -36,16 +26,21 @@ const getStatusColor = (status: ActivityStatus) => {
     }
 }
 
+const statusConfig: { [key in ActivityStatus]: { title: string } } = {
+    'Ativo': { title: 'Ativo' },
+    'Pendente': { title: 'Pendente' },
+    'Concluído': { title: 'Concluído' },
+    'Cancelado': { title: 'Cancelado' },
+};
+
 export default function RealtorKanbanPage() {
     const router = useRouter();
     const params = useParams();
     const { toast } = useToast();
     const realtorName = params.realtorName ? formatUrlNameToRealtorName(params.realtorName as string) : "";
 
-    const [activities, setActivities] = useState<{[key: string]: Activity}>({});
-    const [columns, setColumns] = useState<Columns | null>(null);
+    const [activities, setActivities] = useState<Activity[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null);
 
     const loadData = async () => {
         if (!realtorName) return;
@@ -53,27 +48,7 @@ export default function RealtorKanbanPage() {
         setIsLoading(true);
         try {
             const fetchedActivities = await getActivitiesForRealtor(realtorName);
-            
-            const activitiesMap = fetchedActivities.reduce((acc, activity) => {
-                acc[activity.id] = activity;
-                return acc;
-            }, {} as {[key: string]: Activity});
-            setActivities(activitiesMap);
-
-            const initialColumns: Columns = {
-                'Ativo': { id: 'Ativo', title: 'Ativo', activityIds: [] },
-                'Pendente': { id: 'Pendente', title: 'Pendente', activityIds: [] },
-                'Concluído': { id: 'Concluído', title: 'Concluído', activityIds: [] },
-                'Cancelado': { id: 'Cancelado', title: 'Cancelado', activityIds: [] },
-            };
-
-            fetchedActivities.forEach(activity => {
-                if (initialColumns[activity.status]) {
-                    initialColumns[activity.status].activityIds.push(activity.id);
-                }
-            });
-
-            setColumns(initialColumns);
+            setActivities(fetchedActivities);
         } catch (error) {
             toast({
                 variant: 'destructive',
@@ -89,56 +64,53 @@ export default function RealtorKanbanPage() {
         loadData();
     }, [realtorName]);
 
-    const handleCardClick = (activityId: string) => {
-        // Se o card clicado já está selecionado, deseleciona. Senão, seleciona.
-        setSelectedActivityId(prevId => prevId === activityId ? null : activityId);
+    const activitiesByStatus = useMemo(() => {
+        const grouped: { [key in ActivityStatus]: Activity[] } = {
+            'Ativo': [], 'Pendente': [], 'Concluído': [], 'Cancelado': []
+        };
+        activities.forEach(activity => {
+            if (grouped[activity.status]) {
+                grouped[activity.status].push(activity);
+            }
+        });
+        return grouped;
+    }, [activities]);
+
+    const handleDragStart = (e: React.DragEvent<HTMLDivElement>, activityId: string) => {
+        e.dataTransfer.setData("activityId", activityId);
     };
 
-    const handleColumnClick = async (columnId: ActivityStatus) => {
-        if (!selectedActivityId || !columns) return;
+    const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault(); // Necessário para permitir o drop
+    };
 
-        const sourceColumn = Object.values(columns).find(col => col.activityIds.includes(selectedActivityId));
-        if (!sourceColumn || sourceColumn.id === columnId) {
-            // Não faz nada se a coluna de destino for a mesma ou se não encontrar a de origem
-            setSelectedActivityId(null); // Deseleciona o card
-            return;
-        }
+    const handleDrop = async (e: React.DragEvent<HTMLDivElement>, newStatus: ActivityStatus) => {
+        const activityId = e.dataTransfer.getData("activityId");
+        if (!activityId) return;
 
-        const destinationColumn = columns[columnId];
+        const originalActivities = [...activities]; // Cópia para rollback em caso de erro
 
         // --- Optimistic UI Update ---
-        const newColumns = { ...columns };
-
-        // Remove from source
-        const sourceActivityIds = [...sourceColumn.activityIds];
-        const activityIndex = sourceActivityIds.indexOf(selectedActivityId);
-        sourceActivityIds.splice(activityIndex, 1);
-        newColumns[sourceColumn.id] = { ...sourceColumn, activityIds: sourceActivityIds };
-
-        // Add to destination
-        const destActivityIds = [...destinationColumn.activityIds];
-        destActivityIds.push(selectedActivityId);
-        newColumns[destinationColumn.id] = { ...destinationColumn, activityIds: destActivityIds };
+        setActivities(prevActivities =>
+            prevActivities.map(act =>
+                act.id === activityId ? { ...act, status: newStatus } : act
+            )
+        );
         
-        setColumns(newColumns);
-        const movedActivityId = selectedActivityId;
-        setSelectedActivityId(null); // Deseleciona após mover
-
         // --- Persist change in the database ---
         try {
-            await updateActivityStatus(movedActivityId, columnId);
+            await updateActivityStatus(activityId, newStatus);
             toast({
                 title: "Status Atualizado!",
-                description: `Atividade movida para "${columnId}".`,
+                description: `Atividade movida para "${newStatus}".`,
             });
         } catch (error) {
             toast({
                 variant: 'destructive',
                 title: "Erro ao salvar",
-                description: "Não foi possível salvar a alteração. Por favor, atualize a página.",
+                description: "A alteração não pôde ser salva. Revertendo.",
             });
-            // Idealmente, reverteríamos o estado, mas recarregar os dados é mais simples aqui.
-            await loadData(); 
+            setActivities(originalActivities); // Reverte a UI em caso de falha
         }
     };
 
@@ -165,25 +137,28 @@ export default function RealtorKanbanPage() {
                 </Button>
                 <div>
                     <h1 className="text-2xl font-bold">Quadro de Atividades: {realtorName}</h1>
-                    <p className="text-muted-foreground">Clique em um card para selecionar e em uma coluna para mover.</p>
+                    <p className="text-muted-foreground">Arraste e solte os cards para alterar o status das atividades.</p>
                 </div>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start flex-1">
-                {columns && Object.values(columns).map(column => (
-                    <div key={column.id} onClick={() => handleColumnClick(column.id)} className="h-full">
-                        <Card className={cn("flex flex-col h-full transition-all duration-200", selectedActivityId && "cursor-pointer hover:bg-secondary/80")}>
+                {Object.entries(statusConfig).map(([status, config]) => (
+                    <div 
+                        key={status} 
+                        onDragOver={handleDragOver}
+                        onDrop={(e) => handleDrop(e, status as ActivityStatus)}
+                        className="h-full"
+                    >
+                        <Card className="flex flex-col h-full bg-secondary/50">
                             <CardHeader className="border-b">
                                 <CardTitle className="flex items-center gap-2 text-base">
-                                    <span className={cn("h-3 w-3 rounded-full", getStatusColor(column.id))}></span>
-                                    {column.title}
-                                    <Badge variant="secondary" className="ml-auto">{column.activityIds.length}</Badge>
+                                    <span className={cn("h-3 w-3 rounded-full", getStatusColor(status as ActivityStatus))}></span>
+                                    {config.title}
+                                    <Badge variant="secondary" className="ml-auto">{activitiesByStatus[status as ActivityStatus].length}</Badge>
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="p-2 space-y-2 flex-1 overflow-y-auto">
-                                {column.activityIds.map((activityId) => {
-                                    const activity = activities[activityId];
-                                    if (!activity) return null;
+                                {activitiesByStatus[status as ActivityStatus].map((activity) => {
                                     const isCapture = activity.type === 'capture';
                                     const Icon = isCapture ? Target : Handshake;
                                     const iconBg = isCapture ? 'bg-primary text-primary-foreground' : 'bg-success text-success-foreground';
@@ -191,14 +166,9 @@ export default function RealtorKanbanPage() {
                                     return (
                                         <div
                                             key={activity.id}
-                                            onClick={(e) => {
-                                                e.stopPropagation(); // Evita que o clique no card dispare o clique da coluna
-                                                handleCardClick(activity.id);
-                                            }}
-                                            className={cn(
-                                                "rounded-lg border bg-card p-3 shadow-sm cursor-pointer transition-all duration-200",
-                                                selectedActivityId === activity.id && "ring-2 ring-primary shadow-lg scale-105"
-                                            )}
+                                            draggable
+                                            onDragStart={(e) => handleDragStart(e, activity.id)}
+                                            className="rounded-lg border bg-card p-3 shadow-sm cursor-grab active:cursor-grabbing transition-shadow hover:shadow-md"
                                         >
                                             <div className="flex items-start justify-between">
                                                 <span className="text-xs font-semibold">{isCapture ? 'Captação' : 'Negociação'}</span>
@@ -219,3 +189,4 @@ export default function RealtorKanbanPage() {
         </div>
     );
 }
+
