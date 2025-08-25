@@ -75,6 +75,7 @@ export default function SettingsPage() {
     // Estados dos Filtros da Aba de Membros
     const [searchQuery, setSearchQuery] = useState("");
     const [teamFilter, setTeamFilter] = useState("all");
+    const [openTeamId, setOpenTeamId] = useState<string | null>(null);
 
 
     // Estado das Permissões
@@ -600,13 +601,13 @@ export default function SettingsPage() {
                                 <TableBody>
                                     {teams.length > 0 ? (
                                         teams.map((team) => (
-                                            <Collapsible as="tbody" key={team.id} className="w-full">
+                                           <React.Fragment key={team.id}>
                                                 <TableRow className="transition-all duration-200 hover:shadow-md">
                                                     <TableCell className="font-medium">
-                                                        <CollapsibleTrigger className="flex items-center gap-2 w-full text-left">
-                                                            <ChevronRight className="h-4 w-4 transition-transform duration-200 [&[data-state=open]]:rotate-90" />
+                                                        <button className="flex items-center gap-2 w-full text-left" onClick={() => setOpenTeamId(openTeamId === team.id ? null : team.id)}>
+                                                            <ChevronRight className={cn("h-4 w-4 transition-transform duration-200", openTeamId === team.id && "rotate-90")} />
                                                             {team.name}
-                                                        </CollapsibleTrigger>
+                                                        </button>
                                                     </TableCell>
                                                     <TableCell>{team.memberIds.length}</TableCell>
                                                     <TableCell className="text-right">
@@ -623,10 +624,10 @@ export default function SettingsPage() {
                                                         </DropdownMenu>
                                                     </TableCell>
                                                 </TableRow>
-                                                <CollapsibleContent asChild>
-                                                    <tr>
+                                                {openTeamId === team.id && (
+                                                     <tr className="bg-muted/50">
                                                         <td colSpan={3} className="p-0">
-                                                            <div className="bg-muted/50 p-4">
+                                                            <div className="p-4">
                                                                 {getMembersForTeam(team).length > 0 ? (
                                                                     <Table>
                                                                         <TableHeader>
@@ -652,8 +653,8 @@ export default function SettingsPage() {
                                                             </div>
                                                         </td>
                                                     </tr>
-                                                </CollapsibleContent>
-                                            </Collapsible>
+                                                )}
+                                           </React.Fragment>
                                         ))
                                     ) : (
                                         <TableRow><TableCell colSpan={3} className="text-center h-24">Nenhuma equipe encontrada.</TableCell></TableRow>
