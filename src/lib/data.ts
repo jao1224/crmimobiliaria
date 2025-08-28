@@ -890,23 +890,32 @@ export async function completeSaleAndGenerateCommission(negotiation: Negotiation
 
 export const getActivitiesForRealtor = async (realtorName: string): Promise<Activity[]> => {
     const allActivities: Activity[] = [];
+
+    // Primeiro, encontre o ID do usuário com base no nome
+    const usersQuery = query(collection(db, 'users'), where('name', '==', realtorName), limit(1));
+    const userSnapshot = await getDocs(usersQuery);
+    if (userSnapshot.empty) {
+        console.warn(`Nenhum usuário encontrado com o nome: ${realtorName}`);
+        return []; // Retorna vazio se o usuário não for encontrado
+    }
+    const realtorId = userSnapshot.docs[0].id;
     
     // Helper para determinar o status da atividade com base no status do imóvel/negociação
     const determineActivityStatus = (itemStatus: string): ActivityStatus => {
-        if (itemStatus === 'Vendido' || itemStatus === 'Alugado' || itemStatus === 'Finalizado') {
+        if (itemStatus === 'Vendido' || itemStatus === 'Alugado' || itemStatus === 'Finalizado' || itemStatus === 'Venda Concluída') {
             return 'Concluído';
         }
         if (itemStatus === 'Cancelado') {
             return 'Cancelado';
         }
-        if (itemStatus === 'Pendente' || itemStatus === 'Em Negociação') { 
+        if (itemStatus === 'Pendente' || itemStatus === 'Em Negociação' || itemStatus === 'Proposta Enviada') { 
             return 'Pendente';
         }
         return 'Ativo';
     };
 
-    // 1. Busca captações (imóveis capturados pelo corretor)
-    const capturesQuery = query(collection(db, 'imoveis'), where('capturedBy', '==', realtorName));
+    // 1. Busca captações (imóveis capturados pelo ID do corretor)
+    const capturesQuery = query(collection(db, 'imoveis'), where('capturedById', '==', realtorId));
     const capturesSnapshot = await getDocs(capturesQuery);
     capturesSnapshot.docs.forEach(doc => {
         const prop = { id: doc.id, ...doc.data() } as Property;
@@ -921,8 +930,8 @@ export const getActivitiesForRealtor = async (realtorName: string): Promise<Acti
         });
     });
 
-    // 2. Busca negociações (vendas realizadas pelo corretor)
-    const negotiationsQuery = query(collection(db, 'negociacoes'), where('salesperson', '==', realtorName));
+    // 2. Busca negociações (vendas realizadas pelo ID do corretor)
+    const negotiationsQuery = query(collection(db, 'negociacoes'), where('salespersonId', '==', realtorId));
     const negotiationsSnapshot = await getDocs(negotiationsQuery);
     negotiationsSnapshot.docs.forEach(doc => {
         const neg = { id: doc.id, ...doc.data() } as Negotiation;
