@@ -180,13 +180,13 @@ export default function ProcessesPage() {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead className="w-[100px]">Status</TableHead>
+                                <TableHead>Status</TableHead>
                                 <TableHead>Cód. Proc.</TableHead>
+                                <TableHead>Data Criação</TableHead>
                                 <TableHead>Fase Atual</TableHead>
                                 <TableHead>Imóvel</TableHead>
                                 <TableHead>Vendedor</TableHead>
                                 <TableHead className="hidden md:table-cell">Captador</TableHead>
-                                <TableHead className="hidden md:table-cell">Equipe</TableHead>
                                 <TableHead><span className="sr-only">Ações</span></TableHead>
                             </TableRow>
                         </TableHeader>
@@ -202,6 +202,9 @@ export default function ProcessesPage() {
                                     <TableRow key={process.id} onClick={() => handleOpenDetailModal(process)} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
                                         <TableCell><Badge variant={getStatusVariant(process.status)}>{process.status}</Badge></TableCell>
                                         <TableCell className="font-mono text-xs">{process.processoDisplayCode}</TableCell>
+                                        <TableCell className="text-xs text-muted-foreground">
+                                            {process.createdAt ? new Date(process.createdAt).toLocaleDateString('pt-BR') : 'N/A'}
+                                        </TableCell>
                                         <TableCell className="whitespace-nowrap">
                                             <div className="flex items-center gap-2">
                                                 {process.stage === 'Pendência' && <AlertCircle className="h-4 w-4 text-status-orange" />}
@@ -216,7 +219,6 @@ export default function ProcessesPage() {
                                         </TableCell>
                                         <TableCell>{process.salespersonName}</TableCell>
                                         <TableCell className="hidden md:table-cell">{process.realtorName}</TableCell>
-                                        <TableCell className="hidden md:table-cell">{process.team}</TableCell>
                                         <TableCell>
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>

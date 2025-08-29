@@ -1,4 +1,5 @@
 
+
 import { db, storage } from './firebase';
 import { collection, getDocs, addDoc, doc, updateDoc, writeBatch, serverTimestamp, query, orderBy, limit, where, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -88,6 +89,7 @@ export type Processo = {
     team: string;
     status: ProcessStatus;
     stage: ProcessStage;
+    createdAt: string;
     observations?: string;
 };
 
@@ -441,6 +443,7 @@ export const addNegotiation = async (newNegotiation: Omit<Negotiation, 'id'>): P
         team: 'Equipe A', // Simulado, pode ser melhorado
         status: 'Ativo',
         stage: 'Em andamento',
+        createdAt: new Date().toISOString(),
         observations: 'Processo iniciado automaticamente com a negociação.'
     };
     batch.set(processoRef, newProcesso);
@@ -892,30 +895,27 @@ export async function completeSaleAndGenerateCommission(negotiation: Negotiation
     return { success: true, message: `A comissão para a venda de "${negotiation.property}" foi gerada no módulo Financeiro.` };
 }
 
-export const getActivitiesForRealtor = async (realtorName: string): Promise<Activity[]> => {
-    const allActivities: Activity[] = [];
+export const getActivitiesForRealtor = async (realtorId: string): Promise<Activity[]> => {
+    const activityMap = new Map<string, Activity>();
 
-    // Primeiro, encontre o ID do usuário com base no nome
-    const usersQuery = query(collection(db, 'users'), where('name', '==', realtorName), limit(1));
-    const userSnapshot = await getDocs(usersQuery);
-    if (userSnapshot.empty) {
-        console.warn(`Nenhum usuário encontrado com o nome: ${realtorName}`);
-        return []; // Retorna vazio se o usuário não for encontrado
+    const realtorDoc = await getDoc(doc(db, 'users', realtorId));
+    if (!realtorDoc.exists()) {
+        console.warn(`Nenhum usuário encontrado com o ID: ${realtorId}`);
+        return [];
     }
-    const realtorId = userSnapshot.docs[0].id;
-    
-    // Helper para determinar o status da atividade com base no status do imóvel/negociação
+    const realtorName = realtorDoc.data().name;
+
     const determineActivityStatus = (itemStatus: string): ActivityStatus => {
-        if (itemStatus === 'Vendido' || itemStatus === 'Alugado' || itemStatus === 'Finalizado' || itemStatus === 'Venda Concluída' || itemStatus === 'Aluguel Ativo') {
+        const status = itemStatus.toLowerCase();
+        if (status.includes('vendido') || status.includes('alugado') || status.includes('finalizado') || status.includes('concluída')) {
             return 'Concluído';
         }
-        if (itemStatus === 'Cancelado') {
+        if (status.includes('cancelado')) {
             return 'Cancelado';
         }
-        if (itemStatus === 'Pendente' || itemStatus === 'Em Negociação' || itemStatus === 'Proposta Enviada') { 
+        if (status.includes('pendente') || status.includes('em negociação') || status.includes('proposta enviada')) {
             return 'Pendente';
         }
-        // 'Disponível', 'Ativo', etc.
         return 'Ativo';
     };
 
@@ -924,47 +924,56 @@ export const getActivitiesForRealtor = async (realtorName: string): Promise<Acti
     const capturesSnapshot = await getDocs(capturesQuery);
     capturesSnapshot.docs.forEach(doc => {
         const prop = { id: doc.id, ...doc.data() } as Property;
-        allActivities.push({
-            id: prop.id,
-            relatedId: prop.id,
-            realtorName: prop.capturedBy,
-            type: 'capture',
-            name: prop.name,
-            value: prop.price,
-            status: determineActivityStatus(prop.status),
-        });
+        if (!activityMap.has(prop.id)) {
+            activityMap.set(prop.id, {
+                id: prop.id,
+                relatedId: prop.id,
+                realtorName: prop.capturedBy,
+                type: 'capture',
+                name: prop.name,
+                value: prop.price,
+                status: determineActivityStatus(prop.status),
+            });
+        }
     });
 
-    // 2. Busca negociações (vendas realizadas pelo ID do corretor)
+    // 2. Busca negociações onde o corretor é o VENDEDOR
     const salesQuery = query(collection(db, 'negociacoes'), where('salespersonId', '==', realtorId));
     const salesSnapshot = await getDocs(salesQuery);
-
-    const realtorNegotiationsQuery = query(collection(db, 'negociacoes'), where('realtorId', '==', realtorId));
-    const realtorNegotiationsSnapshot = await getDocs(realtorNegotiationsQuery);
-    
-    const negotiationMap = new Map<string, Negotiation>();
     salesSnapshot.docs.forEach(doc => {
         const neg = { id: doc.id, ...doc.data() } as Negotiation;
-        negotiationMap.set(neg.id, neg);
+        if (!activityMap.has(neg.id)) {
+            activityMap.set(neg.id, {
+                id: neg.id,
+                relatedId: neg.id,
+                realtorName: neg.salesperson,
+                type: 'negotiation',
+                name: neg.property,
+                value: neg.value,
+                status: determineActivityStatus(neg.stage),
+            });
+        }
     });
+
+    // 3. Busca negociações onde o corretor é o CAPTADOR
+    const realtorNegotiationsQuery = query(collection(db, 'negociacoes'), where('realtorId', '==', realtorId));
+    const realtorNegotiationsSnapshot = await getDocs(realtorNegotiationsQuery);
     realtorNegotiationsSnapshot.docs.forEach(doc => {
         const neg = { id: doc.id, ...doc.data() } as Negotiation;
-        negotiationMap.set(neg.id, neg);
+        if (!activityMap.has(neg.id)) {
+            activityMap.set(neg.id, {
+                id: neg.id,
+                relatedId: neg.id,
+                realtorName: neg.realtor,
+                type: 'negotiation',
+                name: neg.property,
+                value: neg.value,
+                status: determineActivityStatus(neg.stage),
+            });
+        }
     });
 
-    negotiationMap.forEach(neg => {
-        allActivities.push({
-            id: neg.id,
-            relatedId: neg.id,
-            realtorName: neg.salesperson,
-            type: 'negotiation',
-            name: neg.property,
-            value: neg.value,
-            status: determineActivityStatus(neg.stage),
-        });
-    });
-
-    return allActivities;
+    return Array.from(activityMap.values());
 };
 
 
@@ -1010,3 +1019,4 @@ export const updateActivityStatus = async (activityId: string, newStatus: Activi
     
     console.warn(`Activity with ID ${activityId} not found in 'negotiations' or 'imoveis'.`);
 };
+
