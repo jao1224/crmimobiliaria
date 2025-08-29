@@ -514,6 +514,7 @@ export default function NegotiationsPage() {
                         <CardDescription>
                            Selecione os filtros para buscar as negociações.
                            <Link href="/dashboard/negotiations/archived" className="text-sm text-primary hover:underline ml-2">Ver Arquivadas</Link>
+                           <Link href="/dashboard/negotiations/deleted" className="text-sm text-destructive hover:underline ml-2">Ver Excluídas</Link>
                         </CardDescription>
                          {(activeProfile === 'Admin' || activeProfile === 'Imobiliária') && (
                         <div className="flex flex-wrap items-center gap-2">
@@ -688,7 +689,7 @@ export default function NegotiationsPage() {
                 <AlertDialogHeader>
                     <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
                     <AlertDialogDescription>
-                        Esta ação é irreversível. A negociação será permanentemente excluída. Um registro do evento será criado no Feed de Atividades.
+                        Esta ação marcará a negociação como excluída e a moverá para a lixeira, de onde poderá ser restaurada. Para exclusão permanente, contate o administrador.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -697,7 +698,7 @@ export default function NegotiationsPage() {
                         onClick={handleDeleteConfirm}
                         className={cn(buttonVariants({ variant: "destructive" }))}
                     >
-                        Excluir Negociação
+                        Mover para Lixeira
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>

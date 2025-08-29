@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useContext, useMemo } from "react";
@@ -128,7 +129,7 @@ export default function ProcessesPage() {
                 description: `No processo do imóvel ${selectedProcess.propertyName} (${selectedProcess.propertyDisplayCode}) - Vendedor: ${selectedProcess.salespersonName}.`,
             });
             await refreshData();
-            toast({ title: "Pendência Registrada!", description: `Uma nova observação foi adicionada ao processo ${selectedProcess.negotiationId.toUpperCase()}.` });
+            toast({ title: "Pendência Registrada!", description: `Uma nova observação foi adicionada ao processo ${selectedProcess.processoDisplayCode}.` });
         } catch (error) {
             toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível salvar a pendência.'});
         }
@@ -180,7 +181,7 @@ export default function ProcessesPage() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead className="w-[100px]">Status</TableHead>
-                                <TableHead>Cód. Neg.</TableHead>
+                                <TableHead>Cód. Proc.</TableHead>
                                 <TableHead>Fase Atual</TableHead>
                                 <TableHead>Imóvel</TableHead>
                                 <TableHead>Vendedor</TableHead>
@@ -200,7 +201,7 @@ export default function ProcessesPage() {
                                 filteredProcesses.map(process => (
                                     <TableRow key={process.id} onClick={() => handleOpenDetailModal(process)} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
                                         <TableCell><Badge variant={getStatusVariant(process.status)}>{process.status}</Badge></TableCell>
-                                        <TableCell className="font-mono text-xs">{process.negotiationId.toUpperCase()}</TableCell>
+                                        <TableCell className="font-mono text-xs">{process.processoDisplayCode}</TableCell>
                                         <TableCell className="whitespace-nowrap">
                                             <div className="flex items-center gap-2">
                                                 {process.stage === 'Pendência' && <AlertCircle className="h-4 w-4 text-status-orange" />}
@@ -255,7 +256,7 @@ export default function ProcessesPage() {
                     <DialogHeader>
                         <DialogTitle>Detalhes do Processo</DialogTitle>
                         <DialogDescription>
-                            Processo da Negociação: <span className="font-bold font-mono">{selectedProcess?.negotiationId.toUpperCase()}</span>
+                            Processo da Negociação: <span className="font-bold font-mono">{selectedProcess?.processoDisplayCode}</span>
                         </DialogDescription>
                     </DialogHeader>
                     <div className="py-4 space-y-4">
@@ -307,7 +308,7 @@ export default function ProcessesPage() {
                         <DialogTitle>Marcar Pendência no Processo</DialogTitle>
                         <DialogDescription>
                             Adicione uma observação sobre a pendência. Todos os envolvidos no processo 
-                            serão notificados (simulado). Processo da Negociação: <span className="font-bold">{selectedProcess?.negotiationId.toUpperCase()}</span>
+                            serão notificados (simulado). Processo: <span className="font-bold">{selectedProcess?.processoDisplayCode}</span>
                         </DialogDescription>
                     </DialogHeader>
                     <div className="py-4 space-y-2">
@@ -334,7 +335,7 @@ export default function ProcessesPage() {
                         <DialogTitle>Finalizar Processo</DialogTitle>
                         <DialogDescription>
                             Adicione uma nota de finalização para este processo.
-                             Processo da Negociação: <span className="font-bold">{selectedProcess?.negotiationId.toUpperCase()}</span>
+                             Processo: <span className="font-bold">{selectedProcess?.processoDisplayCode}</span>
                         </DialogDescription>
                     </DialogHeader>
                     <div className="py-4 space-y-2">

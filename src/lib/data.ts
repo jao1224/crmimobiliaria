@@ -1,3 +1,4 @@
+
 import { db, storage } from './firebase';
 import { collection, getDocs, addDoc, doc, updateDoc, writeBatch, serverTimestamp, query, orderBy, limit, where, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -78,6 +79,7 @@ export type ProcessStage = 'Em andamento' | 'Pendência' | 'Finalizado';
 export type Processo = {
     id: string;
     negotiationId: string;
+    processoDisplayCode: string;
     propertyDisplayCode: string;
     propertyName: string;
     clientName: string;
@@ -427,8 +429,10 @@ export const addNegotiation = async (newNegotiation: Omit<Negotiation, 'id'>): P
 
     // 3. Cria o processo administrativo correspondente
     const processoRef = doc(collection(db, 'processos'));
+    const processoDisplayCode = `PROC-${String(Date.now()).slice(-6)}`;
     const newProcesso: Omit<Processo, 'id'> = {
         negotiationId: negotiationRef.id,
+        processoDisplayCode,
         propertyDisplayCode: newNegotiation.propertyDisplayCode,
         propertyName: newNegotiation.property,
         clientName: newNegotiation.client,
@@ -902,7 +906,7 @@ export const getActivitiesForRealtor = async (realtorName: string): Promise<Acti
     
     // Helper para determinar o status da atividade com base no status do imóvel/negociação
     const determineActivityStatus = (itemStatus: string): ActivityStatus => {
-        if (itemStatus === 'Vendido' || itemStatus === 'Alugado' || itemStatus === 'Finalizado' || itemStatus === 'Venda Concluída') {
+        if (itemStatus === 'Vendido' || itemStatus === 'Alugado' || itemStatus === 'Finalizado' || itemStatus === 'Venda Concluída' || itemStatus === 'Aluguel Ativo') {
             return 'Concluído';
         }
         if (itemStatus === 'Cancelado') {
@@ -911,6 +915,7 @@ export const getActivitiesForRealtor = async (realtorName: string): Promise<Acti
         if (itemStatus === 'Pendente' || itemStatus === 'Em Negociação' || itemStatus === 'Proposta Enviada') { 
             return 'Pendente';
         }
+        // 'Disponível', 'Ativo', etc.
         return 'Ativo';
     };
 
@@ -931,10 +936,23 @@ export const getActivitiesForRealtor = async (realtorName: string): Promise<Acti
     });
 
     // 2. Busca negociações (vendas realizadas pelo ID do corretor)
-    const negotiationsQuery = query(collection(db, 'negociacoes'), where('salespersonId', '==', realtorId));
-    const negotiationsSnapshot = await getDocs(negotiationsQuery);
-    negotiationsSnapshot.docs.forEach(doc => {
+    const salesQuery = query(collection(db, 'negociacoes'), where('salespersonId', '==', realtorId));
+    const salesSnapshot = await getDocs(salesQuery);
+
+    const realtorNegotiationsQuery = query(collection(db, 'negociacoes'), where('realtorId', '==', realtorId));
+    const realtorNegotiationsSnapshot = await getDocs(realtorNegotiationsQuery);
+    
+    const negotiationMap = new Map<string, Negotiation>();
+    salesSnapshot.docs.forEach(doc => {
         const neg = { id: doc.id, ...doc.data() } as Negotiation;
+        negotiationMap.set(neg.id, neg);
+    });
+    realtorNegotiationsSnapshot.docs.forEach(doc => {
+        const neg = { id: doc.id, ...doc.data() } as Negotiation;
+        negotiationMap.set(neg.id, neg);
+    });
+
+    negotiationMap.forEach(neg => {
         allActivities.push({
             id: neg.id,
             relatedId: neg.id,
