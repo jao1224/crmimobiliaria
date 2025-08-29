@@ -28,7 +28,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { getNegotiations, addNegotiation, type Negotiation, addFinancingProcess, completeSaleAndGenerateCommission, getProperties, type Property, updateNegotiation, getUsers, type User, archiveNegotiation, addServiceRequest } from "@/lib/data";
+import { getNegotiations, addNegotiation, type Negotiation, addFinancingProcess, completeSaleAndGenerateCommission, getProperties, type Property, updateNegotiation, getUsers, type User, archiveNegotiation, addServiceRequest, markAsDeleted } from "@/lib/data";
 import { getClients, type Client } from "@/lib/crm-data";
 import { cn } from "@/lib/utils";
 import { ProfileContext } from "@/contexts/ProfileContext";
@@ -36,7 +36,6 @@ import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
 import { AssignNegotiationDialog } from "@/components/dashboard/assign-negotiation-dialog";
 import Link from "next/link";
-import { deleteNegotiation } from "@/lib/data";
 
 
 export default function NegotiationsPage() {
@@ -110,7 +109,7 @@ export default function NegotiationsPage() {
     };
     
     const filteredNegotiations = useMemo(() => {
-        let negotiations = allNegotiations.filter(neg => !neg.isArchived);
+        let negotiations = allNegotiations.filter(neg => !neg.isArchived && !neg.isDeleted);
 
         if (currentUser && activeProfile !== 'Admin' && activeProfile !== 'Imobiliária') {
             negotiations = negotiations.filter(neg => 
@@ -214,6 +213,7 @@ export default function NegotiationsPage() {
             createdAt: new Date().toISOString(),
             isFinanced: isFinanced,
             isArchived: false,
+            isDeleted: false,
         };
         
         const newNegotiationId = await addNegotiation(newNegotiationData);
@@ -319,7 +319,7 @@ export default function NegotiationsPage() {
     
     const handleArchiveNegotiation = async (negotiationId: string) => {
         try {
-            await archiveNegotiation(negotiationId);
+            await archiveNegotiation(negotiationId, true);
             await refreshData();
             toast({ title: "Negociação Arquivada", description: "A negociação foi movida para os arquivos." });
         } catch (error) {
@@ -335,9 +335,9 @@ export default function NegotiationsPage() {
     const handleDeleteConfirm = async () => {
         if (!selectedNegotiation) return;
         try {
-            await deleteNegotiation(selectedNegotiation);
+            await markAsDeleted(selectedNegotiation.id, true);
             await refreshData();
-            toast({ title: "Negociação Excluída", description: "A negociação foi removida permanentemente e registrada no Feed de Atividades." });
+            toast({ title: "Negociação Excluída", description: "A negociação foi movida para a lixeira." });
         } catch (error) {
             toast({ variant: "destructive", title: "Erro", description: "Não foi possível excluir a negociação." });
         } finally {
