@@ -461,18 +461,6 @@ export const updateNegotiation = async (id: string, data: Partial<Negotiation>):
     await updateDoc(doc(db, 'negociacoes', id), data);
 };
 
-export const deleteNegotiation = async (negotiation: Negotiation): Promise<void> => {
-    const codePart = negotiation.propertyDisplayCode ? `(${negotiation.propertyDisplayCode})` : '';
-    const description = `Imóvel: ${negotiation.property} ${codePart}. Cliente: ${negotiation.client}. Vendedor: ${negotiation.salesperson}.`;
-    
-    await addNotification({
-        title: "Negociação Excluída",
-        description: description,
-    });
-
-    await deleteDoc(doc(db, "negociacoes", negotiation.id));
-};
-
 export const markAsDeleted = async (id: string, deletedStatus: boolean): Promise<void> => {
     const negRef = doc(db, "negociacoes", id);
     const negSnap = await getDoc(negRef);
@@ -907,7 +895,7 @@ export const getActivitiesForRealtor = async (realtorId: string): Promise<Activi
 
     const determineActivityStatus = (itemStatus: string): ActivityStatus => {
         const status = itemStatus.toLowerCase();
-        if (status.includes('vendido') || status.includes('alugado') || status.includes('finalizado') || status.includes('concluída')) {
+        if (status.includes('vendido') || status.includes('alugado') || status.includes('finalizado') || status.includes('venda concluída')) {
             return 'Concluído';
         }
         if (status.includes('cancelado')) {
@@ -916,11 +904,15 @@ export const getActivitiesForRealtor = async (realtorId: string): Promise<Activi
         if (status.includes('pendente') || status.includes('em negociação') || status.includes('proposta enviada')) {
             return 'Pendente';
         }
-        return 'Ativo';
+        // Para status de imóvel como "Disponível"
+        if (status.includes('disponível')) {
+            return 'Ativo';
+        }
+        return 'Ativo'; // Default
     };
 
-    // 1. Busca captações (imóveis capturados pelo ID do corretor)
-    const capturesQuery = query(collection(db, 'imoveis'), where('capturedById', '==', realtorId));
+    // 1. Busca captações (imóveis capturados pelo NOME do corretor)
+    const capturesQuery = query(collection(db, 'imoveis'), where('capturedBy', '==', realtorName));
     const capturesSnapshot = await getDocs(capturesQuery);
     capturesSnapshot.docs.forEach(doc => {
         const prop = { id: doc.id, ...doc.data() } as Property;
@@ -937,7 +929,7 @@ export const getActivitiesForRealtor = async (realtorId: string): Promise<Activi
         }
     });
 
-    // 2. Busca negociações onde o corretor é o VENDEDOR
+    // 2. Busca negociações onde o corretor é o VENDEDOR (pelo ID)
     const salesQuery = query(collection(db, 'negociacoes'), where('salespersonId', '==', realtorId));
     const salesSnapshot = await getDocs(salesQuery);
     salesSnapshot.docs.forEach(doc => {
@@ -955,7 +947,7 @@ export const getActivitiesForRealtor = async (realtorId: string): Promise<Activi
         }
     });
 
-    // 3. Busca negociações onde o corretor é o CAPTADOR
+    // 3. Busca negociações onde o corretor é o CAPTADOR (pelo ID)
     const realtorNegotiationsQuery = query(collection(db, 'negociacoes'), where('realtorId', '==', realtorId));
     const realtorNegotiationsSnapshot = await getDocs(realtorNegotiationsQuery);
     realtorNegotiationsSnapshot.docs.forEach(doc => {
@@ -1019,4 +1011,5 @@ export const updateActivityStatus = async (activityId: string, newStatus: Activi
     
     console.warn(`Activity with ID ${activityId} not found in 'negotiations' or 'imoveis'.`);
 };
+
 

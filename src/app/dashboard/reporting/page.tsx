@@ -78,12 +78,15 @@ const processSalesData = (negotiations: Negotiation[]) => {
 };
 
 const processCaptureData = (properties: Property[]) => {
-    const realtorCaptures: { [key: string]: number } = {};
+    const realtorCaptures: { [key: string]: { id: string, name: string, captures: number } } = {};
     const propertyTypeCaptures: { [key: string]: number } = {};
 
     properties.forEach(prop => {
-        if (prop.capturedBy) {
-            realtorCaptures[prop.capturedBy] = (realtorCaptures[prop.capturedBy] || 0) + 1;
+        if (prop.capturedBy && prop.capturedById) {
+             if (!realtorCaptures[prop.capturedBy]) {
+                realtorCaptures[prop.capturedBy] = { id: prop.capturedById, name: prop.capturedBy, captures: 0 };
+            }
+            realtorCaptures[prop.capturedBy].captures += 1;
         }
         if (prop.type) {
             propertyTypeCaptures[prop.type] = (propertyTypeCaptures[prop.type] || 0) + 1;
@@ -91,7 +94,7 @@ const processCaptureData = (properties: Property[]) => {
     });
 
     return {
-        realtorCaptures: Object.entries(realtorCaptures).map(([name, captures]) => ({ name, captures })).sort((a, b) => b.captures - a.captures),
+        realtorCaptures: Object.values(realtorCaptures).sort((a, b) => b.captures - a.captures),
         propertyTypeCaptures: Object.entries(propertyTypeCaptures).map(([type, captures]) => ({ type, captures })).sort((a, b) => b.captures - a.captures),
     };
 };
@@ -194,9 +197,8 @@ export default function ReportingPage() {
 
     const userCanSeeAll = activeProfile === 'Admin' || activeProfile === 'Imobiliária';
     
-    const handleRealtorClick = (realtorName: string) => {
-        const urlFriendlyName = realtorName.toLowerCase().replace(/\s+/g, '-');
-        router.push(`/dashboard/reporting/${urlFriendlyName}`);
+    const handleRealtorClick = (realtorId: string) => {
+        router.push(`/dashboard/reporting/${realtorId}`);
     };
 
     const filterByDate = (items: (Negotiation | PaymentCLT | Expense)[], dateField: keyof (Negotiation | PaymentCLT | Expense)) => {
@@ -654,8 +656,8 @@ export default function ReportingPage() {
                                         {realtorCaptures.length > 0 ? (
                                             realtorCaptures.map(item => (
                                                 <TableRow 
-                                                    key={item.name} 
-                                                    onClick={() => handleRealtorClick(item.name)}
+                                                    key={item.id} 
+                                                    onClick={() => handleRealtorClick(item.id)}
                                                     className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary")}>
                                                         <TableCell className="font-medium">{item.name}</TableCell>
                                                         <TableCell className="text-right font-bold">{item.captures}</TableCell>
@@ -935,3 +937,4 @@ export default function ReportingPage() {
         </div>
     )
 }
+
