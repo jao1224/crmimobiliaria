@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect, useMemo, useContext } from "react";
@@ -498,7 +497,16 @@ export default function NegotiationsPage() {
                                     <div className="space-y-2">
                                         <Label htmlFor="documents">Anexar Documentos do Cliente (Opcional)</Label>
                                         <Input id="documents" name="documents" type="file" multiple onChange={(e) => setSelectedDocs(e.target.files)} />
-                                        {selectedDocs && <p className="text-xs text-muted-foreground">{selectedDocs.length} arquivo(s) selecionado(s).</p>}
+                                        {selectedDocs && selectedDocs.length > 0 && (
+                                            <div className="mt-2 p-3 border rounded-md bg-muted/50 space-y-2">
+                                                <h4 className="text-sm font-medium">Arquivos Selecionados:</h4>
+                                                <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+                                                    {Array.from(selectedDocs).map((file, index) => (
+                                                        <li key={index}>{file.name}</li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        )}
                                     </div>
 
                                     <div className="flex items-center space-x-2">
@@ -713,3 +721,5 @@ export default function NegotiationsPage() {
         </>
     );
 }
+
+    
