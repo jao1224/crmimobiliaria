@@ -276,7 +276,7 @@ export default function ProcessesPage() {
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
                                                     <DropdownMenuLabel>Ações do Processo</DropdownMenuLabel>
-                                                    <DropdownMenuItem onSelect={() => handleOpenAssignTeam(process)}>Atribuir Equipe</DropdownMenuItem>
+                                                    <DropdownMenuItem onSelect={(e) => { e.stopPropagation(); handleOpenAssignTeam(process); }}>Atribuir Equipe</DropdownMenuItem>
                                                     <DropdownMenuItem onSelect={() => handleOpenPendencyModal(process)}>Marcar Pendência</DropdownMenuItem>
                                                     <DropdownMenuSeparator/>
                                                     <DropdownMenuItem 
