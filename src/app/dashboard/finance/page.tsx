@@ -153,21 +153,29 @@ export default function FinancePage() {
             return;
         }
 
-        const newCommissionData: Omit<Commission, 'id'> = {
+        const newCommissionData: Partial<Omit<Commission, 'id'>> = {
             negotiationId: negotiation.id,
             propertyValue: negotiation.value,
             clientName: negotiation.client,
             realtorName: negotiation.realtor,
             salespersonName: negotiation.salesperson,
-            managerName: formData.get('managerName') as string || undefined,
-            clientSignal: parseFloat(formData.get('clientSignal') as string) || undefined,
             commissionValue: parseFloat(formData.get('commissionValue') as string),
             commissionRate: parseFloat(formData.get('commissionRate') as string),
             status: formData.get('status') as Commission['status'], 
             paymentDate: formData.get('paymentDate') as string,
-            notes: formData.get('notes') as string || undefined,
         };
-        await addCommission(newCommissionData);
+        
+        const managerName = formData.get('managerName') as string;
+        if (managerName) newCommissionData.managerName = managerName;
+        
+        const clientSignal = parseFloat(formData.get('clientSignal') as string);
+        if (!isNaN(clientSignal)) newCommissionData.clientSignal = clientSignal;
+        
+        const notes = formData.get('notes') as string;
+        if (notes) newCommissionData.notes = notes;
+
+
+        await addCommission(newCommissionData as Omit<Commission, 'id'>);
         await refreshFinanceData();
         toast({ title: "Sucesso!", description: "Comissão lançada com sucesso." });
         form.reset();
