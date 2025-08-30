@@ -49,6 +49,7 @@ export type Property = {
 
 export type Negotiation = {
     id: string;
+    negotiationDisplayCode: string;
     property: string;
     propertyId: string;
     propertyDisplayCode: string;
@@ -434,12 +435,14 @@ export const getNegotiationsByRealtor = async (realtorName: string): Promise<Neg
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Negotiation));
 };
 
-export const addNegotiation = async (newNegotiation: Omit<Negotiation, 'id'>, documents?: File[]): Promise<string> => {
+export const addNegotiation = async (newNegotiation: Omit<Negotiation, 'id' | 'negotiationDisplayCode'>, documents?: File[]): Promise<string> => {
     const batch = writeBatch(db);
 
     // 1. Cria a negociação
     const negotiationRef = doc(collection(db, 'negociacoes'));
-    batch.set(negotiationRef, newNegotiation);
+    const negotiationDisplayCode = `NEG-${String(Date.now()).slice(-6)}`;
+    const negotiationData = { ...newNegotiation, negotiationDisplayCode };
+    batch.set(negotiationRef, negotiationData);
     
     // 2. Atualiza o status do imóvel para 'Em Negociação'
     const propertyRef = doc(db, 'imoveis', newNegotiation.propertyId);

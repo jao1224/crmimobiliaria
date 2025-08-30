@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useMemo, useContext } from "react";
@@ -224,7 +225,7 @@ export default function NegotiationsPage() {
         const responsibleSalespersonId = formData.get('salespersonId') as string || currentUser.uid;
         const responsibleSalesperson = allUsers.find(u => u.id === responsibleSalespersonId);
 
-        const newNegotiationData: Omit<Negotiation, 'id'> = {
+        const newNegotiationData: Omit<Negotiation, 'id' | 'negotiationDisplayCode'> = {
             property: foundProperty.name,
             propertyId: foundProperty.id,
             propertyDisplayCode: foundProperty.displayCode,
@@ -648,7 +649,7 @@ export default function NegotiationsPage() {
                                 <TableRow
                                     key={neg.id}
                                 >
-                                    <TableCell className="font-mono text-xs text-muted-foreground">{neg.id.substring(0, 8)}...</TableCell>
+                                    <TableCell className="font-mono text-xs text-muted-foreground">{neg.negotiationDisplayCode}</TableCell>
                                     <TableCell className="font-mono text-xs text-muted-foreground">{getProcessCodeForNegotiation(neg.id)}</TableCell>
                                     <TableCell>
                                         <div className="font-medium">{neg.property}</div>
