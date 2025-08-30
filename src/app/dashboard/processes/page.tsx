@@ -270,17 +270,17 @@ export default function ProcessesPage() {
                                         <TableCell>
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
-                                                    <Button aria-haspopup="true" size="icon" variant="ghost" onClick={(e) => {e.stopPropagation()}}>
+                                                    <Button aria-haspopup="true" size="icon" variant="ghost" onClick={(e) => e.stopPropagation()}>
                                                         <MoreHorizontal className="h-4 w-4" />
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
                                                     <DropdownMenuLabel>Ações do Processo</DropdownMenuLabel>
-                                                    <DropdownMenuItem onSelect={(e) => { e.stopPropagation(); handleOpenAssignTeam(process); }}>Atribuir Equipe</DropdownMenuItem>
-                                                    <DropdownMenuItem onSelect={(e) => { e.stopPropagation(); handleOpenPendencyModal(process); }}>Marcar Pendência</DropdownMenuItem>
+                                                    <DropdownMenuItem onSelect={() => handleOpenAssignTeam(process)}>Atribuir Equipe</DropdownMenuItem>
+                                                    <DropdownMenuItem onSelect={() => handleOpenPendencyModal(process)}>Marcar Pendência</DropdownMenuItem>
                                                     <DropdownMenuSeparator/>
                                                     <DropdownMenuItem 
-                                                        onSelect={(e) => { e.stopPropagation(); handleOpenFinalizeModal(process); }}
+                                                        onSelect={() => handleOpenFinalizeModal(process)}
                                                         className="text-green-600 focus:text-green-600 focus:bg-green-50"
                                                         disabled={process.status === 'Finalizado' || process.status === 'Cancelado'}
                                                     >
