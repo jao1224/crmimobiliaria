@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useContext, useEffect, useMemo } from "react";
@@ -282,12 +281,12 @@ export default function CorrespondentPage() {
                         <AlertDialogTitle>Aceitar Solicitação e Iniciar Processo?</AlertDialogTitle>
                         <AlertDialogDescription>
                             Esta ação criará um novo processo de financiamento na aba "Meus Processos" com base nos dados desta solicitação e mudará o status da solicitação para "Em Análise".
-                            <div className="mt-4 text-sm text-foreground space-y-1">
-                                <span className="block"><strong>Tipo:</strong> {serviceRequestTypes.find(t => t.id === selectedRequest?.type)?.label || selectedRequest?.type}</span>
-                                <span className="block"><strong>Solicitante:</strong> {selectedRequest?.realtorName}</span>
-                                <span className="block"><strong>Cliente:</strong> {selectedRequest?.clientInfo.split('\n')[0].replace('Nome: ', '').trim()}</span>
-                            </div>
                         </AlertDialogDescription>
+                        <div className="pt-4 text-sm text-foreground space-y-1 text-left">
+                            <span className="block"><strong>Tipo:</strong> {serviceRequestTypes.find(t => t.id === selectedRequest?.type)?.label || selectedRequest?.type}</span>
+                            <span className="block"><strong>Solicitante:</strong> {selectedRequest?.realtorName}</span>
+                            <span className="block"><strong>Cliente:</strong> {selectedRequest?.clientInfo.split('\n')[0].replace('Nome: ', '').trim()}</span>
+                        </div>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Cancelar</AlertDialogCancel>
@@ -459,4 +458,5 @@ function ProcessDetailForm({ process, onSave, onCancel }: { process: FinancingPr
 }
 
 
+    
     
