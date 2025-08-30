@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, AlertCircle, CheckCircle, Hourglass, UserPlus, Trash2, Home } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { getProcessos, type Processo, type ProcessStatus, type ProcessStage, updateProcesso, addNotification, getNegotiations, type Negotiation, completeSaleAndGenerateCommission, getUsers } from "@/lib/data";
+import { getProcessos, type Processo, type ProcessStatus, type ProcessStage, updateProcesso, addNotification, getNegotiations, type Negotiation, completeSaleAndGenerateCommission, getUsers, type User as AppUser } from "@/lib/data";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,11 +17,16 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProfileContext } from "@/contexts/ProfileContext";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged, type User } from "firebase/auth";
-import { arrayRemove, arrayUnion } from "firebase/firestore";
+import { arrayRemove, arrayUnion, getDocs, collection } from "firebase/firestore";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
+type Team = {
+    id: string;
+    name: string;
+    memberIds: string[];
+};
 
 const getStatusVariant = (status: ProcessStatus) => {
     switch (status) {
@@ -47,7 +52,8 @@ export default function ProcessesPage() {
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [processes, setProcesses] = useState<Processo[]>([]);
     const [negotiations, setNegotiations] = useState<Negotiation[]>([]);
-    const [allUsers, setAllUsers] = useState<any[]>([]); // Para o select de partes
+    const [allUsers, setAllUsers] = useState<AppUser[]>([]);
+    const [teams, setTeams] = useState<Team[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [selectedProcess, setSelectedProcess] = useState<Processo | null>(null);
     const [isPendencyModalOpen, setPendencyModalOpen] = useState(false);
@@ -75,14 +81,16 @@ export default function ProcessesPage() {
     const refreshData = async () => {
         setIsLoading(true);
         try {
-            const [processesData, negotiationsData, usersData] = await Promise.all([
+            const [processesData, negotiationsData, usersData, teamsSnapshot] = await Promise.all([
                 getProcessos(),
                 getNegotiations(),
-                getUsers()
+                getUsers(),
+                getDocs(collection(db, "teams")),
             ]);
             setProcesses(processesData);
             setNegotiations(negotiationsData);
             setAllUsers(usersData);
+            setTeams(teamsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team)));
         } catch (error) {
             toast({ variant: 'destructive', title: "Erro", description: "Não foi possível carregar os processos."});
         } finally {
@@ -222,6 +230,11 @@ export default function ProcessesPage() {
         } catch (error) {
              toast({ variant: 'destructive', title: "Erro", description: "Não foi possível remover a parte." });
         }
+    };
+
+    const findTeamForMember = (memberId: string) => {
+        const team = teams.find(t => t.memberIds.includes(memberId));
+        return team ? team.name : 'Sem Equipe';
     };
 
 
@@ -450,7 +463,9 @@ export default function ProcessesPage() {
                                         {allUsers
                                             .filter(user => !(selectedProcess?.involvedParties || []).includes(user.name))
                                             .map(user => (
-                                                <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
+                                                <SelectItem key={user.id} value={user.id}>
+                                                    {user.name} - ({user.role}) - [{findTeamForMember(user.id)}]
+                                                </SelectItem>
                                             ))
                                         }
                                     </SelectContent>
