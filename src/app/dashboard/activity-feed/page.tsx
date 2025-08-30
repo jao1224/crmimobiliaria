@@ -26,9 +26,9 @@ const iconMap: { [key: string]: React.ElementType } = {
     "default": AlertCircle
 };
 
-const getIconForTitle = (title: string) => {
+const getIconForTitle = (title: string, className: string = "h-4 w-4") => {
     const Icon = iconMap[title] || iconMap.default;
-    return <Icon className="h-6 w-6 text-muted-foreground" />;
+    return <Icon className={className} />;
 };
 
 
@@ -82,19 +82,19 @@ export default function ActivityFeedPage() {
                             ))}
                         </div>
                     ) : notifications.length > 0 ? (
-                        <div className="relative pl-6">
+                        <div className="relative pl-8">
                             {/* Linha da timeline */}
-                            <div className="absolute left-6 top-0 bottom-0 w-px bg-border -translate-x-1/2"></div>
+                            <div className="absolute left-4 top-0 bottom-0 w-px bg-border -translate-x-1/2"></div>
                             
                             <div className="space-y-8">
                                 {notifications.map(notification => (
                                      <div key={notification.id} className="relative flex items-start">
                                         {/* Ponto na timeline */}
-                                        <div className="absolute left-0 top-1 h-6 w-6 -translate-x-1/2 rounded-full bg-background border-2 border-primary flex items-center justify-center">
-                                           <div className="h-2 w-2 rounded-full bg-primary"></div>
+                                        <div className="absolute left-0 top-0 h-8 w-8 -translate-x-1/2 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                                           {getIconForTitle(notification.title, "h-4 w-4")}
                                         </div>
 
-                                        <div className="flex-1 pt-1 ml-6">
+                                        <div className="flex-1 pt-1.5 ml-6">
                                             <p className="font-semibold text-sm">{notification.title}</p>
                                             <p className="text-sm text-muted-foreground">{notification.description}</p>
                                             <p className="text-xs text-muted-foreground/80 mt-1">
