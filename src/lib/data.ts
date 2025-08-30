@@ -44,7 +44,6 @@ export type Property = {
   capturedById: string; // ID do corretor que captou
   description?: string;
   ownerInfo?: string;
-  team?: string; // CAMPO ADICIONADO PARA GESTÃO DE LOJAS/EQUIPES
 };
 
 
@@ -92,6 +91,7 @@ export type Processo = {
     stage: ProcessStage;
     createdAt: string;
     observations?: string;
+    involvedParties?: string[];
 };
 
 // --- TIPO PARA CONTRATO ---
@@ -1073,6 +1073,3 @@ export const updateActivityStatus = async (activityId: string, newStatus: Activi
     
     console.warn(`Activity with ID ${activityId} not found in 'negotiations' or 'imoveis'.`);
 };
-
-
-

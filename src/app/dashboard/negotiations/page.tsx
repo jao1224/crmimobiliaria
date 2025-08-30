@@ -21,7 +21,7 @@ import {
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MoreHorizontal, Search, Archive, Trash2, Landmark, Upload } from "lucide-react";
+import { MoreHorizontal, Search, Archive, Trash2, Landmark, Upload, Eye } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -590,10 +590,6 @@ export default function NegotiationsPage() {
                                 filteredNegotiations.map((neg) => (
                                 <TableRow
                                     key={neg.id}
-                                    onClick={() => router.push(`/dashboard/negotiations/${neg.id}/contract`)}
-                                    className={cn(
-                                        "transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1"
-                                    )}
                                 >
                                     <TableCell className="font-mono text-xs text-muted-foreground">{neg.propertyDisplayCode}</TableCell>
                                     <TableCell className="font-medium">
@@ -632,30 +628,32 @@ export default function NegotiationsPage() {
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/processes`)}}>Ver Processo</DropdownMenuItem>
+                                                <DropdownMenuItem onSelect={() => router.push(`/dashboard/processes`)}>
+                                                    <Eye className="mr-2 h-4 w-4" />Ver Processo
+                                                </DropdownMenuItem>
                                                 {neg.contractStatus === 'Não Gerado' ? (
-                                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleGenerateContract(neg); }}>
+                                                    <DropdownMenuItem onSelect={() => handleGenerateContract(neg)}>
                                                         Gerar Contrato
                                                     </DropdownMenuItem>
                                                 ) : (
-                                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/negotiations/${neg.id}/contract`)}}>
+                                                    <DropdownMenuItem onSelect={() => router.push(`/dashboard/negotiations/${neg.id}/contract`)}>
                                                         Ver/Editar Contrato
                                                     </DropdownMenuItem>
                                                 )}
-                                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleTriggerCorrespondent(neg); }}>
+                                                <DropdownMenuItem onSelect={() => handleTriggerCorrespondent(neg)}>
                                                     Acionar Correspondente
                                                 </DropdownMenuItem>
                                                 {(activeProfile === 'Admin' || activeProfile === 'Imobiliária') && (
-                                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenAssignDialog(neg); }}>
+                                                    <DropdownMenuItem onSelect={() => handleOpenAssignDialog(neg)}>
                                                         Enviar/Atribuir
                                                     </DropdownMenuItem>
                                                 )}
-                                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleArchiveNegotiation(neg.id); }}>
+                                                <DropdownMenuItem onSelect={() => handleArchiveNegotiation(neg.id)}>
                                                     Arquivar
                                                 </DropdownMenuItem>
                                                  <DropdownMenuSeparator />
                                                 <DropdownMenuItem 
-                                                    onClick={(e) => { e.stopPropagation(); handleCompleteSale(neg); }}
+                                                    onSelect={() => handleCompleteSale(neg)}
                                                     disabled={neg.stage === 'Venda Concluída' || neg.stage === 'Aluguel Ativo'}
                                                     className="text-green-600 focus:text-green-600 focus:bg-green-50"
                                                 >
@@ -664,7 +662,7 @@ export default function NegotiationsPage() {
                                                  <DropdownMenuSeparator />
                                                 <DropdownMenuItem 
                                                     className="text-destructive focus:text-destructive"
-                                                    onClick={(e) => { e.stopPropagation(); handleOpenDeleteDialog(neg); }}
+                                                    onSelect={() => handleOpenDeleteDialog(neg)}
                                                 >
                                                     Excluir
                                                 </DropdownMenuItem>
@@ -715,4 +713,3 @@ export default function NegotiationsPage() {
         </>
     );
 }
-
