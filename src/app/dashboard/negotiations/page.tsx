@@ -406,7 +406,7 @@ export default function NegotiationsPage() {
     return (
         <>
         <div className="flex flex-col gap-6">
-            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold">Processos de Negociação</h1>
                     <p className="text-muted-foreground">Acompanhe e gerencie todas as suas negociações.</p>
