@@ -6,7 +6,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { MoreHorizontal, History, Briefcase, Landmark, Trash2, PlusCircle, UserPlus, Handshake } from "lucide-react";
+import { MoreHorizontal, History, Briefcase, Landmark, Trash2, PlusCircle, UserPlus, Handshake, Link as LinkIcon, FileText } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
@@ -430,7 +430,7 @@ export default function CrmPage() {
         
         {/* Modal de Detalhes do Cliente */}
          <Dialog open={isDetailOpen} onOpenChange={setDetailOpen}>
-            <DialogContent className="sm:max-w-xl">
+            <DialogContent className="sm:max-w-2xl max-h-[90vh]">
                 {selectedClient && (
                     <>
                     <DialogHeader>
@@ -439,36 +439,60 @@ export default function CrmPage() {
                             Informações completas de {selectedClient.name}.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="space-y-4 rounded-lg border p-4">
-                            <h3 className="font-semibold text-lg">Informações Pessoais</h3>
-                             <div className="grid grid-cols-2 gap-4 text-sm">
-                                <div><Label className="text-muted-foreground">Nome</Label><p>{selectedClient.name}</p></div>
-                                <div><Label className="text-muted-foreground">CPF/CNPJ</Label><p>{selectedClient.document || "Não informado"}</p></div>
-                                <div><Label className="text-muted-foreground">Data de Nascimento</Label><p>{selectedClient.birthDate ? new Date(selectedClient.birthDate + "T00:00:00").toLocaleDateString('pt-BR') : "Não informado"}</p></div>
-                                <div><Label className="text-muted-foreground">Estado Civil</Label><p>{selectedClient.civilStatus || "Não informado"}</p></div>
-                             </div>
-                        </div>
-                         <div className="space-y-4 rounded-lg border p-4">
-                            <h3 className="font-semibold text-lg">Contato e Origem</h3>
-                             <div className="grid grid-cols-2 gap-4 text-sm">
-                                <div><Label className="text-muted-foreground">E-mail</Label><p>{selectedClient.email}</p></div>
-                                <div><Label className="text-muted-foreground">Telefone</Label><p>{selectedClient.phone}</p></div>
-                                <div className="col-span-2"><Label className="text-muted-foreground">Endereço</Label><p>{selectedClient.address || "Não informado"}</p></div>
-                                <div><Label className="text-muted-foreground">Fonte</Label><p>{selectedClient.source}</p></div>
-                                <div><Label className="text-muted-foreground">Corretor Responsável</Label><p>{selectedClient.assignedTo}</p></div>
-                             </div>
-                        </div>
-                        <div className="space-y-4 rounded-lg border p-4">
-                            <h3 className="font-semibold text-lg">Informações Financeiras</h3>
-                            <div className="grid grid-cols-2 gap-4 text-sm">
-                                <div>
-                                    <Label className="text-muted-foreground">Renda Mensal</Label>
-                                    <p>{selectedClient.monthlyIncome ? formatCurrency(selectedClient.monthlyIncome) : "Não informado"}</p>
+                    <ScrollArea className="max-h-[70vh]">
+                        <div className="space-y-6 pr-6 py-4">
+                            <div className="space-y-4 rounded-lg border p-4">
+                                <h3 className="font-semibold text-lg">Informações Pessoais</h3>
+                                 <div className="grid grid-cols-2 gap-4 text-sm">
+                                    <div><Label className="text-muted-foreground">Nome</Label><p>{selectedClient.name}</p></div>
+                                    <div><Label className="text-muted-foreground">CPF/CNPJ</Label><p>{selectedClient.document || "Não informado"}</p></div>
+                                    <div><Label className="text-muted-foreground">Data de Nascimento</Label><p>{selectedClient.birthDate ? new Date(selectedClient.birthDate + "T00:00:00").toLocaleDateString('pt-BR') : "Não informado"}</p></div>
+                                    <div><Label className="text-muted-foreground">Estado Civil</Label><p>{selectedClient.civilStatus || "Não informado"}</p></div>
+                                 </div>
+                            </div>
+                             <div className="space-y-4 rounded-lg border p-4">
+                                <h3 className="font-semibold text-lg">Contato e Origem</h3>
+                                 <div className="grid grid-cols-2 gap-4 text-sm">
+                                    <div><Label className="text-muted-foreground">E-mail</Label><p>{selectedClient.email}</p></div>
+                                    <div><Label className="text-muted-foreground">Telefone</Label><p>{selectedClient.phone}</p></div>
+                                    <div className="col-span-2"><Label className="text-muted-foreground">Endereço</Label><p>{selectedClient.address || "Não informado"}</p></div>
+                                    <div><Label className="text-muted-foreground">Fonte</Label><p>{selectedClient.source}</p></div>
+                                    <div><Label className="text-muted-foreground">Corretor Responsável</Label><p>{selectedClient.assignedTo}</p></div>
+                                 </div>
+                            </div>
+                            <div className="space-y-4 rounded-lg border p-4">
+                                <h3 className="font-semibold text-lg">Informações Financeiras</h3>
+                                <div className="grid grid-cols-2 gap-4 text-sm">
+                                    <div>
+                                        <Label className="text-muted-foreground">Renda Mensal</Label>
+                                        <p>{selectedClient.monthlyIncome ? formatCurrency(selectedClient.monthlyIncome) : "Não informado"}</p>
+                                    </div>
+                                </div>
+                            </div>
+                             <div className="space-y-4 rounded-lg border p-4">
+                                <h3 className="font-semibold text-lg">Documentos Anexados</h3>
+                                <div className="text-sm text-muted-foreground space-y-2">
+                                  {(selectedClient.documentUrls && selectedClient.documentUrls.length > 0) ? (
+                                    selectedClient.documentUrls.map((doc, index) => (
+                                        <a 
+                                            key={index}
+                                            href={doc.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-2 p-2 rounded-md bg-muted hover:bg-muted/80 transition-colors"
+                                        >
+                                            <FileText className="h-5 w-5 text-primary" />
+                                            <span className="truncate text-foreground hover:underline">{doc.name}</span>
+                                            <LinkIcon className="h-4 w-4 ml-auto" />
+                                        </a>
+                                    ))
+                                  ) : (
+                                    <p>Nenhum documento anexado a este cliente.</p>
+                                  )}
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </ScrollArea>
                     <DialogFooter>
                          <Button variant="secondary" onClick={() => { setDetailOpen(false); handleShowHistory(selectedClient); }}>
                             <History className="mr-2 h-4 w-4"/>Ver Histórico

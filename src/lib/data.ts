@@ -470,10 +470,18 @@ export const addNegotiation = async (newNegotiation: Omit<Negotiation, 'id'>, do
     // 5. Executa as operações iniciais
     await batch.commit();
 
-    // 6. Faz o upload dos documentos, se houver, e atualiza a negociação
+    // 6. Faz o upload dos documentos, se houver, e atualiza a negociação E o cliente
     if (documents && documents.length > 0) {
         const documentUrls = await uploadNegotiationDocuments(documents, negotiationRef.id);
+        
+        // Atualiza a negociação com os URLs
         await updateDoc(negotiationRef, { documentUrls });
+
+        // Atualiza o cliente com os mesmos URLs
+        const clientRef = doc(db, 'clients', newNegotiation.clientId);
+        await updateDoc(clientRef, {
+            documentUrls: arrayUnion(...documentUrls)
+        });
     }
 
     return negotiationRef.id;

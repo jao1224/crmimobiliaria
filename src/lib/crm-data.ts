@@ -1,6 +1,6 @@
 
 import { db } from './firebase';
-import { collection, getDocs, addDoc, doc, setDoc, deleteDoc, writeBatch, query, where, getDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, setDoc, deleteDoc, writeBatch, query, where, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { addNotification } from './data';
 import { type Property } from './data';
 
@@ -27,6 +27,7 @@ export type Client = {
     birthDate?: string;
     address?: string;
     monthlyIncome?: number;
+    documentUrls?: { url: string, name: string }[];
 };
 
 
