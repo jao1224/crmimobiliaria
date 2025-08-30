@@ -1,5 +1,4 @@
 
-
 import {initializeApp} from "firebase-admin/app";
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {beforeUserCreated} from "firebase-functions/v2/identity";
@@ -17,17 +16,6 @@ const adminDb = getFirestore();
 
 // --- INÍCIO: LÓGICA DE NOTIFICAÇÃO DE EVENTOS ---
 
-// TODO: Para ativar o envio de e-mails de notificação de eventos, siga os passos:
-// 1. Escolha um provedor de e-mail (ex: Gmail, SendGrid, Resend).
-// 2. Salve as credenciais de e-mail (usuário e senha/chave de API) de forma segura.
-//    Execute no seu terminal:
-//    firebase functions:secrets:set EMAIL_USER
-//    firebase functions:secrets:set EMAIL_PASS
-// 3. Descomente as funções `sendEventNotification` e `sendPendencyNotification` abaixo.
-// 4. Preencha o campo `to` com o e-mail que deve receber as notificações.
-// 5. Faça o deploy das funções: `firebase deploy --only functions`
-
-
 const emailUser = defineString("EMAIL_USER");
 const emailPass = defineString("EMAIL_PASS");
 
@@ -41,156 +29,7 @@ const transporter = nodemailer.createTransport({
     },
 });
 
-// Gatilho: Função que é executada QUANDO um novo evento é criado no Firestore.
-/*
-export const sendEventNotification = functions.firestore
-    .document("eventos/{eventId}")
-    .onCreate(async (snap, context) => {
-        const eventData = snap.data();
-
-        // Só envia notificação para eventos de agendas compartilhadas
-        if (eventData.type === "personal") {
-            console.log(`Evento pessoal de ${eventData.title} criado. Nenhuma notificação enviada.`);
-            return null;
-        }
-
-        const eventId = context.params.eventId;
-        const title = eventData.title;
-        const eventDate = new Date(eventData.date.seconds * 1000).toLocaleDateString("pt-BR");
-        const time = eventData.time;
-        const description = eventData.description;
-        const typeLabel = eventData.type === "company" ? "Agenda da Imobiliária" : "Visitas da Equipe";
-
-        const mailOptions = {
-            from: `Ideal Imóveis <${emailUser.value()}>`,
-            to: "email-do-admin-ou-gerente@example.com", // <-- IMPORTANTE: Defina o destinatário aqui
-            subject: `Novo Evento na Agenda: ${title}`,
-            html: `
-                <h1>Novo Evento Agendado</h1>
-                <p>Um novo evento foi adicionado na <strong>${typeLabel}</strong>.</p>
-                <ul>
-                    <li><strong>Título:</strong> ${title}</li>
-                    <li><strong>Data:</strong> ${eventDate}</li>
-                    <li><strong>Hora:</strong> ${time}</li>
-                    <li><strong>Descrição:</strong> ${description || "N/A"}</li>
-                </ul>
-                <p>ID do Evento: ${eventId}</p>
-            `,
-        };
-
-        try {
-            await transporter.sendMail(mailOptions);
-            console.log(`E-mail de notificação do evento '${title}' enviado com sucesso.`);
-        } catch (error) {
-            console.error("Erro ao enviar e-mail de notificação de evento:", error);
-        }
-
-        return null;
-    });
-*/
-
-// Gatilho: Função que é executada QUANDO um processo é ATUALIZADO no Firestore.
-/*
-export const sendPendencyNotification = functions.firestore
-    .document("processos/{processoId}")
-    .onUpdate(async (change, context) => {
-        const beforeData = change.before.data();
-        const afterData = change.after.data();
-
-        // Verifica se o estágio mudou para "Pendência"
-        if (beforeData.stage !== "Pendência" && afterData.stage === "Pendência") {
-            const processoId = context.params.processoId;
-            const propertyName = afterData.propertyName;
-            const propertyCode = afterData.propertyDisplayCode;
-            const salesperson = afterData.salespersonName;
-            const observation = afterData.observations;
-
-            const mailOptions = {
-                from: `Ideal Imóveis <${emailUser.value()}>`,
-                to: "email-do-admin-ou-gerente@example.com", // <-- IMPORTANTE: Defina o destinatário aqui
-                subject: `Alerta de Pendência no Processo: ${propertyCode}`,
-                html: `
-                    <h1>Alerta de Pendência em Processo</h1>
-                    <p>O processo do imóvel <strong>${propertyName} (${propertyCode})</strong> foi marcado com uma pendência.</p>
-                    <ul>
-                        <li><strong>Vendedor Responsável:</strong> ${salesperson}</li>
-                        <li><strong>Observação da Pendência:</strong> ${observation || "Nenhuma observação registrada."}</li>
-                    </ul>
-                    <p>Por favor, verifique o sistema para tomar as ações necessárias.</p>
-                    <p>ID do Processo: ${processoId}</p>
-                `,
-            };
-
-            try {
-                await transporter.sendMail(mailOptions);
-                console.log(`E-mail de pendência do processo '${processoId}' enviado com sucesso.`);
-            } catch (error) {
-                console.error("Erro ao enviar e-mail de notificação de pendência:", error);
-            }
-        }
-
-        return null;
-    });
-*/
-
-
-// --- INÍCIO: LÓGICA DE NOTIFICAÇÃO POR E-MAIL ---
-
-// TODO: Para ativar o envio de e-mails, siga os passos:
-// 1. Escolha um provedor de e-mail (ex: SendGrid, Resend, Mailgun).
-// 2. Obtenha uma chave de API (API Key) do provedor escolhido.
-// 3. Salve a chave de API de forma segura no seu ambiente de Cloud Functions.
-//    Execute no seu terminal: firebase functions:secrets:set SENDGRID_API_KEY
-//    Cole a chave quando solicitado.
-// 4. Instale o pacote do provedor na pasta `functions`: npm install @sendgrid/mail
-// 5. Descomente o código abaixo e adicione o e-mail remetente.
-
-/*
-// Carrega a chave de API das secrets do Firebase.
-import {defineString} from "firebase-functions/params";
-import * as sgMail from "@sendgrid/mail";
-const sendgridApiKey = defineString("SENDGRID_API_KEY");
-
-// Gatilho: Função que é executada DEPOIS que um usuário é criado no Firebase Auth.
-export const sendWelcomeEmail = beforeUserCreated(async (event) => {
-    const user = event.data;
-    const email = user.email;
-    const displayName = user.displayName || "Novo Usuário";
-
-    if (!email) {
-        console.log("Usuário criado sem e-mail, não é possível enviar boas-vindas.");
-        return;
-    }
-
-    // Inicializa o cliente do serviço de e-mail.
-    sgMail.setApiKey(sendgridApiKey.value());
-
-    const msg = {
-        to: email,
-        from: "seu-email@seudominio.com", // <-- IMPORTANTE: Use um e-mail verificado no seu provedor.
-        subject: "Bem-vindo(a) à Ideal Imóveis!",
-        html: `
-            <h1>Olá, ${displayName}!</h1>
-            <p>Sua conta na plataforma Ideal Imóveis foi criada com sucesso.</p>
-            <p>Agora você pode acessar nosso painel e explorar todas as funcionalidades para otimizar seu negócio imobiliário.</p>
-            <p>Se tiver qualquer dúvida, nossa equipe de suporte está à disposição.</p>
-            <br>
-            <p>Atenciosamente,</p>
-            <p>Equipe Ideal Imóveis</p>
-        `,
-    };
-
-    try {
-        await sgMail.send(msg);
-        console.log(`E-mail de boas-vindas enviado para ${email}`);
-    } catch (error) {
-        console.error("Erro ao enviar e-mail de boas-vindas:", error);
-    }
-});
-*/
-
-// --- FIM: LÓGICA DE NOTIFICAÇÃO POR E-MAIL ---
-
+// --- FIM: LÓGICA DE NOTIFICAÇÃO ---
 
 interface Party {
     name: string;
@@ -241,12 +80,13 @@ interface ReportData {
 }
 
 export const createUser = onCall(async (request) => {
-    // Verifica se o usuário que está chamando a função é um admin.
-    if (request.auth?.token.role !== 'Admin' && request.auth?.token.role !== 'Imobiliária') {
-        throw new HttpsError('permission-denied', 'Apenas administradores podem criar usuários.');
+    // Verifica se o usuário que está chamando a função é um admin de imobiliária.
+    if (!request.auth?.token.imobiliariaId) {
+        throw new HttpsError('permission-denied', 'Apenas administradores de imobiliárias podem criar usuários.');
     }
 
     const { email, password, name, role } = request.data;
+    const imobiliariaId = request.auth.token.imobiliariaId;
 
     try {
         const userRecord = await adminAuth.createUser({
@@ -255,8 +95,8 @@ export const createUser = onCall(async (request) => {
             displayName: name,
         });
         
-        // Define a custom claim (role) para o novo usuário.
-        await adminAuth.setCustomUserClaims(userRecord.uid, { role });
+        // Define as custom claims (role e imobiliariaId) para o novo usuário.
+        await adminAuth.setCustomUserClaims(userRecord.uid, { role, imobiliariaId });
 
         // Salva informações adicionais no Firestore.
         await adminDb.collection('users').doc(userRecord.uid).set({
@@ -264,14 +104,47 @@ export const createUser = onCall(async (request) => {
             name,
             email,
             role,
+            imobiliariaId, // Salva o ID da imobiliária no documento do usuário
             createdAt: new Date().toISOString(),
         });
 
         return { success: true, uid: userRecord.uid };
     } catch (error: any) {
         console.error('Error creating new user:', error);
-        // Lança um erro que pode ser pego no lado do cliente.
         throw new HttpsError('internal', error.message, error);
+    }
+});
+
+// Esta função adiciona custom claims ao criar um usuário diretamente pelo Firebase Auth (ex: no registro).
+export const addRoleOnCreate = beforeUserCreated(async (event) => {
+    const user = event.data;
+    const userDocRef = adminDb.collection('users').doc(user.uid);
+    
+    try {
+        const userDoc = await userDocRef.get();
+        if (userDoc.exists) {
+            const userData = userDoc.data();
+            if (userData && userData.role) {
+                const claims: { [key: string]: any } = { role: userData.role };
+                // Se o usuário for do tipo Imobiliária, seu imobiliariaId é o próprio uid.
+                if (userData.role === 'Imobiliária') {
+                    claims.imobiliariaId = user.uid;
+                    // Atualiza o documento no firestore com o imobiliariaId
+                    await userDocRef.update({ imobiliariaId: user.uid });
+                }
+                 if (userData.imobiliariaId) {
+                    claims.imobiliariaId = userData.imobiliariaId;
+                }
+                
+                await adminAuth.setCustomUserClaims(user.uid, claims);
+                return;
+            }
+        }
+        // Fallback: se não encontrar o documento a tempo, define um cargo padrão.
+        await adminAuth.setCustomUserClaims(user.uid, { role: 'Corretor Autônomo' });
+
+    } catch (error) {
+        console.error("Erro ao definir custom claims:", error);
     }
 });
 
@@ -304,7 +177,6 @@ async function drawText(
   }
   page.drawText(line, {x: x, y: currentY, font: font, size: size, color: rgb(0, 0, 0)});
 
-  // Return the new Y position after drawing the text
   return currentY - lineHeight;
 }
 
@@ -324,7 +196,7 @@ async function drawPartyInfo(
     for (const party of parties) {
         const partyText = `${party.name}, CPF/CNPJ: ${party.doc}, residente em ${party.address}.`;
         currentY = await drawText(font, partyText, x, currentY, 10, contentWidth, 15, page);
-        currentY -= 5; // Espaço entre as partes, se houver múltiplas
+        currentY -= 5;
     }
 
     return currentY;
@@ -342,7 +214,6 @@ export const generateReportPdf = onCall<ReportData, Promise<{pdfBase64: string}>
     const contentWidth = width - 2 * margin;
     let y = height - margin;
 
-    // Title
     page.drawText(data.title, {
         x: margin, y, font: boldFont, size: 18, color: rgb(0, 0, 0),
     });
@@ -352,7 +223,6 @@ export const generateReportPdf = onCall<ReportData, Promise<{pdfBase64: string}>
     });
     y -= 30;
 
-    // Summary
     page.drawText("Resumo do Período", {x: margin, y, font: boldFont, size: 14});
     y -= 20;
     const revenueText = `Receita Total: ${new Intl.NumberFormat('pt-BR', {style: 'currency', currency: 'BRL'}).format(data.summary.totalRevenue)}`;
@@ -362,14 +232,11 @@ export const generateReportPdf = onCall<ReportData, Promise<{pdfBase64: string}>
     page.drawText(dealsText, {x: margin, y, font, size: 12});
     y -= 40;
 
-    // Table Header
     page.drawText("Detalhamento das Vendas", {x: margin, y, font: boldFont, size: 14});
     y -= 20;
 
-    const tableTop = y;
-    const colWidths = [150, 100, 100, 100, 100];
-    const colPositions = [margin, margin + 150, margin + 250, margin + 350, margin + 450];
     const tableHeaders = ["Imóvel", "Cliente", "Vendedor", "Data", "Valor"];
+    const colPositions = [margin, margin + 150, margin + 250, margin + 350, margin + 450];
 
     page.drawText(tableHeaders[0], {x: colPositions[0], y, font: boldFont, size: 10});
     page.drawText(tableHeaders[1], {x: colPositions[1], y, font: boldFont, size: 10});
@@ -378,9 +245,8 @@ export const generateReportPdf = onCall<ReportData, Promise<{pdfBase64: string}>
     page.drawText(tableHeaders[4], {x: colPositions[4], y, font: boldFont, size: 10});
     y -= 15;
 
-    // Table Rows
     data.sales.forEach(sale => {
-        if (y < margin + 20) { // Check for page break
+        if (y < margin + 20) {
             page = pdfDoc.addPage();
             y = height - margin;
         }
@@ -410,7 +276,6 @@ export const generateContractPdf = onCall<ContractData, Promise<{pdfBase64: stri
   const contentWidth = width - 2 * margin;
   let y = height - margin;
 
-  // Title
   page.drawText("CONTRATO PARTICULAR DE PROMESSA DE COMPRA E VENDA DE IMÓVEL", {
     x: margin,
     y,
@@ -420,7 +285,6 @@ export const generateContractPdf = onCall<ContractData, Promise<{pdfBase64: stri
   });
   y -= 40;
 
-  // Parties
   y = await drawPartyInfo("VENDEDOR(ES):", data.sellers, font, boldFont, margin, y, contentWidth, page);
   y -= 10;
   y = await drawPartyInfo("COMPRADOR(A/ES):", data.buyers, font, boldFont, margin, y, contentWidth, page);
@@ -432,7 +296,6 @@ export const generateContractPdf = onCall<ContractData, Promise<{pdfBase64: stri
   y = await drawText(font, realtorText, margin, y, 10, contentWidth, 15, page);
   y -= 20;
 
-  // Clauses
   page.drawText("CLÁUSULA PRIMEIRA - DO OBJETO", {x: margin, y, font: boldFont, size: 12});
   y -= 15;
   const objectText = `O presente contrato tem por objeto a promessa de compra e venda do imóvel a seguir descrito: ${data.propertyName} (Cód. ${data.propertyCode}), localizado em ${data.propertyAddress}, com área de ${data.propertyArea}m², matrícula ${data.propertyRegistration} do ${data.propertyRegistryOffice}.`;
@@ -463,8 +326,7 @@ export const generateContractPdf = onCall<ContractData, Promise<{pdfBase64: stri
     y -= 10;
   }
 
-  // Signatures
-  y = Math.min(y, 180); // Garante que a seção de assinaturas não saia da página
+  y = Math.min(y, 180);
   const line = "_________________________";
 
   data.buyers.forEach((buyer) => {

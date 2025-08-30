@@ -81,26 +81,28 @@ export function RegisterForm() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-        // Verifica se já existe algum usuário no banco
         const usersCollection = collection(db, "users");
         const q = query(usersCollection, limit(1));
         const usersSnapshot = await getDocs(q);
         const isFirstUser = usersSnapshot.empty;
 
-        // Se for o primeiro usuário, a role é 'Admin', caso contrário, usa o que foi selecionado
         const role = isFirstUser ? 'Admin' : values.profileType;
 
-        // 1. Cria o usuário
         const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
         const user = userCredential.user;
         
-        // 2. Atualiza perfil e salva dados no Firestore
+        // Se for uma nova imobiliária, o ID da imobiliária é o próprio UID do usuário admin.
+        // Caso contrário, (ex: corretor, investidor), eles não pertencem a uma imobiliária neste momento.
+        const imobiliariaId = role === 'Imobiliária' ? user.uid : null;
+
         await updateProfile(user, { displayName: values.name });
+        
         await setDoc(doc(db, "users", user.uid), {
             uid: user.uid,
             name: values.name,
             email: values.email,
             role: role,
+            imobiliariaId: imobiliariaId, // Adiciona o ID da imobiliária
             document: values.document,
             whatsapp: values.whatsapp,
             creci: values.creci || null,
@@ -108,7 +110,6 @@ export function RegisterForm() {
             createdAt: new Date().toISOString(),
         });
         
-        // 3. Mostra sucesso e redireciona
         toast({
             title: "Conta Criada com Sucesso!",
             description: "Você será redirecionado para fazer o login.",
@@ -120,8 +121,6 @@ export function RegisterForm() {
         let description = "Não foi possível criar sua conta. Tente novamente.";
         if (error.code === 'auth/email-already-in-use') {
             description = "Este endereço de e-mail já está em uso.";
-        } else if (error.code === 'auth/invalid-api-key' || error.code === 'auth/configuration-not-found') {
-            description = "A configuração do Firebase está incorreta. Verifique a chave de API e se o Authentication está ativado.";
         }
         toast({
             variant: "destructive",

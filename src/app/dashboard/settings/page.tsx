@@ -19,7 +19,7 @@ import { ProfileContext } from "@/contexts/ProfileContext";
 import { cn } from "@/lib/utils";
 import { type UserProfile, userProfiles, menuConfig, allModules } from "@/lib/permissions";
 import { auth, db, app } from "@/lib/firebase";
-import { collection, getDocs, doc, setDoc, addDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc } from "firebase/firestore";
+import { collection, getDocs, doc, setDoc, addDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc, query, where } from "firebase/firestore";
 import { EmailAuthProvider, onAuthStateChanged, reauthenticateWithCredential, updatePassword, updateProfile, type User } from "firebase/auth";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import {
@@ -34,29 +34,30 @@ type TeamMember = {
     name: string;
     email: string;
     role: string;
+    imobiliariaId?: string;
 };
 
 type Team = {
     id: string;
     name: string;
     memberIds: string[];
+    imobiliariaId: string;
 };
 
 type PermissionsState = Record<UserProfile, string[]>;
 
-const roles = userProfiles.filter(p => ['Admin', 'Super Usuário', 'Imobiliária', 'Vendedor', 'Financeiro', 'Corretor Autônomo', 'Investidor', 'Construtora'].includes(p));
+const roles = userProfiles.filter(p => ['Vendedor', 'Financeiro', 'Corretor Autônomo'].includes(p));
 
 
 export default function SettingsPage() {
     const { activeProfile } = useContext(ProfileContext);
-    const hasPermission = activeProfile === 'Admin' || activeProfile === 'Imobiliária' || activeProfile === 'Super Usuário';
+    const hasPermission = activeProfile === 'Admin' || activeProfile === 'Imobiliária';
 
-    // Estados da UI
     const [isSaving, setIsSaving] = useState(false);
     const { toast } = useToast();
 
-    // Estados do Perfil
     const [user, setUser] = useState<User | null>(null);
+    const [userData, setUserData] = useState<TeamMember | null>(null);
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [currentPassword, setCurrentPassword] = useState('');
@@ -64,7 +65,6 @@ export default function SettingsPage() {
     const [showCurrentPassword, setShowCurrentPassword] = useState(false);
     const [showNewPassword, setShowNewPassword] = useState(false);
 
-    // Estados das Equipes
     const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
     const [teams, setTeams] = useState<Team[]>([]);
     const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
@@ -72,41 +72,54 @@ export default function SettingsPage() {
     const [isTeamDialogOpen, setTeamDialogOpen] = useState(false);
     const [isManageMembersDialogOpen, setManageMembersDialogOpen] = useState(false);
     
-    // Estados dos Filtros da Aba de Membros
     const [searchQuery, setSearchQuery] = useState("");
     const [teamFilter, setTeamFilter] = useState("all");
     const [openTeamId, setOpenTeamId] = useState<string | null>(null);
 
-
-    // Estado das Permissões
     const [permissions, setPermissions] = useState<PermissionsState>(menuConfig);
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             if (currentUser) {
                 setUser(currentUser);
                 setName(currentUser.displayName || '');
                 setEmail(currentUser.email || '');
+
+                const userDocRef = doc(db, "users", currentUser.uid);
+                const userDocSnap = await getDoc(userDocRef);
+                if (userDocSnap.exists()) {
+                    setUserData(userDocSnap.data() as TeamMember);
+                }
+
+                if (hasPermission) {
+                    fetchTeamData(currentUser);
+                }
             } else {
                 setUser(null);
+                setUserData(null);
             }
         });
-
-        if (hasPermission) {
-            fetchTeamData();
-        }
 
         return () => unsubscribe();
     }, [hasPermission]);
 
-    const fetchTeamData = async () => {
-        if (hasPermission) {
-            const usersSnapshot = await getDocs(collection(db, "users"));
-            setTeamMembers(usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeamMember)));
+    const fetchTeamData = async (currentUser: User) => {
+        if (!currentUser) return;
+        
+        const userDocRef = doc(db, "users", currentUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        const currentUserData = userDocSnap.data();
+        const imobiliariaId = currentUserData?.imobiliariaId;
 
-            const teamsSnapshot = await getDocs(collection(db, "teams"));
-            setTeams(teamsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team)));
-        }
+        if (!imobiliariaId) return;
+
+        const usersQuery = query(collection(db, "users"), where("imobiliariaId", "==", imobiliariaId));
+        const usersSnapshot = await getDocs(usersQuery);
+        setTeamMembers(usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeamMember)));
+
+        const teamsQuery = query(collection(db, "teams"), where("imobiliariaId", "==", imobiliariaId));
+        const teamsSnapshot = await getDocs(teamsQuery);
+        setTeams(teamsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team)));
     };
 
 
@@ -121,14 +134,12 @@ export default function SettingsPage() {
         }
 
         try {
-            // 1. Atualizar nome (se mudou)
             if (currentUser.displayName !== name) {
                 await updateProfile(currentUser, { displayName: name });
-                await setDoc(doc(db, "users", currentUser.uid), { name }, { merge: true });
+                await updateDoc(doc(db, "users", currentUser.uid), { name });
                 toast({ title: 'Sucesso', description: 'Seu nome foi atualizado.' });
             }
 
-            // 2. Atualizar senha (se preenchido)
             if (currentPassword && newPassword) {
                 const credential = EmailAuthProvider.credential(currentUser.email, currentPassword);
                 await reauthenticateWithCredential(currentUser, credential);
@@ -141,7 +152,6 @@ export default function SettingsPage() {
             }
 
         } catch (error: any) {
-            console.error("Profile Update Error: ", error);
             let description = 'Ocorreu um erro ao atualizar seu perfil.';
             if (error.code === 'auth/wrong-password') {
                 description = 'A senha atual está incorreta.';
@@ -178,19 +188,16 @@ export default function SettingsPage() {
             const result = await createUser(newMemberData) as any;
 
             if (result.data.success) {
-                await fetchTeamData();
+                if (user) await fetchTeamData(user);
                 toast({ title: "Sucesso!", description: "Novo membro da equipe criado." });
                 setTeamMemberDialogOpen(false);
             } else {
                 throw new Error(result.data.error || "A função de nuvem retornou um erro.");
             }
         } catch (error: any) {
-            console.error("Error creating user:", error);
             let description = "Ocorreu um erro ao criar o usuário.";
             if (error.message.includes('auth/email-already-exists') || (error.details && error.details.message.includes('EMAIL_EXISTS'))) {
                 description = 'Este e-mail já está em uso por outra conta.';
-            } else if (error.message.includes('auth/weak-password')) {
-                description = 'A senha fornecida é muito fraca. Use pelo menos 6 caracteres.';
             } else if (error.message.includes('permission-denied')) {
                 description = 'Você não tem permissão para executar esta ação.';
             }
@@ -202,6 +209,8 @@ export default function SettingsPage() {
 
     const handleAddTeam = async (event: React.FormEvent<HTMLFormElement>) => {
        event.preventDefault();
+       if (!userData?.imobiliariaId) return;
+
        setIsSaving(true);
        const formData = new FormData(event.currentTarget);
        const teamName = formData.get("team-name") as string;
@@ -209,9 +218,10 @@ export default function SettingsPage() {
        try {
             await addDoc(collection(db, "teams"), {
                 name: teamName,
-                memberIds: []
+                memberIds: [],
+                imobiliariaId: userData.imobiliariaId
             });
-            await fetchTeamData();
+            if(user) await fetchTeamData(user);
             toast({ title: "Sucesso!", description: `A equipe "${teamName}" foi criada.`});
             setTeamDialogOpen(false);
        } catch (error) {
@@ -236,15 +246,12 @@ export default function SettingsPage() {
         setIsSaving(true);
         try {
             const teamRef = doc(db, 'teams', selectedTeam.id);
-            await updateDoc(teamRef, {
-                memberIds: arrayUnion(memberId)
-            });
-            await fetchTeamData(); // Refresh all data
-            // Refresh selectedTeam state
-            const updatedTeams = await getDocs(collection(db, "teams"));
-            const updatedTeam = updatedTeams.docs.find(d => d.id === selectedTeam.id)?.data() as Team;
-            if(updatedTeam) {
-                 setSelectedTeam({ ...updatedTeam, id: selectedTeam.id });
+            await updateDoc(teamRef, { memberIds: arrayUnion(memberId) });
+            if (user) await fetchTeamData(user);
+            
+            const updatedTeamDoc = await getDoc(teamRef);
+            if (updatedTeamDoc.exists()) {
+                setSelectedTeam({ ...updatedTeamDoc.data(), id: updatedTeamDoc.id } as Team);
             }
            
             toast({ title: "Sucesso!", description: "Membro adicionado à equipe." });
@@ -261,18 +268,14 @@ export default function SettingsPage() {
         setIsSaving(true);
          try {
             const teamRef = doc(db, 'teams', selectedTeam.id);
-            await updateDoc(teamRef, {
-                memberIds: arrayRemove(memberId)
-            });
-            await fetchTeamData(); // Refresh all data
-            // Refresh selectedTeam state
-             const updatedTeams = await getDocs(collection(db, "teams"));
-             const updatedTeamDoc = updatedTeams.docs.find(d => d.id === selectedTeam.id);
-             if (updatedTeamDoc) {
-                 const updatedTeamData = updatedTeamDoc.data() as Omit<Team, 'id'>;
-                 setSelectedTeam({ ...updatedTeamData, id: selectedTeam.id });
+            await updateDoc(teamRef, { memberIds: arrayRemove(memberId) });
+            if (user) await fetchTeamData(user);
+            
+             const updatedTeamDoc = await getDoc(teamRef);
+             if (updatedTeamDoc.exists()) {
+                 setSelectedTeam({ ...updatedTeamDoc.data(), id: updatedTeamDoc.id } as Team);
              } else {
-                 setManageMembersDialogOpen(false); // Team was deleted, close modal
+                 setManageMembersDialogOpen(false);
              }
 
             toast({ title: "Sucesso!", description: "Membro removido da equipe." });
@@ -291,7 +294,7 @@ export default function SettingsPage() {
         if (window.confirm("Tem certeza que deseja excluir esta equipe? Esta ação não pode ser desfeita.")) {
             try {
                 await deleteDoc(doc(db, "teams", teamId));
-                await fetchTeamData();
+                if (user) await fetchTeamData(user);
                 toast({ title: "Sucesso", description: "Equipe excluída." });
             } catch (error) {
                 toast({ variant: "destructive", title: "Erro", description: "Não foi possível excluir a equipe." });
@@ -311,9 +314,6 @@ export default function SettingsPage() {
 
     const handleSavePermissions = () => {
         setIsSaving(true);
-        // Simulação de salvamento no Firestore.
-        // Em um projeto real, você faria um loop e salvaria `permissions`
-        // em um documento de configuração no Firestore.
         console.log("Salvando permissões:", permissions);
         setTimeout(() => {
             toast({ title: "Permissões Salvas", description: "As novas regras de permissão foram salvas com sucesso (simulado)." });
@@ -326,7 +326,7 @@ export default function SettingsPage() {
         try {
             const userRef = doc(db, 'users', memberId);
             await updateDoc(userRef, { role: newRole });
-            await fetchTeamData();
+            if (user) await fetchTeamData(user);
             toast({ title: "Sucesso", description: `Função do usuário alterada para ${newRole}.` });
         } catch (error) {
              toast({ variant: "destructive", title: "Erro", description: "Não foi possível alterar a função do usuário." });
@@ -366,7 +366,7 @@ export default function SettingsPage() {
                      {hasPermission && <TabsTrigger value="permissions">Permissões</TabsTrigger>}
                 </TabsList>
                 <TabsContent value="profile" className="space-y-6">
-                    <Card className="transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
+                    <Card>
                         <CardHeader>
                             <CardTitle>Meu Perfil</CardTitle>
                             <CardDescription>Atualize suas informações pessoais e senha.</CardDescription>
@@ -398,7 +398,6 @@ export default function SettingsPage() {
                                       onClick={() => setShowCurrentPassword(prev => !prev)}
                                     >
                                       {showCurrentPassword ? <EyeOff /> : <Eye />}
-                                      <span className="sr-only">{showCurrentPassword ? "Ocultar senha" : "Mostrar senha"}</span>
                                     </Button>
                                 </div>
                             </div>
@@ -420,7 +419,6 @@ export default function SettingsPage() {
                                       onClick={() => setShowNewPassword(prev => !prev)}
                                     >
                                       {showNewPassword ? <EyeOff /> : <Eye />}
-                                      <span className="sr-only">{showNewPassword ? "Ocultar senha" : "Mostrar senha"}</span>
                                     </Button>
                                 </div>
                             </div>
@@ -519,11 +517,11 @@ export default function SettingsPage() {
                                 <TableBody>
                                     {filteredMembers.length > 0 ? (
                                         filteredMembers.map((member) => (
-                                            <TableRow key={member.id} className="transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1">
+                                            <TableRow key={member.id}>
                                                 <TableCell className="font-medium">{member.name}</TableCell>
                                                 <TableCell>{member.email}</TableCell>
                                                 <TableCell>{findTeamForMember(member.id)}</TableCell>
-                                                <TableCell><Badge variant={member.role === 'Admin' || member.role === 'Imobiliária' || member.role === 'Super Usuário' ? 'default' : 'secondary'}>{member.role}</Badge></TableCell>
+                                                <TableCell><Badge variant={member.role === 'Admin' || member.role === 'Imobiliária' ? 'default' : 'secondary'}>{member.role}</Badge></TableCell>
                                                 <TableCell className="text-right">
                                                     <DropdownMenu>
                                                         <DropdownMenuTrigger asChild>
@@ -534,7 +532,7 @@ export default function SettingsPage() {
                                                             <DropdownMenuSub>
                                                                 <DropdownMenuSubTrigger>Alterar Função</DropdownMenuSubTrigger>
                                                                 <DropdownMenuSubContent>
-                                                                    {userProfiles.map(role => (
+                                                                    {roles.map(role => (
                                                                         <DropdownMenuItem 
                                                                             key={role} 
                                                                             onClick={() => handleChangeUserRole(member.id, role)}
@@ -602,7 +600,7 @@ export default function SettingsPage() {
                                     {teams.length > 0 ? (
                                         teams.map((team) => (
                                            <React.Fragment key={team.id}>
-                                                <TableRow className="transition-all duration-200 hover:shadow-md">
+                                                <TableRow>
                                                     <TableCell className="font-medium">
                                                         <button className="flex items-center gap-2 w-full text-left" onClick={() => setOpenTeamId(openTeamId === team.id ? null : team.id)}>
                                                             <ChevronRight className={cn("h-4 w-4 transition-transform duration-200", openTeamId === team.id && "rotate-90")} />
@@ -778,5 +776,3 @@ export default function SettingsPage() {
         </div>
     );
 }
-
-    

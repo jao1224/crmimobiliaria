@@ -3,6 +3,8 @@ export type UserProfile = 'Admin' | 'Super Usuário' | 'Imobiliária' | 'Correto
 
 export const userProfiles: UserProfile[] = ['Admin', 'Super Usuário', 'Imobiliária', 'Vendedor', 'Corretor Autônomo', 'Investidor', 'Construtora', 'Financeiro'];
 
+// O perfil "Admin" agora representa um Super Admin da plataforma.
+// O perfil "Imobiliária" é o administrador de uma agência específica.
 export const menuConfig: Record<UserProfile, string[]> = {
     'Admin': ['/dashboard', '/dashboard/activity-feed', '/dashboard/properties', '/dashboard/crm', '/dashboard/negotiations', '/dashboard/processes', '/dashboard/finance', '/dashboard/agenda', '/dashboard/reporting', '/dashboard/correspondent', '/dashboard/services', '/dashboard/settings'],
     'Super Usuário': ['/dashboard', '/dashboard/activity-feed', '/dashboard/properties', '/dashboard/crm', '/dashboard/negotiations', '/dashboard/processes', '/dashboard/finance', '/dashboard/agenda', '/dashboard/reporting', '/dashboard/correspondent', '/dashboard/services', '/dashboard/settings'],
