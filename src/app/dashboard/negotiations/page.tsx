@@ -27,7 +27,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { getNegotiations, addNegotiation, type Negotiation, addFinancingProcess, completeSaleAndGenerateCommission, getProperties, type Property, updateNegotiation, getUsers, type User, archiveNegotiation, addServiceRequest, markAsDeleted } from "@/lib/data";
+import { getNegotiations, addNegotiation, type Negotiation, addFinancingProcess, completeSaleAndGenerateCommission, getProperties, type Property, updateNegotiation, getUsers, type User, archiveNegotiation, addServiceRequest, markAsDeleted, getProcessos, type Processo } from "@/lib/data";
 import { getClients, type Client } from "@/lib/crm-data";
 import { cn } from "@/lib/utils";
 import { ProfileContext } from "@/contexts/ProfileContext";
@@ -50,6 +50,7 @@ export default function NegotiationsPage() {
     const [currentUser, setCurrentUser] = useState<User | null>(null);
 
     const [allNegotiations, setAllNegotiations] = useState<Negotiation[]>([]);
+    const [allProcesses, setAllProcesses] = useState<Processo[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isNewNegotiationOpen, setNewNegotiationOpen] = useState(false);
     const { toast } = useToast();
@@ -108,8 +109,9 @@ export default function NegotiationsPage() {
     const refreshData = async () => {
         setIsLoading(true);
         try {
-            const data = await getNegotiations();
+            const [data, processes] = await Promise.all([getNegotiations(), getProcessos()]);
             setAllNegotiations(data);
+            setAllProcesses(processes);
         } catch (error) {
             toast({ variant: 'destructive', title: "Erro ao buscar negociações" });
         } finally {
@@ -417,6 +419,12 @@ export default function NegotiationsPage() {
         }
     }
 
+    const getProcessCodeForNegotiation = (negotiationId: string) => {
+        const process = allProcesses.find(p => p.negotiationId === negotiationId);
+        return process ? process.processoDisplayCode : 'N/A';
+    };
+
+
     return (
         <>
         <div className="flex flex-col gap-6">
@@ -429,7 +437,7 @@ export default function NegotiationsPage() {
                     <DialogTrigger asChild>
                         <Button>Iniciar Nova Negociação</Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
+                     <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
                         <DialogHeader>
                             <DialogTitle>Iniciar Nova Negociação</DialogTitle>
                             <DialogDescription>
@@ -613,7 +621,7 @@ export default function NegotiationsPage() {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Cód.</TableHead>
+                                <TableHead>Cód. Processo</TableHead>
                                 <TableHead>Imóvel</TableHead>
                                 <TableHead>Cliente</TableHead>
                                 <TableHead className="hidden md:table-cell">Data Criação</TableHead>
@@ -639,7 +647,7 @@ export default function NegotiationsPage() {
                                 <TableRow
                                     key={neg.id}
                                 >
-                                    <TableCell className="font-mono text-xs text-muted-foreground">{neg.propertyDisplayCode}</TableCell>
+                                    <TableCell className="font-mono text-xs text-muted-foreground">{getProcessCodeForNegotiation(neg.id)}</TableCell>
                                     <TableCell>
                                         <div className="font-medium">{neg.property}</div>
                                         <div className="text-xs text-muted-foreground font-mono">{neg.propertyDisplayCode}</div>
