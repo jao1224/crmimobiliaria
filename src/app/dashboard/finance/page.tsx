@@ -153,7 +153,7 @@ export default function FinancePage() {
             return;
         }
 
-        const newCommissionData: Partial<Omit<Commission, 'id'>> = {
+        const newCommissionData: Omit<Commission, 'id'> = {
             negotiationId: negotiation.id,
             propertyValue: negotiation.value,
             clientName: negotiation.client,
@@ -175,7 +175,7 @@ export default function FinancePage() {
         if (notes) newCommissionData.notes = notes;
 
 
-        await addCommission(newCommissionData as Omit<Commission, 'id'>);
+        await addCommission(newCommissionData);
         await refreshFinanceData();
         toast({ title: "Sucesso!", description: "Comissão lançada com sucesso." });
         form.reset();
@@ -394,7 +394,7 @@ export default function FinancePage() {
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead>Cód. Processo</TableHead>
+                                            <TableHead>Imóvel</TableHead>
                                             <TableHead>Cliente</TableHead>
                                             {hasPermission && <TableHead>Captador</TableHead>}
                                             {hasPermission && <TableHead>Vendedor</TableHead>}
@@ -414,7 +414,10 @@ export default function FinancePage() {
                                         ) : visibleCommissions.length > 0 ? (
                                             visibleCommissions.map(commission => (
                                                 <TableRow key={commission.id} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
-                                                    <TableCell className="font-mono text-xs text-muted-foreground">{commission.processoDisplayCode || commission.negotiationId.substring(0, 8).toUpperCase()}</TableCell>
+                                                    <TableCell>
+                                                        <div className="font-medium">{commission.propertyName || "Imóvel não encontrado"}</div>
+                                                        <div className="text-xs text-muted-foreground font-mono">{commission.propertyDisplayCode || commission.processoDisplayCode}</div>
+                                                    </TableCell>
                                                     <TableCell className="font-medium">{commission.clientName}</TableCell>
                                                     {hasPermission && <TableCell>{commission.realtorName}</TableCell>}
                                                     {hasPermission && <TableCell>{commission.salespersonName}</TableCell>}

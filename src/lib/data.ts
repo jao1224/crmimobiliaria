@@ -124,7 +124,9 @@ export type Contrato = {
 export type Commission = {
     id: string;
     negotiationId: string;
-    processoDisplayCode?: string; // Adicionado para exibição na UI
+    processoDisplayCode?: string;
+    propertyName?: string;
+    propertyDisplayCode?: string;
     propertyValue: number;
     clientName: string;
     realtorName: string; // Captador
@@ -560,18 +562,33 @@ export const getCommissions = async (): Promise<Commission[]> => {
     const commissionsSnapshot = await getDocs(collection(db, 'comissoes'));
     const commissionsData = commissionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Commission));
     
-    // Para cada comissão, buscamos o processoDisplayCode correspondente
     const enrichedCommissions = await Promise.all(commissionsData.map(async (commission) => {
-        const q = query(collection(db, 'processos'), where('negotiationId', '==', commission.negotiationId));
-        const processoSnapshot = await getDocs(q);
+        // Busca o Processo para obter o processoDisplayCode
+        const processoQuery = query(collection(db, 'processos'), where('negotiationId', '==', commission.negotiationId));
+        const processoSnapshot = await getDocs(processoQuery);
+        
+        let processoDisplayCode: string | undefined;
         if (!processoSnapshot.empty) {
-            const processoData = processoSnapshot.docs[0].data() as Processo;
-            return {
-                ...commission,
-                processoDisplayCode: processoData.processoDisplayCode
-            };
+            processoDisplayCode = processoSnapshot.docs[0].data().processoDisplayCode;
         }
-        return commission; // Retorna a comissão original se não encontrar o processo
+
+        // Busca a Negociação para obter os detalhes do imóvel
+        const negotiationDoc = await getDoc(doc(db, 'negociacoes', commission.negotiationId));
+        let propertyName: string | undefined;
+        let propertyDisplayCode: string | undefined;
+        
+        if (negotiationDoc.exists()) {
+            const negotiationData = negotiationDoc.data() as Negotiation;
+            propertyName = negotiationData.property;
+            propertyDisplayCode = negotiationData.propertyDisplayCode;
+        }
+
+        return {
+            ...commission,
+            processoDisplayCode,
+            propertyName,
+            propertyDisplayCode,
+        };
     }));
 
     return enrichedCommissions;
@@ -913,7 +930,7 @@ export const getActivitiesForRealtor = async (realtorId: string): Promise<Activi
     const determineActivityStatus = (itemStatus: string | undefined): ActivityStatus => {
         const status = (itemStatus || '').toLowerCase();
         
-        if (status.includes('concluído') || status.includes('vendido') || status.includes('alugado')) return 'Concluído';
+        if (status.includes('concluído') || status.includes('vendido') || status.includes('alugado') || status.includes('finalizado')) return 'Concluído';
         if (status.includes('cancelado')) return 'Cancelado';
         if (status.includes('pendência') || status.includes('em negociação') || status.includes('proposta enviada') || status.includes('contrato gerado')) return 'Pendente';
         if (status.includes('disponível') || status.includes('em andamento') || status.includes('ativo')) return 'Ativo';
