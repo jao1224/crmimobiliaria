@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect, useContext, useMemo } from "react";
@@ -9,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, AlertCircle, CheckCircle, Hourglass, UserPlus, Trash2, Home } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { getProcessos, type Processo, type ProcessStatus, type ProcessStage, updateProcesso, addNotification, getNegotiations, type Negotiation, completeSaleAndGenerateCommission } from "@/lib/data";
+import { getProcessos, type Processo, type ProcessStatus, type ProcessStage, updateProcesso, addNotification, getNegotiations, type Negotiation, completeSaleAndGenerateCommission, getUsers } from "@/lib/data";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,6 +20,7 @@ import { ProfileContext } from "@/contexts/ProfileContext";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, type User } from "firebase/auth";
 import { arrayRemove, arrayUnion } from "firebase/firestore";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 
 const getStatusVariant = (status: ProcessStatus) => {
@@ -47,6 +47,7 @@ export default function ProcessesPage() {
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [processes, setProcesses] = useState<Processo[]>([]);
     const [negotiations, setNegotiations] = useState<Negotiation[]>([]);
+    const [allUsers, setAllUsers] = useState<any[]>([]); // Para o select de partes
     const [isLoading, setIsLoading] = useState(true);
     const [selectedProcess, setSelectedProcess] = useState<Processo | null>(null);
     const [isPendencyModalOpen, setPendencyModalOpen] = useState(false);
@@ -55,7 +56,7 @@ export default function ProcessesPage() {
     const [isManagePartiesOpen, setManagePartiesOpen] = useState(false);
     const [pendencyNote, setPendencyNote] = useState("");
     const [finalizationNote, setFinalizationNote] = useState("");
-    const [newPartyName, setNewPartyName] = useState("");
+    const [newPartyId, setNewPartyId] = useState("");
     const { toast } = useToast();
 
     useEffect(() => {
@@ -74,12 +75,14 @@ export default function ProcessesPage() {
     const refreshData = async () => {
         setIsLoading(true);
         try {
-            const [processesData, negotiationsData] = await Promise.all([
+            const [processesData, negotiationsData, usersData] = await Promise.all([
                 getProcessos(),
-                getNegotiations()
+                getNegotiations(),
+                getUsers()
             ]);
             setProcesses(processesData);
             setNegotiations(negotiationsData);
+            setAllUsers(usersData);
         } catch (error) {
             toast({ variant: 'destructive', title: "Erro", description: "Não foi possível carregar os processos."});
         } finally {
@@ -173,19 +176,30 @@ export default function ProcessesPage() {
     };
     
     const handleAddParty = async () => {
-        if (!selectedProcess || !newPartyName.trim()) return;
+        if (!selectedProcess || !newPartyId) {
+            toast({ variant: 'destructive', title: "Erro", description: "Selecione uma parte para adicionar." });
+            return;
+        }
         
+        const partyToAdd = allUsers.find(u => u.id === newPartyId);
+        if (!partyToAdd) {
+            toast({ variant: 'destructive', title: "Erro", description: "Usuário selecionado não encontrado." });
+            return;
+        }
+        
+        const partyName = partyToAdd.name;
+
         try {
             await updateProcesso(selectedProcess.id, {
-                involvedParties: arrayUnion(newPartyName.trim())
+                involvedParties: arrayUnion(partyName)
             });
             await refreshData();
             // Atualizar o estado local para o modal
             setSelectedProcess(prev => ({
                 ...prev!,
-                involvedParties: [...(prev?.involvedParties || []), newPartyName.trim()]
+                involvedParties: [...(prev?.involvedParties || []), partyName]
             }));
-            setNewPartyName("");
+            setNewPartyId("");
             toast({ title: "Sucesso", description: "Parte envolvida adicionada." });
         } catch (error) {
             toast({ variant: 'destructive', title: "Erro", description: "Não foi possível adicionar a parte." });
@@ -269,17 +283,17 @@ export default function ProcessesPage() {
                                         <TableCell>
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
-                                                    <Button aria-haspopup="true" size="icon" variant="ghost" onClick={(e) => e.stopPropagation()}>
+                                                    <Button aria-haspopup="true" size="icon" variant="ghost" onClick={(e) => {e.stopPropagation()}}>
                                                         <MoreHorizontal className="h-4 w-4" />
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
                                                     <DropdownMenuLabel>Ações do Processo</DropdownMenuLabel>
-                                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenManageParties(process); }}>Gerenciar Partes</DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenPendencyModal(process); }}>Marcar Pendência</DropdownMenuItem>
+                                                    <DropdownMenuItem onSelect={() => handleOpenManageParties(process)}>Gerenciar Partes</DropdownMenuItem>
+                                                    <DropdownMenuItem onSelect={() => handleOpenPendencyModal(process)}>Marcar Pendência</DropdownMenuItem>
                                                     <DropdownMenuSeparator/>
                                                     <DropdownMenuItem 
-                                                        onClick={(e) => { e.stopPropagation(); handleOpenFinalizeModal(process); }}
+                                                        onSelect={() => handleOpenFinalizeModal(process)}
                                                         className="text-green-600 focus:text-green-600 focus:bg-green-50"
                                                         disabled={process.status === 'Finalizado' || process.status === 'Cancelado'}
                                                     >
@@ -426,14 +440,21 @@ export default function ProcessesPage() {
                     </DialogHeader>
                     <div className="py-4 space-y-4">
                         <div>
-                            <Label htmlFor="new-party">Adicionar Nova Parte</Label>
-                            <div className="flex gap-2 mt-1">
-                                <Input 
-                                    id="new-party"
-                                    value={newPartyName}
-                                    onChange={(e) => setNewPartyName(e.target.value)}
-                                    placeholder="Nome da Imobiliária/Corretor"
-                                />
+                            <Label htmlFor="new-party-select">Adicionar Nova Parte</Label>
+                             <div className="flex gap-2 mt-1">
+                                <Select value={newPartyId} onValueChange={setNewPartyId}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Selecione um usuário" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {allUsers
+                                            .filter(user => !(selectedProcess?.involvedParties || []).includes(user.name))
+                                            .map(user => (
+                                                <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
+                                            ))
+                                        }
+                                    </SelectContent>
+                                </Select>
                                 <Button onClick={handleAddParty}><UserPlus className="h-4 w-4"/></Button>
                             </div>
                         </div>
