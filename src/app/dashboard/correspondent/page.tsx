@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useContext, useEffect } from "react";
+import { useState, useContext, useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -36,6 +36,13 @@ const formatCurrency = (amount: number) => new Intl.NumberFormat('pt-BR', { styl
 
 const correspondentPermissions: UserProfile[] = ['Admin', 'Imobiliária'];
 
+const serviceRequestTypes: { id: ServiceRequestType, label: string }[] = [
+    { id: 'credit_approval', label: 'Aprovação de Crédito' },
+    { id: 'engineering_report', label: 'Laudo de Engenharia' },
+    { id: 'property_registration', label: 'Matrícula Atualizada' },
+    { id: 'account_opening', label: 'Abertura de Conta' }
+];
+
 export default function CorrespondentPage() {
     const [processes, setProcesses] = useState<FinancingProcess[]>([]);
     const [requests, setRequests] = useState<ServiceRequest[]>([]);
@@ -44,9 +51,8 @@ export default function CorrespondentPage() {
     const [selectedProcess, setSelectedProcess] = useState<FinancingProcess | null>(null);
     const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(null);
     const [isDetailModalOpen, setDetailModalOpen] = useState(false);
-    const [isRequestModalOpen, setRequestModalOpen] = useState(false);
     const [isAcceptRequestDialogOpen, setAcceptRequestDialogOpen] = useState(false);
-    const [requestType, setRequestType] = useState<ServiceRequestType>('credit_approval');
+    const [requestTypeFilter, setRequestTypeFilter] = useState('all');
 
     const { toast } = useToast();
     
@@ -66,6 +72,14 @@ export default function CorrespondentPage() {
         setUsers(usersData);
         setNegotiations(negsData); // Adicionado
     }
+    
+    const filteredRequests = useMemo(() => {
+        if (requestTypeFilter === 'all') {
+            return requests;
+        }
+        return requests.filter(req => req.type === requestTypeFilter);
+    }, [requests, requestTypeFilter]);
+
 
     const handleRowClick = (process: FinancingProcess) => {
         setSelectedProcess(process);
@@ -84,28 +98,6 @@ export default function CorrespondentPage() {
 
         toast({ title: "Sucesso", description: "Processo de financiamento atualizado." });
         setDetailModalOpen(false);
-    };
-
-    const handleNewRequest = async (event: React.FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        const form = event.currentTarget;
-        const formData = new FormData(form);
-        
-        const newRequest: Omit<ServiceRequest, 'id'> = {
-            type: requestType,
-            realtorName: formData.get('realtorName') as string,
-            clientInfo: formData.get('clientInfo') as string,
-            propertyInfo: formData.get('propertyInfo') as string,
-            status: 'Pendente',
-            date: new Date().toISOString()
-        };
-        
-        await addServiceRequest(newRequest);
-        await fetchData();
-        
-        toast({ title: "Sucesso!", description: "Nova solicitação enviada ao correspondente." });
-        form.reset();
-        setRequestModalOpen(false);
     };
 
     const handleRequestClick = (request: ServiceRequest) => {
@@ -226,10 +218,25 @@ export default function CorrespondentPage() {
                 </TabsContent>
                 <TabsContent value="requests">
                     <Card>
-                        <CardHeader className="flex-row items-center justify-between">
-                            <div>
-                                <CardTitle>Solicitações de Corretores</CardTitle>
-                                <CardDescription>Gerencie as solicitações de aprovação de crédito, laudos e outros serviços.</CardDescription>
+                        <CardHeader>
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <CardTitle>Solicitações de Corretores</CardTitle>
+                                    <CardDescription>Gerencie as solicitações de aprovação de crédito, laudos e outros serviços.</CardDescription>
+                                </div>
+                                 <div className="w-1/4">
+                                     <Select value={requestTypeFilter} onValueChange={setRequestTypeFilter}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Filtrar por tipo..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Todos os Tipos</SelectItem>
+                                            {serviceRequestTypes.map(type => (
+                                                <SelectItem key={type.id} value={type.id}>{type.label}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                 </div>
                             </div>
                         </CardHeader>
                         <CardContent>
@@ -243,17 +250,12 @@ export default function CorrespondentPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {requests.map(req => (
+                                    {filteredRequests.map(req => (
                                         <TableRow key={req.id} onClick={() => handleRequestClick(req)} className={cn("transition-all duration-200", req.status === 'Pendente' && "cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
                                             <TableCell>{new Date(req.date).toLocaleDateString()}</TableCell>
-                                            <TableCell className="font-medium">{
-                                                {
-                                                    'credit_approval': 'Aprovação de Crédito',
-                                                    'engineering_report': 'Laudo de Engenharia',
-                                                    'property_registration': 'Matrícula Atualizada',
-                                                    'account_opening': 'Abertura de Conta'
-                                                }[req.type] || req.type
-                                            }</TableCell>
+                                            <TableCell className="font-medium">
+                                                {serviceRequestTypes.find(t => t.id === req.type)?.label || req.type}
+                                            </TableCell>
                                             <TableCell>{req.realtorName}</TableCell>
                                             <TableCell><Badge variant={req.status === 'Concluído' ? 'success' : req.status === 'Em Análise' ? 'warning' : 'secondary'}>{req.status}</Badge></TableCell>
                                         </TableRow>
