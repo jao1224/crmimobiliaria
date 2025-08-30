@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, AlertCircle, CheckCircle, Hourglass, UserPlus, Trash2, Home, Users } from "lucide-react";
+import { MoreHorizontal, AlertCircle, CheckCircle, Hourglass, UserPlus, Trash2, Home, Users, User, Eye } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getProcessos, type Processo, type ProcessStatus, type ProcessStage, updateProcesso, addNotification, getNegotiations, type Negotiation, completeSaleAndGenerateCommission, getUsers, type User as AppUser } from "@/lib/data";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import { auth, db } from "@/lib/firebase";
-import { onAuthStateChanged, type User } from "firebase/auth";
+import { onAuthStateChanged } from "firebase/auth";
 import { arrayRemove, arrayUnion, getDocs, collection } from "firebase/firestore";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -49,7 +49,7 @@ const getStageVariant = (stage: ProcessStage) => {
 
 export default function ProcessesPage() {
     const { activeProfile } = useContext(ProfileContext);
-    const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
     const [processes, setProcesses] = useState<Processo[]>([]);
     const [negotiations, setNegotiations] = useState<Negotiation[]>([]);
     const [allUsers, setAllUsers] = useState<AppUser[]>([]);
@@ -67,7 +67,7 @@ export default function ProcessesPage() {
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (user) => {
-            setCurrentUser(user);
+            setCurrentUser(user as any);
         });
         return () => unsubscribe();
     }, []);
@@ -247,7 +247,7 @@ export default function ProcessesPage() {
                                 ))
                             ) : filteredProcesses.length > 0 ? (
                                 filteredProcesses.map(process => (
-                                    <TableRow key={process.id} onClick={() => handleOpenDetailModal(process)} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
+                                    <TableRow key={process.id} className="transition-colors hover:bg-secondary">
                                         <TableCell><Badge variant={getStatusVariant(process.status)}>{process.status}</Badge></TableCell>
                                         <TableCell className="font-mono text-xs">{process.processoDisplayCode}</TableCell>
                                         <TableCell className="text-xs text-muted-foreground">
@@ -270,21 +270,28 @@ export default function ProcessesPage() {
                                         <TableCell>
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
-                                                    <Button aria-haspopup="true" size="icon" variant="ghost" onClick={(e) => e.stopPropagation()}>
+                                                     <Button aria-haspopup="true" size="icon" variant="ghost" onClick={(e) => e.stopPropagation()}>
                                                         <MoreHorizontal className="h-4 w-4" />
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
                                                     <DropdownMenuLabel>Ações do Processo</DropdownMenuLabel>
-                                                    <DropdownMenuItem onSelect={(e) => { e.stopPropagation(); handleOpenAssignTeam(process); }}>Atribuir Equipe</DropdownMenuItem>
-                                                    <DropdownMenuItem onSelect={() => handleOpenPendencyModal(process)}>Marcar Pendência</DropdownMenuItem>
+                                                    <DropdownMenuItem onSelect={() => handleOpenDetailModal(process)}>
+                                                        <Eye className="mr-2 h-4 w-4" /> Ver Detalhes
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onSelect={() => handleOpenAssignTeam(process)}>
+                                                        <Users className="mr-2 h-4 w-4" /> Atribuir Equipe
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onSelect={() => handleOpenPendencyModal(process)}>
+                                                        <AlertCircle className="mr-2 h-4 w-4" /> Marcar Pendência
+                                                    </DropdownMenuItem>
                                                     <DropdownMenuSeparator/>
                                                     <DropdownMenuItem 
                                                         onSelect={() => handleOpenFinalizeModal(process)}
                                                         className="text-green-600 focus:text-green-600 focus:bg-green-50"
                                                         disabled={process.status === 'Finalizado' || process.status === 'Cancelado'}
                                                     >
-                                                        Finalizar Processo
+                                                        <CheckCircle className="mr-2 h-4 w-4" /> Finalizar Processo
                                                     </DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
