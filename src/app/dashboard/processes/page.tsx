@@ -7,10 +7,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, AlertCircle, CheckCircle, Hourglass } from "lucide-react";
+import { MoreHorizontal, AlertCircle, CheckCircle, Hourglass, UserPlus, Trash2, Home } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getProcessos, type Processo, type ProcessStatus, type ProcessStage, updateProcesso, addNotification, getNegotiations, type Negotiation, completeSaleAndGenerateCommission } from "@/lib/data";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
@@ -19,6 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, type User } from "firebase/auth";
+import { arrayRemove, arrayUnion } from "firebase/firestore";
 
 
 const getStatusVariant = (status: ProcessStatus) => {
@@ -50,8 +52,10 @@ export default function ProcessesPage() {
     const [isPendencyModalOpen, setPendencyModalOpen] = useState(false);
     const [isFinalizeModalOpen, setFinalizeModalOpen] = useState(false);
     const [isDetailModalOpen, setDetailModalOpen] = useState(false);
+    const [isManagePartiesOpen, setManagePartiesOpen] = useState(false);
     const [pendencyNote, setPendencyNote] = useState("");
     const [finalizationNote, setFinalizationNote] = useState("");
+    const [newPartyName, setNewPartyName] = useState("");
     const { toast } = useToast();
 
     useEffect(() => {
@@ -116,6 +120,11 @@ export default function ProcessesPage() {
         setSelectedProcess(process);
         setDetailModalOpen(true);
     };
+    
+    const handleOpenManageParties = (process: Processo) => {
+        setSelectedProcess(process);
+        setManagePartiesOpen(true);
+    };
 
     const handleSavePendency = async () => {
         if (!selectedProcess) return;
@@ -161,6 +170,44 @@ export default function ProcessesPage() {
         }
         
         setFinalizeModalOpen(false);
+    };
+    
+    const handleAddParty = async () => {
+        if (!selectedProcess || !newPartyName.trim()) return;
+        
+        try {
+            await updateProcesso(selectedProcess.id, {
+                involvedParties: arrayUnion(newPartyName.trim())
+            });
+            await refreshData();
+            // Atualizar o estado local para o modal
+            setSelectedProcess(prev => ({
+                ...prev!,
+                involvedParties: [...(prev?.involvedParties || []), newPartyName.trim()]
+            }));
+            setNewPartyName("");
+            toast({ title: "Sucesso", description: "Parte envolvida adicionada." });
+        } catch (error) {
+            toast({ variant: 'destructive', title: "Erro", description: "Não foi possível adicionar a parte." });
+        }
+    };
+    
+    const handleRemoveParty = async (partyToRemove: string) => {
+        if (!selectedProcess) return;
+        
+        try {
+            await updateProcesso(selectedProcess.id, {
+                involvedParties: arrayRemove(partyToRemove)
+            });
+            await refreshData();
+             setSelectedProcess(prev => ({
+                ...prev!,
+                involvedParties: (prev?.involvedParties || []).filter(p => p !== partyToRemove)
+            }));
+            toast({ title: "Sucesso", description: "Parte envolvida removida." });
+        } catch (error) {
+             toast({ variant: 'destructive', title: "Erro", description: "Não foi possível remover a parte." });
+        }
     };
 
 
@@ -228,6 +275,7 @@ export default function ProcessesPage() {
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
                                                     <DropdownMenuLabel>Ações do Processo</DropdownMenuLabel>
+                                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenManageParties(process); }}>Gerenciar Partes</DropdownMenuItem>
                                                     <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenPendencyModal(process); }}>Marcar Pendência</DropdownMenuItem>
                                                     <DropdownMenuSeparator/>
                                                     <DropdownMenuItem 
@@ -296,6 +344,16 @@ export default function ProcessesPage() {
                             <Label className="text-muted-foreground">Observações</Label>
                             <p className="text-sm p-3 bg-muted rounded-md min-h-20">{selectedProcess?.observations || "Nenhuma observação registrada."}</p>
                         </div>
+                         <div className="space-y-1">
+                            <Label className="text-muted-foreground">Outras Partes Envolvidas</Label>
+                             <div className="text-sm p-3 bg-muted rounded-md min-h-12">
+                                {selectedProcess?.involvedParties && selectedProcess.involvedParties.length > 0 ? (
+                                    <ul className="list-disc list-inside">
+                                        {selectedProcess.involvedParties.map((party, index) => <li key={index}>{party}</li>)}
+                                    </ul>
+                                ) : "Nenhuma outra parte envolvida."}
+                             </div>
+                        </div>
                     </div>
                     <DialogFooter>
                         <Button onClick={() => setDetailModalOpen(false)}>Fechar</Button>
@@ -356,8 +414,52 @@ export default function ProcessesPage() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+            
+            {/* Modal de Gerenciar Partes Envolvidas */}
+            <Dialog open={isManagePartiesOpen} onOpenChange={setManagePartiesOpen}>
+                <DialogContent>
+                     <DialogHeader>
+                        <DialogTitle>Gerenciar Partes Envolvidas</DialogTitle>
+                        <DialogDescription>
+                            Adicione ou remova imobiliárias e corretores parceiros neste processo.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4 space-y-4">
+                        <div>
+                            <Label htmlFor="new-party">Adicionar Nova Parte</Label>
+                            <div className="flex gap-2 mt-1">
+                                <Input 
+                                    id="new-party"
+                                    value={newPartyName}
+                                    onChange={(e) => setNewPartyName(e.target.value)}
+                                    placeholder="Nome da Imobiliária/Corretor"
+                                />
+                                <Button onClick={handleAddParty}><UserPlus className="h-4 w-4"/></Button>
+                            </div>
+                        </div>
+                         <div>
+                            <h4 className="text-sm font-medium mb-2">Partes Atuais</h4>
+                            <div className="p-3 bg-muted rounded-md min-h-24 max-h-48 overflow-y-auto">
+                                {selectedProcess?.involvedParties && selectedProcess.involvedParties.length > 0 ? (
+                                    <ul className="space-y-2">
+                                        {selectedProcess.involvedParties.map((party, index) => (
+                                            <li key={index} className="flex items-center justify-between text-sm">
+                                                <span>{party}</span>
+                                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveParty(party)}>
+                                                    <Trash2 className="h-4 w-4 text-destructive"/>
+                                                </Button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                ) : <p className="text-sm text-muted-foreground text-center py-4">Nenhuma parte adicional envolvida.</p>}
+                            </div>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button onClick={() => setManagePartiesOpen(false)}>Fechar</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
-
-    

@@ -92,6 +92,7 @@ export type Processo = {
     stage: ProcessStage;
     createdAt: string;
     observations?: string;
+    involvedParties?: string[]; // Nome da imobiliária ou corretor parceiro
 };
 
 // --- TIPO PARA CONTRATO ---
@@ -460,7 +461,8 @@ export const addNegotiation = async (newNegotiation: Omit<Negotiation, 'id'>, do
         status: 'Ativo',
         stage: 'Em andamento',
         createdAt: new Date().toISOString(),
-        observations: 'Processo iniciado automaticamente com a negociação.'
+        observations: 'Processo iniciado automaticamente com a negociação.',
+        involvedParties: [], // Inicializa o campo de partes envolvidas
     };
     batch.set(processoRef, newProcesso);
 
@@ -1073,4 +1075,5 @@ export const updateActivityStatus = async (activityId: string, newStatus: Activi
     
     console.warn(`Activity with ID ${activityId} not found in 'negotiations' or 'imoveis'.`);
 };
+
 
