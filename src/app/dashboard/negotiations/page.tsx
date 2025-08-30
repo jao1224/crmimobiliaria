@@ -266,7 +266,7 @@ export default function NegotiationsPage() {
         
         if (isFinanced) {
              const newFinancingProcess: Omit<any, 'id'> = {
-                negotiationId: newNegotiationId,
+                negotiationId: newNegotiationId, // O ID da negociação recém-criada
                 clientName: newNegotiationData.client,
                 propertyName: newNegotiationData.property,
                 realtorName: newNegotiationData.salesperson,

@@ -26,7 +26,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, PlusCircle, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { getFinancingProcesses, getServiceRequests, getUsers, addServiceRequest, type FinancingProcess, type ServiceRequest, type ServiceRequestType, type FinancingStatus, type EngineeringStatus, type GeneralProcessStatus, updateFinancingProcess, type User, addFinancingProcess, updateServiceRequest } from "@/lib/data";
+import { getFinancingProcesses, getServiceRequests, getUsers, addServiceRequest, type FinancingProcess, type ServiceRequest, type ServiceRequestType, type FinancingStatus, type EngineeringStatus, type GeneralProcessStatus, updateFinancingProcess, type User, addFinancingProcess, updateServiceRequest, getNegotiations, type Negotiation } from "@/lib/data";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import type { UserProfile } from "../layout";
 import { cn } from "@/lib/utils";
@@ -40,6 +40,7 @@ export default function CorrespondentPage() {
     const [processes, setProcesses] = useState<FinancingProcess[]>([]);
     const [requests, setRequests] = useState<ServiceRequest[]>([]);
     const [users, setUsers] = useState<User[]>([]);
+    const [negotiations, setNegotiations] = useState<Negotiation[]>([]); // Adicionado
     const [selectedProcess, setSelectedProcess] = useState<FinancingProcess | null>(null);
     const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(null);
     const [isDetailModalOpen, setDetailModalOpen] = useState(false);
@@ -54,14 +55,16 @@ export default function CorrespondentPage() {
     }, []);
 
     const fetchData = async () => {
-        const [processesData, requestsData, usersData] = await Promise.all([
+        const [processesData, requestsData, usersData, negsData] = await Promise.all([
             getFinancingProcesses(),
             getServiceRequests(),
-            getUsers()
+            getUsers(),
+            getNegotiations() // Adicionado
         ]);
         setProcesses(processesData);
         setRequests(requestsData);
         setUsers(usersData);
+        setNegotiations(negsData); // Adicionado
     }
 
     const handleRowClick = (process: FinancingProcess) => {
@@ -113,12 +116,32 @@ export default function CorrespondentPage() {
     
     const handleAcceptRequest = async () => {
         if (!selectedRequest) return;
+        
+        const clientNameFromRequest = selectedRequest.clientInfo.split(',')[0].replace('Nome:', '').trim();
+        const propertyNameFromRequest = selectedRequest.propertyInfo.split(',')[0].replace('Imóvel:', '').trim();
+
+        // Tenta encontrar uma negociação existente que corresponda à solicitação.
+        const matchingNegotiation = negotiations.find(
+            neg => neg.client.trim() === clientNameFromRequest && neg.property.trim() === propertyNameFromRequest
+        );
+        
+        if (!matchingNegotiation) {
+            toast({
+                variant: 'destructive',
+                title: "Negociação não encontrada",
+                description: `Não foi encontrada uma negociação para ${clientNameFromRequest} e o imóvel ${propertyNameFromRequest}. O processo de financiamento não pode ser criado sem uma negociação ativa.`,
+                duration: 7000
+            });
+            setAcceptRequestDialogOpen(false);
+            return;
+        }
+
 
         // 1. Cria um novo processo de financiamento
         const newFinancingProcess: Omit<any, 'id'> = {
-            negotiationId: 'N/A',
-            clientName: selectedRequest.clientInfo.split(',')[0].replace('Nome:', '').trim(),
-            propertyName: selectedRequest.propertyInfo.split(',')[0].replace('Imóvel:', '').trim(),
+            negotiationId: matchingNegotiation.id, // Vincula o ID da negociação
+            clientName: clientNameFromRequest,
+            propertyName: propertyNameFromRequest,
             realtorName: selectedRequest.realtorName,
             clientStatus: 'Pendente',
             clientStatusReason: 'Aguardando documentação inicial',
@@ -244,10 +267,10 @@ export default function CorrespondentPage() {
                                                     <Textarea id="clientInfo" name="clientInfo" placeholder="Nome completo, CPF, Renda, etc." required/>
                                                 </div>
                                              )}
-                                             {(requestType === 'engineering_report' || requestType === 'property_registration') && (
+                                             {(requestType === 'credit_approval' || requestType === 'engineering_report' || requestType === 'property_registration') && (
                                                  <div className="space-y-2">
                                                     <Label htmlFor="propertyInfo">Informações do Imóvel</Label>
-                                                    <Textarea id="propertyInfo" name="propertyInfo" placeholder="Endereço completo, matrícula, área, etc." required/>
+                                                    <Textarea id="propertyInfo" name="propertyInfo" placeholder="Nome ou código do imóvel, endereço completo, matrícula, etc." required/>
                                                 </div>
                                              )}
                                          </div>
@@ -362,7 +385,7 @@ function ProcessDetailForm({ process, onSave, onCancel }: { process: FinancingPr
         <form onSubmit={handleSubmit}>
             <DialogHeader>
                 <DialogTitle>Detalhes do Processo de Financiamento</DialogTitle>
-                <DialogDescription>Negociação ID: {formData.negotiationId} - {formData.propertyName}</DialogDescription>
+                <DialogDescription>Negociação ID: ({formData.negotiationId}) - {formData.propertyName}</DialogDescription>
             </DialogHeader>
             <div className="py-4 grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Coluna 1 */}
