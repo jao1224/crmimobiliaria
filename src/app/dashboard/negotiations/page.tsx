@@ -406,7 +406,7 @@ export default function NegotiationsPage() {
     return (
         <>
         <div className="flex flex-col gap-6">
-            <div className="flex items-start justify-between">
+            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold">Processos de Negociação</h1>
                     <p className="text-muted-foreground">Acompanhe e gerencie todas as suas negociações.</p>
@@ -422,8 +422,8 @@ export default function NegotiationsPage() {
                                 Selecione um imóvel e um cliente da lista para buscar os dados.
                             </DialogDescription>
                         </DialogHeader>
-                        <ScrollArea className="pr-6">
-                            <form onSubmit={handleAddNegotiation}>
+                        <form onSubmit={handleAddNegotiation} className="flex-1 min-h-0 flex flex-col">
+                            <ScrollArea className="flex-1 pr-6 -mr-6">
                                 <div className="space-y-4 py-4">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div className="space-y-2">
@@ -538,11 +538,11 @@ export default function NegotiationsPage() {
                                         </div>
                                     </div>
                                 </div>
-                                <DialogFooter className="border-t pt-4">
-                                    <Button type="submit" disabled={!foundProperty || !foundClient || !proposalValue || !proposalDate}>Criar Negociação</Button>
-                                </DialogFooter>
-                            </form>
-                        </ScrollArea>
+                            </ScrollArea>
+                            <DialogFooter className="border-t pt-4 mt-auto">
+                                <Button type="submit" disabled={!foundProperty || !foundClient || !proposalValue || !proposalDate}>Criar Negociação</Button>
+                            </DialogFooter>
+                        </form>
                     </DialogContent>
                 </Dialog>
             </div>
