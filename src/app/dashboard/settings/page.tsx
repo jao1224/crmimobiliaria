@@ -44,12 +44,12 @@ type Team = {
 
 type PermissionsState = Record<UserProfile, string[]>;
 
-const roles = userProfiles.filter(p => ['Admin', 'Imobiliária', 'Vendedor', 'Financeiro', 'Corretor Autônomo', 'Investidor', 'Construtora'].includes(p));
+const roles = userProfiles.filter(p => ['Admin', 'Super Usuário', 'Imobiliária', 'Vendedor', 'Financeiro', 'Corretor Autônomo', 'Investidor', 'Construtora'].includes(p));
 
 
 export default function SettingsPage() {
     const { activeProfile } = useContext(ProfileContext);
-    const hasPermission = activeProfile === 'Admin' || activeProfile === 'Imobiliária';
+    const hasPermission = activeProfile === 'Admin' || activeProfile === 'Imobiliária' || activeProfile === 'Super Usuário';
 
     // Estados da UI
     const [isSaving, setIsSaving] = useState(false);
@@ -523,7 +523,7 @@ export default function SettingsPage() {
                                                 <TableCell className="font-medium">{member.name}</TableCell>
                                                 <TableCell>{member.email}</TableCell>
                                                 <TableCell>{findTeamForMember(member.id)}</TableCell>
-                                                <TableCell><Badge variant={member.role === 'Admin' || member.role === 'Imobiliária' ? 'default' : 'secondary'}>{member.role}</Badge></TableCell>
+                                                <TableCell><Badge variant={member.role === 'Admin' || member.role === 'Imobiliária' || member.role === 'Super Usuário' ? 'default' : 'secondary'}>{member.role}</Badge></TableCell>
                                                 <TableCell className="text-right">
                                                     <DropdownMenu>
                                                         <DropdownMenuTrigger asChild>
@@ -683,9 +683,9 @@ export default function SettingsPage() {
                                                     id={`${profile}-${module.id}`}
                                                     checked={profilePermissions.includes(module.id)}
                                                     onCheckedChange={(checked) => handlePermissionChange(profile as UserProfile, module.id, !!checked)}
-                                                    disabled={profile === 'Admin'}
+                                                    disabled={profile === 'Admin' || profile === 'Super Usuário'}
                                                 />
-                                                <Label htmlFor={`${profile}-${module.id}`} className={cn("font-normal", profile === 'Admin' && "text-muted-foreground")}>
+                                                <Label htmlFor={`${profile}-${module.id}`} className={cn("font-normal", (profile === 'Admin' || profile === 'Super Usuário') && "text-muted-foreground")}>
                                                     {module.label}
                                                 </Label>
                                             </div>
@@ -778,3 +778,5 @@ export default function SettingsPage() {
         </div>
     );
 }
+
+    

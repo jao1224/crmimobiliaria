@@ -1,10 +1,11 @@
 
-export type UserProfile = 'Admin' | 'Imobiliária' | 'Corretor Autônomo' | 'Investidor' | 'Construtora' | 'Financeiro' | 'Vendedor';
+export type UserProfile = 'Admin' | 'Super Usuário' | 'Imobiliária' | 'Corretor Autônomo' | 'Investidor' | 'Construtora' | 'Financeiro' | 'Vendedor';
 
-export const userProfiles: UserProfile[] = ['Admin', 'Imobiliária', 'Vendedor', 'Corretor Autônomo', 'Investidor', 'Construtora', 'Financeiro'];
+export const userProfiles: UserProfile[] = ['Admin', 'Super Usuário', 'Imobiliária', 'Vendedor', 'Corretor Autônomo', 'Investidor', 'Construtora', 'Financeiro'];
 
 export const menuConfig: Record<UserProfile, string[]> = {
     'Admin': ['/dashboard', '/dashboard/activity-feed', '/dashboard/properties', '/dashboard/crm', '/dashboard/negotiations', '/dashboard/processes', '/dashboard/finance', '/dashboard/agenda', '/dashboard/reporting', '/dashboard/correspondent', '/dashboard/services', '/dashboard/settings'],
+    'Super Usuário': ['/dashboard', '/dashboard/activity-feed', '/dashboard/properties', '/dashboard/crm', '/dashboard/negotiations', '/dashboard/processes', '/dashboard/finance', '/dashboard/agenda', '/dashboard/reporting', '/dashboard/correspondent', '/dashboard/services', '/dashboard/settings'],
     'Imobiliária': ['/dashboard', '/dashboard/activity-feed', '/dashboard/properties', '/dashboard/crm', '/dashboard/negotiations', '/dashboard/processes', '/dashboard/finance', '/dashboard/agenda', '/dashboard/reporting', '/dashboard/correspondent', '/dashboard/services', '/dashboard/settings'],
     'Vendedor': ['/dashboard', '/dashboard/properties', '/dashboard/crm', '/dashboard/negotiations', '/dashboard/finance', '/dashboard/agenda', '/dashboard/settings'],
     'Corretor Autônomo': ['/dashboard', '/dashboard/properties', '/dashboard/crm', '/dashboard/negotiations', '/dashboard/processes', '/dashboard/finance', '/dashboard/agenda', '/dashboard/settings'],
@@ -27,3 +28,5 @@ export const allModules = [
     { id: "/dashboard/services", label: "Outros Serviços" },
     { id: "/dashboard/settings", label: "Configurações" },
 ];
+
+    
