@@ -322,13 +322,13 @@ export default function NegotiationsPage() {
     
     const handleServiceRequestSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        if (!selectedNegotiation) return;
+        if (!selectedNegotiation || !currentUser) return;
 
         const formData = new FormData(event.currentTarget);
         
         const requestData = {
             type: formData.get('type') as ServiceRequestType,
-            realtorName: allUsers.find(u => u.id === formData.get('realtorName'))?.name || "N/A",
+            realtorName: allUsers.find(u => u.id === (formData.get('realtorName') as string))?.name || currentUser.displayName || "N/A",
             clientInfo: formData.get('clientInfo') as string,
             propertyInfo: formData.get('propertyInfo') as string,
             status: 'Pendente' as const,
@@ -904,7 +904,7 @@ export default function NegotiationsPage() {
                         <div className="py-4 space-y-4">
                            <div className="space-y-2">
                                <Label>Tipo de Solicitação</Label>
-                               <Select value={serviceRequestType} onValueChange={(v) => setServiceRequestType(v as any)} required>
+                               <Select name="type" required defaultValue={serviceRequestType} onValueChange={(v) => setServiceRequestType(v as any)}>
                                    <SelectTrigger><SelectValue/></SelectTrigger>
                                    <SelectContent>
                                        <SelectItem value="credit_approval">Aprovação de Crédito</SelectItem>
