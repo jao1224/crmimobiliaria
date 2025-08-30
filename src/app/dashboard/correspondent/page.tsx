@@ -5,8 +5,19 @@ import { useState, useContext, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,7 +26,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, PlusCircle, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { getFinancingProcesses, getServiceRequests, getUsers, addServiceRequest, type FinancingProcess, type ServiceRequest, type ServiceRequestType, type FinancingStatus, type EngineeringStatus, type GeneralProcessStatus, updateFinancingProcess, type User } from "@/lib/data";
+import { getFinancingProcesses, getServiceRequests, getUsers, addServiceRequest, type FinancingProcess, type ServiceRequest, type ServiceRequestType, type FinancingStatus, type EngineeringStatus, type GeneralProcessStatus, updateFinancingProcess, type User, addFinancingProcess, updateServiceRequest } from "@/lib/data";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import type { UserProfile } from "../layout";
 import { cn } from "@/lib/utils";
@@ -30,8 +41,10 @@ export default function CorrespondentPage() {
     const [requests, setRequests] = useState<ServiceRequest[]>([]);
     const [users, setUsers] = useState<User[]>([]);
     const [selectedProcess, setSelectedProcess] = useState<FinancingProcess | null>(null);
+    const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(null);
     const [isDetailModalOpen, setDetailModalOpen] = useState(false);
     const [isRequestModalOpen, setRequestModalOpen] = useState(false);
+    const [isAcceptRequestDialogOpen, setAcceptRequestDialogOpen] = useState(false);
     const [requestType, setRequestType] = useState<ServiceRequestType>('credit_approval');
 
     const { toast } = useToast();
@@ -90,6 +103,51 @@ export default function CorrespondentPage() {
         toast({ title: "Sucesso!", description: "Nova solicitação enviada ao correspondente." });
         form.reset();
         setRequestModalOpen(false);
+    };
+
+    const handleRequestClick = (request: ServiceRequest) => {
+        if (request.status !== 'Pendente') return;
+        setSelectedRequest(request);
+        setAcceptRequestDialogOpen(true);
+    };
+    
+    const handleAcceptRequest = async () => {
+        if (!selectedRequest) return;
+
+        // 1. Cria um novo processo de financiamento
+        const newFinancingProcess: Omit<any, 'id'> = {
+            negotiationId: 'N/A',
+            clientName: selectedRequest.clientInfo.split(',')[0].replace('Nome:', '').trim(),
+            propertyName: selectedRequest.propertyInfo.split(',')[0].replace('Imóvel:', '').trim(),
+            realtorName: selectedRequest.realtorName,
+            clientStatus: 'Pendente',
+            clientStatusReason: 'Aguardando documentação inicial',
+            approvedValue: 0,
+            bacenInfo: '',
+            engineeringStatus: 'Não solicitado',
+            engineeringReason: '',
+            appraisalValue: 0,
+            appraisalDate: '',
+            docs: {
+                propertyRegistration: { updated: false, dueDate: '' },
+                paycheck: { updated: false, dueDate: '' },
+                addressProof: { updated: false, dueDate: '' },
+                clientApproval: { updated: false, dueDate: '' },
+                engineeringReport: { updated: false, dueDate: '' },
+            },
+            stages: { formSignature: false, compliance: false, financingResources: false, bankSignature: '', registryEntry: '', warranty: '' },
+            generalStatus: 'Ativo',
+            hasPendency: true,
+        };
+        await addFinancingProcess(newFinancingProcess);
+
+        // 2. Atualiza o status da solicitação
+        await updateServiceRequest(selectedRequest.id, { status: 'Em Análise' });
+
+        await fetchData();
+        toast({ title: "Processo Iniciado!", description: "A solicitação foi aceita e um novo processo de financiamento foi criado." });
+        setAcceptRequestDialogOpen(false);
+        setSelectedRequest(null);
     };
 
 
@@ -212,7 +270,7 @@ export default function CorrespondentPage() {
                                 </TableHeader>
                                 <TableBody>
                                     {requests.map(req => (
-                                        <TableRow key={req.id} className="transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1">
+                                        <TableRow key={req.id} onClick={() => handleRequestClick(req)} className={cn("transition-all duration-200", req.status === 'Pendente' && "cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
                                             <TableCell>{new Date(req.date).toLocaleDateString()}</TableCell>
                                             <TableCell className="font-medium">{
                                                 {
@@ -223,7 +281,7 @@ export default function CorrespondentPage() {
                                                 }[req.type]
                                             }</TableCell>
                                             <TableCell>{req.realtorName}</TableCell>
-                                            <TableCell><Badge variant={req.status === 'Concluído' ? 'success' : 'secondary'}>{req.status}</Badge></TableCell>
+                                            <TableCell><Badge variant={req.status === 'Concluído' ? 'success' : req.status === 'Em Análise' ? 'warning' : 'secondary'}>{req.status}</Badge></TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
@@ -239,6 +297,29 @@ export default function CorrespondentPage() {
                     {selectedProcess && <ProcessDetailForm process={selectedProcess} onSave={handleSaveChanges} onCancel={() => setDetailModalOpen(false)} />}
                 </DialogContent>
             </Dialog>
+            
+             {/* Modal de Confirmação de Aceite de Solicitação */}
+            <AlertDialog open={isAcceptRequestDialogOpen} onOpenChange={setAcceptRequestDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Aceitar Solicitação e Iniciar Processo?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Esta ação criará um novo processo de financiamento na aba "Meus Processos" com base nos dados desta solicitação e mudará o status da solicitação para "Em Análise".
+                            <div className="mt-4 text-sm text-foreground">
+                                <p><strong>Tipo:</strong> {selectedRequest?.type}</p>
+                                <p><strong>Solicitante:</strong> {selectedRequest?.realtorName}</p>
+                                <p><strong>Cliente:</strong> {selectedRequest?.clientInfo}</p>
+                            </div>
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleAcceptRequest} className={cn(buttonVariants({ variant: "default" }))}>
+                            Aceitar e Iniciar
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

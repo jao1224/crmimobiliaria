@@ -680,6 +680,12 @@ export const addServiceRequest = async (newRequest: Omit<ServiceRequest, 'id'>):
     return docRef.id;
 };
 
+export const updateServiceRequest = async (id: string, data: Partial<ServiceRequest>): Promise<void> => {
+    const requestRef = doc(db, 'solicitacoesServico', id);
+    await updateDoc(requestRef, data);
+};
+
+
 export const getLegalRequests = async (): Promise<LegalRequest[]> => {
     const q = query(collection(db, 'juridico_solicitacoes'), orderBy('createdAt', 'desc'));
     const snapshot = await getDocs(q);
