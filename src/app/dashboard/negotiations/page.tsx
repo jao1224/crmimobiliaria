@@ -416,134 +416,132 @@ export default function NegotiationsPage() {
                     <DialogTrigger asChild>
                         <Button>Iniciar Nova Negociação</Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
+                    <DialogContent className="sm:max-w-2xl max-h-[90vh]">
                         <DialogHeader>
                             <DialogTitle>Iniciar Nova Negociação</DialogTitle>
                             <DialogDescription>
                                 Selecione um imóvel e um cliente da lista para buscar os dados.
                             </DialogDescription>
                         </DialogHeader>
-                        <form onSubmit={handleAddNegotiation} className="flex-1 min-h-0 flex flex-col">
-                            <ScrollArea className="flex-grow pr-4">
-                                <div className="space-y-4 py-4">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <Label>Imóvel</Label>
-                                            <Select value={propertyCode} onValueChange={setPropertyCode} required>
-                                                <SelectTrigger><SelectValue placeholder="Selecione um imóvel" /></SelectTrigger>
-                                                <SelectContent>
-                                                    {availableProperties.map(prop => (
-                                                        <SelectItem key={prop.id} value={prop.id}>
-                                                            {prop.name} ({prop.displayCode})
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label>Cliente</Label>
-                                            <Select value={clientCode} onValueChange={setClientCode} required>
-                                                <SelectTrigger><SelectValue placeholder="Selecione um cliente" /></SelectTrigger>
-                                                <SelectContent>
-                                                    {availableClients.map(cli => (
-                                                        <SelectItem key={cli.id} value={cli.id}>
-                                                            {cli.name}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
+                        <ScrollArea className="pr-6 -mr-6">
+                            <form onSubmit={handleAddNegotiation} className="space-y-4 py-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label>Imóvel</Label>
+                                        <Select value={propertyCode} onValueChange={setPropertyCode} required>
+                                            <SelectTrigger><SelectValue placeholder="Selecione um imóvel" /></SelectTrigger>
+                                            <SelectContent>
+                                                {availableProperties.map(prop => (
+                                                    <SelectItem key={prop.id} value={prop.id}>
+                                                        {prop.name} ({prop.displayCode})
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                     </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 rounded-lg border p-4">
-                                        <div className="space-y-2">
-                                            <h4 className="font-semibold text-sm">Imóvel Selecionado</h4>
-                                            {foundProperty ? (
-                                                <div className="text-sm text-muted-foreground space-y-1">
-                                                    <p className="font-medium text-foreground">{foundProperty.name}</p>
-                                                    <p><strong>Cód:</strong> {foundProperty.displayCode}</p>
-                                                    <p><strong>End:</strong> {foundProperty.address}</p>
-                                                    <p><strong>Preço:</strong> {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(foundProperty.price)}</p>
-                                                    <p className="line-clamp-2"><strong>Desc:</strong> {foundProperty.description || 'N/A'}</p>
-                                                </div>
-                                            ) : <p className="text-sm text-destructive">Nenhum imóvel selecionado.</p>}
-                                        </div>
-                                        <div className="space-y-2">
-                                            <h4 className="font-semibold text-sm">Cliente Selecionado</h4>
-                                            {foundClient ? (
-                                                <div className="text-sm text-muted-foreground space-y-1">
-                                                    <p className="font-medium text-foreground">{foundClient.name}</p>
-                                                    <p><strong>Doc:</strong> {foundClient.document || 'N/A'}</p>
-                                                    <p><strong>Email:</strong> {foundClient.email}</p>
-                                                    <p><strong>Tel:</strong> {foundClient.phone}</p>
-                                                    <p><strong>End:</strong> {foundClient.address || 'N/A'}</p>
-                                                    <p><strong>Renda:</strong> {foundClient.monthlyIncome ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(foundClient.monthlyIncome) : 'N/A'}</p>
-                                                    <p><strong>Responsável:</strong> {foundClient.assignedTo}</p>
-                                                </div>
-                                            ) : <p className="text-sm text-destructive">Nenhum cliente selecionado.</p>}
-                                        </div>
-                                    </div>
-
-                                    <div className="border-t pt-4 space-y-4">
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="space-y-2">
-                                                <Label htmlFor="value">Valor da Proposta (R$)</Label>
-                                                <Input id="value" name="value" type="number" placeholder="750000" required value={proposalValue} onChange={e => setProposalValue(e.target.value)} disabled={!foundProperty || !foundClient} />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="date">Data da Proposta</Label>
-                                                <Input id="date" name="date" type="date" required value={proposalDate} onChange={e => setProposalDate(e.target.value)} disabled={!foundProperty || !foundClient} />
-                                            </div>
-                                        </div>
-                                        
-                                        {(activeProfile === 'Admin' || activeProfile === 'Imobiliária') && (
-                                            <div className="space-y-2">
-                                                <Label htmlFor="salespersonId">Vendedor Responsável</Label>
-                                                <Select name="salespersonId" defaultValue={currentUser?.uid || ''}>
-                                                    <SelectTrigger className="w-full">
-                                                        <SelectValue placeholder="Selecione um vendedor" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {allUsers.map(realtor => (
-                                                            <SelectItem key={realtor.id} value={realtor.id}>
-                                                                {realtor.name}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                        )}
-
-                                        <div className="space-y-2">
-                                            <Label htmlFor="documents">Anexar Documentos do Cliente (Opcional)</Label>
-                                            <Input id="documents" name="documents" type="file" multiple onChange={handleFileSelection} />
-                                            {selectedDocs.length > 0 && (
-                                                <div className="mt-2 p-3 border rounded-md bg-muted/50 space-y-2 relative">
-                                                    <Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6" onClick={clearSelectedFiles}>
-                                                        <X className="h-4 w-4" />
-                                                        <span className="sr-only">Limpar arquivos</span>
-                                                    </Button>
-                                                    <h4 className="text-sm font-medium">Arquivos Selecionados ({selectedDocs.length}):</h4>
-                                                    <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1 max-h-24 overflow-y-auto">
-                                                        {selectedDocs.map((file, index) => (
-                                                            <li key={index}>{file.name}</li>
-                                                        ))}
-                                                    </ul>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div className="flex items-center space-x-2">
-                                            <Checkbox id="financed" checked={isFinanced} onCheckedChange={(checked) => setIsFinanced(checked as boolean)} disabled={!foundProperty || !foundClient} />
-                                            <Label htmlFor="financed">É financiado?</Label>
-                                        </div>
+                                    <div className="space-y-2">
+                                        <Label>Cliente</Label>
+                                        <Select value={clientCode} onValueChange={setClientCode} required>
+                                            <SelectTrigger><SelectValue placeholder="Selecione um cliente" /></SelectTrigger>
+                                            <SelectContent>
+                                                {availableClients.map(cli => (
+                                                    <SelectItem key={cli.id} value={cli.id}>
+                                                        {cli.name}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                     </div>
                                 </div>
-                            </ScrollArea>
-                            <DialogFooter className="mt-4 pt-4 border-t">
-                                <Button type="submit" disabled={!foundProperty || !foundClient || !proposalValue || !proposalDate}>Criar Negociação</Button>
-                            </DialogFooter>
-                        </form>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 rounded-lg border p-4">
+                                    <div className="space-y-2">
+                                        <h4 className="font-semibold text-sm">Imóvel Selecionado</h4>
+                                        {foundProperty ? (
+                                            <div className="text-sm text-muted-foreground space-y-1">
+                                                <p className="font-medium text-foreground">{foundProperty.name}</p>
+                                                <p><strong>Cód:</strong> {foundProperty.displayCode}</p>
+                                                <p><strong>End:</strong> {foundProperty.address}</p>
+                                                <p><strong>Preço:</strong> {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(foundProperty.price)}</p>
+                                                <p className="line-clamp-2"><strong>Desc:</strong> {foundProperty.description || 'N/A'}</p>
+                                            </div>
+                                        ) : <p className="text-sm text-destructive">Nenhum imóvel selecionado.</p>}
+                                    </div>
+                                    <div className="space-y-2">
+                                        <h4 className="font-semibold text-sm">Cliente Selecionado</h4>
+                                        {foundClient ? (
+                                            <div className="text-sm text-muted-foreground space-y-1">
+                                                <p className="font-medium text-foreground">{foundClient.name}</p>
+                                                <p><strong>Doc:</strong> {foundClient.document || 'N/A'}</p>
+                                                <p><strong>Email:</strong> {foundClient.email}</p>
+                                                <p><strong>Tel:</strong> {foundClient.phone}</p>
+                                                <p><strong>End:</strong> {foundClient.address || 'N/A'}</p>
+                                                <p><strong>Renda:</strong> {foundClient.monthlyIncome ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(foundClient.monthlyIncome) : 'N/A'}</p>
+                                                <p><strong>Responsável:</strong> {foundClient.assignedTo}</p>
+                                            </div>
+                                        ) : <p className="text-sm text-destructive">Nenhum cliente selecionado.</p>}
+                                    </div>
+                                </div>
+
+                                <div className="border-t pt-4 space-y-4">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="value">Valor da Proposta (R$)</Label>
+                                            <Input id="value" name="value" type="number" placeholder="750000" required value={proposalValue} onChange={e => setProposalValue(e.target.value)} disabled={!foundProperty || !foundClient} />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="date">Data da Proposta</Label>
+                                            <Input id="date" name="date" type="date" required value={proposalDate} onChange={e => setProposalDate(e.target.value)} disabled={!foundProperty || !foundClient} />
+                                        </div>
+                                    </div>
+                                    
+                                    {(activeProfile === 'Admin' || activeProfile === 'Imobiliária') && (
+                                        <div className="space-y-2">
+                                            <Label htmlFor="salespersonId">Vendedor Responsável</Label>
+                                            <Select name="salespersonId" defaultValue={currentUser?.uid || ''}>
+                                                <SelectTrigger className="w-full">
+                                                    <SelectValue placeholder="Selecione um vendedor" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {allUsers.map(realtor => (
+                                                        <SelectItem key={realtor.id} value={realtor.id}>
+                                                            {realtor.name}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    )}
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="documents">Anexar Documentos do Cliente (Opcional)</Label>
+                                        <Input id="documents" name="documents" type="file" multiple onChange={handleFileSelection} />
+                                        {selectedDocs.length > 0 && (
+                                            <div className="mt-2 p-3 border rounded-md bg-muted/50 space-y-2 relative">
+                                                <Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6" onClick={clearSelectedFiles}>
+                                                    <X className="h-4 w-4" />
+                                                    <span className="sr-only">Limpar arquivos</span>
+                                                </Button>
+                                                <h4 className="text-sm font-medium">Arquivos Selecionados ({selectedDocs.length}):</h4>
+                                                <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1 max-h-24 overflow-y-auto">
+                                                    {selectedDocs.map((file, index) => (
+                                                        <li key={index}>{file.name}</li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="flex items-center space-x-2">
+                                        <Checkbox id="financed" checked={isFinanced} onCheckedChange={(checked) => setIsFinanced(checked as boolean)} disabled={!foundProperty || !foundClient} />
+                                        <Label htmlFor="financed">É financiado?</Label>
+                                    </div>
+                                </div>
+                                <DialogFooter className="sticky bottom-0 bg-background pt-4 pb-0 -mb-4 -mx-6 px-6">
+                                  <Button type="submit" disabled={!foundProperty || !foundClient || !proposalValue || !proposalDate}>Criar Negociação</Button>
+                                </DialogFooter>
+                            </form>
+                        </ScrollArea>
                     </DialogContent>
                 </Dialog>
             </div>
