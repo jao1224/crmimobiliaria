@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, AlertCircle, CheckCircle, Hourglass, UserPlus, Trash2, Home } from "lucide-react";
+import { MoreHorizontal, AlertCircle, CheckCircle, Hourglass, UserPlus, Trash2, Home, Users } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getProcessos, type Processo, type ProcessStatus, type ProcessStage, updateProcesso, addNotification, getNegotiations, type Negotiation, completeSaleAndGenerateCommission, getUsers, type User as AppUser } from "@/lib/data";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -59,10 +59,10 @@ export default function ProcessesPage() {
     const [isPendencyModalOpen, setPendencyModalOpen] = useState(false);
     const [isFinalizeModalOpen, setFinalizeModalOpen] = useState(false);
     const [isDetailModalOpen, setDetailModalOpen] = useState(false);
-    const [isManagePartiesOpen, setManagePartiesOpen] = useState(false);
+    const [isAssignTeamOpen, setIsAssignTeamOpen] = useState(false);
     const [pendencyNote, setPendencyNote] = useState("");
     const [finalizationNote, setFinalizationNote] = useState("");
-    const [newPartyId, setNewPartyId] = useState("");
+    const [newTeamId, setNewTeamId] = useState("");
     const { toast } = useToast();
 
     useEffect(() => {
@@ -99,21 +99,21 @@ export default function ProcessesPage() {
     };
     
     const filteredProcesses = useMemo(() => {
+        if (!currentUser) return [];
+
+        const userTeams = teams.filter(team => team.memberIds.includes(currentUser.uid)).map(t => t.name);
+
         if (activeProfile === 'Admin' || activeProfile === 'Imobiliária') {
             return processes;
         }
-        if (currentUser?.displayName) {
-            if (activeProfile === 'Construtora') {
-                 return processes.filter(p => p.realtorName === currentUser.displayName);
-            }
-            return processes.filter(p => 
-                p.realtorName === currentUser.displayName || 
-                p.salespersonName === currentUser.displayName ||
-                p.clientName === currentUser.displayName
-            );
-        }
-        return [];
-    }, [processes, activeProfile, currentUser]);
+
+        return processes.filter(p => 
+            p.realtorName === currentUser.displayName || 
+            p.salespersonName === currentUser.displayName ||
+            p.clientName === currentUser.displayName ||
+            userTeams.includes(p.team) // Mostra se o processo está na equipe do usuário
+        );
+    }, [processes, activeProfile, currentUser, teams]);
 
     const handleOpenPendencyModal = (process: Processo) => {
         setSelectedProcess(process);
@@ -132,9 +132,10 @@ export default function ProcessesPage() {
         setDetailModalOpen(true);
     };
     
-    const handleOpenManageParties = (process: Processo) => {
+    const handleOpenAssignTeam = (process: Processo) => {
         setSelectedProcess(process);
-        setManagePartiesOpen(true);
+        setNewTeamId(teams.find(t => t.name === process.team)?.id || "");
+        setIsAssignTeamOpen(true);
     };
 
     const handleSavePendency = async () => {
@@ -183,58 +184,31 @@ export default function ProcessesPage() {
         setFinalizeModalOpen(false);
     };
     
-    const handleAddParty = async () => {
-        if (!selectedProcess || !newPartyId) {
-            toast({ variant: 'destructive', title: "Erro", description: "Selecione uma parte para adicionar." });
+    const handleAssignTeam = async () => {
+        if (!selectedProcess || !newTeamId) {
+            toast({ variant: 'destructive', title: "Erro", description: "Selecione uma equipe para atribuir." });
             return;
         }
         
-        const partyToAdd = allUsers.find(u => u.id === newPartyId);
-        if (!partyToAdd) {
-            toast({ variant: 'destructive', title: "Erro", description: "Usuário selecionado não encontrado." });
+        const teamToAssign = teams.find(t => t.id === newTeamId);
+        if (!teamToAssign) {
+            toast({ variant: 'destructive', title: "Erro", description: "Equipe selecionada não encontrada." });
             return;
         }
         
-        const partyName = partyToAdd.name;
+        const teamName = teamToAssign.name;
 
         try {
             await updateProcesso(selectedProcess.id, {
-                involvedParties: arrayUnion(partyName)
+                team: teamName
             });
             await refreshData();
-            // Atualizar o estado local para o modal
-            setSelectedProcess(prev => ({
-                ...prev!,
-                involvedParties: [...(prev?.involvedParties || []), partyName]
-            }));
-            setNewPartyId("");
-            toast({ title: "Sucesso", description: "Parte envolvida adicionada." });
+            setNewTeamId("");
+            toast({ title: "Sucesso", description: `Processo enviado para a equipe ${teamName}.` });
+            setIsAssignTeamOpen(false);
         } catch (error) {
-            toast({ variant: 'destructive', title: "Erro", description: "Não foi possível adicionar a parte." });
+            toast({ variant: 'destructive', title: "Erro", description: "Não foi possível atribuir o processo." });
         }
-    };
-    
-    const handleRemoveParty = async (partyToRemove: string) => {
-        if (!selectedProcess) return;
-        
-        try {
-            await updateProcesso(selectedProcess.id, {
-                involvedParties: arrayRemove(partyToRemove)
-            });
-            await refreshData();
-             setSelectedProcess(prev => ({
-                ...prev!,
-                involvedParties: (prev?.involvedParties || []).filter(p => p !== partyToRemove)
-            }));
-            toast({ title: "Sucesso", description: "Parte envolvida removida." });
-        } catch (error) {
-             toast({ variant: 'destructive', title: "Erro", description: "Não foi possível remover a parte." });
-        }
-    };
-
-    const findTeamForMember = (memberId: string) => {
-        const team = teams.find(t => t.memberIds.includes(memberId));
-        return team ? team.name : 'Sem Equipe';
     };
 
 
@@ -242,7 +216,7 @@ export default function ProcessesPage() {
         <div className="flex flex-col gap-6">
             <div>
                 <h1 className="text-2xl font-bold">Gestão de Processos</h1>
-                <p className="text-muted-foreground">Acompanhe todos os processos em que você está envolvido.</p>
+                <p className="text-muted-foreground">Acompanhe todos os processos em que você está envolvido ou que foram atribuídos à sua equipe.</p>
             </div>
 
             <Card>
@@ -260,7 +234,7 @@ export default function ProcessesPage() {
                                 <TableHead>Fase Atual</TableHead>
                                 <TableHead>Imóvel</TableHead>
                                 <TableHead>Vendedor</TableHead>
-                                <TableHead className="hidden md:table-cell">Captador</TableHead>
+                                <TableHead className="hidden md:table-cell">Equipe</TableHead>
                                 <TableHead><span className="sr-only">Ações</span></TableHead>
                             </TableRow>
                         </TableHeader>
@@ -292,7 +266,7 @@ export default function ProcessesPage() {
                                             <div className="text-xs text-muted-foreground font-mono">{process.propertyDisplayCode}</div>
                                         </TableCell>
                                         <TableCell>{process.salespersonName}</TableCell>
-                                        <TableCell className="hidden md:table-cell">{process.realtorName}</TableCell>
+                                        <TableCell className="hidden md:table-cell"><Badge variant="outline">{process.team}</Badge></TableCell>
                                         <TableCell>
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
@@ -302,11 +276,11 @@ export default function ProcessesPage() {
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
                                                     <DropdownMenuLabel>Ações do Processo</DropdownMenuLabel>
-                                                    <DropdownMenuItem onSelect={() => handleOpenManageParties(process)}>Gerenciar Partes</DropdownMenuItem>
-                                                    <DropdownMenuItem onSelect={() => handleOpenPendencyModal(process)}>Marcar Pendência</DropdownMenuItem>
+                                                    <DropdownMenuItem onSelect={(e) => { e.stopPropagation(); handleOpenAssignTeam(process); }}>Atribuir Equipe</DropdownMenuItem>
+                                                    <DropdownMenuItem onSelect={(e) => { e.stopPropagation(); handleOpenPendencyModal(process); }}>Marcar Pendência</DropdownMenuItem>
                                                     <DropdownMenuSeparator/>
                                                     <DropdownMenuItem 
-                                                        onSelect={() => handleOpenFinalizeModal(process)}
+                                                        onSelect={(e) => { e.stopPropagation(); handleOpenFinalizeModal(process); }}
                                                         className="text-green-600 focus:text-green-600 focus:bg-green-50"
                                                         disabled={process.status === 'Finalizado' || process.status === 'Cancelado'}
                                                     >
@@ -372,13 +346,9 @@ export default function ProcessesPage() {
                             <p className="text-sm p-3 bg-muted rounded-md min-h-20">{selectedProcess?.observations || "Nenhuma observação registrada."}</p>
                         </div>
                          <div className="space-y-1">
-                            <Label className="text-muted-foreground">Outras Partes Envolvidas</Label>
+                            <Label className="text-muted-foreground">Equipe Responsável</Label>
                              <div className="text-sm p-3 bg-muted rounded-md min-h-12">
-                                {selectedProcess?.involvedParties && selectedProcess.involvedParties.length > 0 ? (
-                                    <ul className="list-disc list-inside">
-                                        {selectedProcess.involvedParties.map((party, index) => <li key={index}>{party}</li>)}
-                                    </ul>
-                                ) : "Nenhuma outra parte envolvida."}
+                                <Badge variant="outline">{selectedProcess?.team}</Badge>
                              </div>
                         </div>
                     </div>
@@ -442,57 +412,37 @@ export default function ProcessesPage() {
                 </DialogContent>
             </Dialog>
             
-            {/* Modal de Gerenciar Partes Envolvidas */}
-            <Dialog open={isManagePartiesOpen} onOpenChange={setManagePartiesOpen}>
+            {/* Modal de Atribuir Equipe */}
+            <Dialog open={isAssignTeamOpen} onOpenChange={setIsAssignTeamOpen}>
                 <DialogContent>
                      <DialogHeader>
-                        <DialogTitle>Gerenciar Partes Envolvidas</DialogTitle>
+                        <DialogTitle>Atribuir Processo a uma Equipe</DialogTitle>
                         <DialogDescription>
-                            Adicione ou remova imobiliárias e corretores parceiros neste processo.
+                            Selecione a equipe que ficará responsável por este processo.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="py-4 space-y-4">
                         <div>
-                            <Label htmlFor="new-party-select">Adicionar Nova Parte</Label>
+                            <Label htmlFor="new-team-select">Enviar para a Equipe</Label>
                              <div className="flex gap-2 mt-1">
-                                <Select value={newPartyId} onValueChange={setNewPartyId}>
+                                <Select value={newTeamId} onValueChange={setNewTeamId}>
                                     <SelectTrigger>
-                                        <SelectValue placeholder="Selecione um usuário" />
+                                        <SelectValue placeholder="Selecione uma equipe" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {allUsers
-                                            .filter(user => !(selectedProcess?.involvedParties || []).includes(user.name))
-                                            .map(user => (
-                                                <SelectItem key={user.id} value={user.id}>
-                                                    {user.name} - ({user.role}) - [{findTeamForMember(user.id)}]
-                                                </SelectItem>
-                                            ))
-                                        }
+                                        {teams.map(team => (
+                                            <SelectItem key={team.id} value={team.id}>
+                                                {team.name}
+                                            </SelectItem>
+                                        ))}
                                     </SelectContent>
                                 </Select>
-                                <Button onClick={handleAddParty}><UserPlus className="h-4 w-4"/></Button>
-                            </div>
-                        </div>
-                         <div>
-                            <h4 className="text-sm font-medium mb-2">Partes Atuais</h4>
-                            <div className="p-3 bg-muted rounded-md min-h-24 max-h-48 overflow-y-auto">
-                                {selectedProcess?.involvedParties && selectedProcess.involvedParties.length > 0 ? (
-                                    <ul className="space-y-2">
-                                        {selectedProcess.involvedParties.map((party, index) => (
-                                            <li key={index} className="flex items-center justify-between text-sm">
-                                                <span>{party}</span>
-                                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveParty(party)}>
-                                                    <Trash2 className="h-4 w-4 text-destructive"/>
-                                                </Button>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                ) : <p className="text-sm text-muted-foreground text-center py-4">Nenhuma parte adicional envolvida.</p>}
                             </div>
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button onClick={() => setManagePartiesOpen(false)}>Fechar</Button>
+                        <Button variant="outline" onClick={() => setIsAssignTeamOpen(false)}>Cancelar</Button>
+                        <Button onClick={handleAssignTeam}>Atribuir Equipe</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
