@@ -910,26 +910,18 @@ export const getActivitiesForRealtor = async (realtorId: string): Promise<Activi
     }
     const realtorName = realtorDoc.data().name;
 
-    const determineActivityStatus = (itemStatus: string, itemType: 'property' | 'negotiation'): ActivityStatus => {
-        const status = itemStatus.toLowerCase();
-
+    const determineActivityStatus = (itemStatus: string | undefined): ActivityStatus => {
+        const status = (itemStatus || '').toLowerCase();
+        
+        if (status.includes('concluído') || status.includes('vendido') || status.includes('alugado')) return 'Concluído';
         if (status.includes('cancelado')) return 'Cancelado';
+        if (status.includes('pendência') || status.includes('em negociação') || status.includes('proposta enviada') || status.includes('contrato gerado')) return 'Pendente';
+        if (status.includes('disponível') || status.includes('em andamento') || status.includes('ativo')) return 'Ativo';
         
-        if (itemType === 'property') {
-            if (status.includes('disponível')) return 'Ativo';
-            if (status.includes('vendido') || status.includes('alugado')) return 'Concluído';
-            if (status.includes('em negociação')) return 'Pendente';
-        }
-
-        if (itemType === 'negotiation') {
-            if (status.includes('venda concluída') || status.includes('aluguel ativo')) return 'Concluído';
-            if (status.includes('proposta enviada') || status.includes('em negociação') || status.includes('contrato gerado')) return 'Pendente';
-        }
-        
-        return 'Ativo'; // Default
+        return 'Ativo'; // Default status
     };
 
-    // 1. Busca captações (imóveis capturados pelo NOME do corretor)
+    // 1. Busca captações (imóveis capturados pelo ID do corretor)
     const capturesQuery = query(collection(db, 'imoveis'), where('capturedById', '==', realtorId));
     const capturesSnapshot = await getDocs(capturesQuery);
     capturesSnapshot.docs.forEach(doc => {
@@ -942,7 +934,7 @@ export const getActivitiesForRealtor = async (realtorId: string): Promise<Activi
                 type: 'capture',
                 name: prop.name,
                 value: prop.price,
-                status: determineActivityStatus(prop.status, 'property'),
+                status: determineActivityStatus(prop.status),
             });
         }
     });
@@ -960,7 +952,7 @@ export const getActivitiesForRealtor = async (realtorId: string): Promise<Activi
                 type: 'negotiation',
                 name: neg.property,
                 value: neg.value,
-                status: determineActivityStatus(neg.stage, 'negotiation'),
+                status: determineActivityStatus(neg.stage),
             });
         }
     });
@@ -978,7 +970,7 @@ export const getActivitiesForRealtor = async (realtorId: string): Promise<Activi
                 type: 'negotiation',
                 name: neg.property,
                 value: neg.value,
-                status: determineActivityStatus(neg.stage, 'negotiation'),
+                status: determineActivityStatus(neg.stage),
             });
         }
     });
