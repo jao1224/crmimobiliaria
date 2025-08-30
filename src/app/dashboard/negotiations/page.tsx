@@ -153,6 +153,7 @@ export default function NegotiationsPage() {
     const handleFileSelection = (event: React.ChangeEvent<HTMLInputElement>) => {
         if (event.target.files) {
             const newFiles = Array.from(event.target.files);
+            // Acumula os arquivos em vez de substituir
             setSelectedDocs(prevDocs => [...prevDocs, ...newFiles]);
         }
     };
@@ -423,7 +424,7 @@ export default function NegotiationsPage() {
                             </DialogDescription>
                         </DialogHeader>
                         <form onSubmit={handleAddNegotiation} className="flex-1 min-h-0 flex flex-col">
-                            <ScrollArea className="flex-1 pr-6 -mr-6">
+                            <ScrollArea className="flex-grow pr-4">
                                 <div className="space-y-4 py-4">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div className="space-y-2">
@@ -539,7 +540,7 @@ export default function NegotiationsPage() {
                                     </div>
                                 </div>
                             </ScrollArea>
-                            <DialogFooter className="border-t pt-4 mt-auto">
+                            <DialogFooter className="mt-4 pt-4 border-t">
                                 <Button type="submit" disabled={!foundProperty || !foundClient || !proposalValue || !proposalDate}>Criar Negociação</Button>
                             </DialogFooter>
                         </form>
