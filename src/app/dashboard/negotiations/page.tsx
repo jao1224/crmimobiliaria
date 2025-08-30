@@ -60,6 +60,8 @@ export default function NegotiationsPage() {
     const [typeFilter, setTypeFilter] = useState('all');
     const [statusFilter, setStatusFilter] = useState('all');
     const [realtorFilter, setRealtorFilter] = useState('all');
+    const [startDate, setStartDate] = useState("");
+    const [endDate, setEndDate] = useState("");
     const [allUsers, setAllUsers] = useState<User[]>([]); // Para os filtros e diálogos
 
     const [propertyCode, setPropertyCode] = useState("");
@@ -145,9 +147,22 @@ export default function NegotiationsPage() {
                 }
             }
         }
+
+        if (startDate || endDate) {
+            const start = startDate ? new Date(`${startDate}T00:00:00`) : null;
+            const end = endDate ? new Date(`${endDate}T23:59:59`) : null;
+
+            negotiations = negotiations.filter(neg => {
+                const negDate = new Date(neg.createdAt);
+                if (start && end) return negDate >= start && negDate <= end;
+                if (start) return negDate >= start;
+                if (end) return negDate <= end;
+                return true;
+            });
+        }
         
         return negotiations;
-    }, [allNegotiations, typeFilter, statusFilter, realtorFilter, activeProfile, currentUser, allUsers]);
+    }, [allNegotiations, typeFilter, statusFilter, realtorFilter, activeProfile, currentUser, allUsers, startDate, endDate]);
 
 
     const resetForm = () => {
@@ -575,16 +590,16 @@ export default function NegotiationsPage() {
             <Card>
                 <CardHeader>
                     <CardTitle>Negociações em Andamento</CardTitle>
-                    <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
                         <CardDescription>
                            Selecione os filtros para buscar as negociações.
                            <Link href="/dashboard/negotiations/archived" className="text-sm text-primary hover:underline ml-2">Ver Arquivadas</Link>
                            <Link href="/dashboard/negotiations/deleted" className="text-sm text-destructive hover:underline ml-2">Ver Excluídas</Link>
                         </CardDescription>
                          {(activeProfile === 'Admin' || activeProfile === 'Imobiliária') && (
-                        <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex flex-wrap items-end gap-2">
                              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                                <SelectTrigger className="w-full sm:w-[150px]">
+                                <SelectTrigger className="w-full sm:w-[150px] h-9">
                                     <SelectValue placeholder="Filtrar por Tipo" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -595,7 +610,7 @@ export default function NegotiationsPage() {
                                 </SelectContent>
                             </Select>
                              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                                <SelectTrigger className="w-full sm:w-[150px]">
+                                <SelectTrigger className="w-full sm:w-[150px] h-9">
                                     <SelectValue placeholder="Filtrar por Status" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -606,7 +621,7 @@ export default function NegotiationsPage() {
                                 </SelectContent>
                             </Select>
                             <Select value={realtorFilter} onValueChange={setRealtorFilter}>
-                                <SelectTrigger className="w-full sm:w-[160px]">
+                                <SelectTrigger className="w-full sm:w-[160px] h-9">
                                     <SelectValue placeholder="Filtrar por Responsável" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -614,6 +629,14 @@ export default function NegotiationsPage() {
                                     {allUsers.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
                                 </SelectContent>
                             </Select>
+                            <div className="grid w-full sm:w-auto gap-1.5">
+                                <Label htmlFor="start-date" className="text-xs">Data Início</Label>
+                                <Input type="date" id="start-date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="h-9" />
+                            </div>
+                            <div className="grid w-full sm:w-auto gap-1.5">
+                                <Label htmlFor="end-date" className="text-xs">Data Fim</Label>
+                                <Input type="date" id="end-date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="h-9" />
+                            </div>
                         </div>
                         )}
                     </div>
@@ -779,7 +802,7 @@ export default function NegotiationsPage() {
                     <DialogHeader>
                         <DialogTitle>Detalhes da Negociação</DialogTitle>
                         <DialogDescription>
-                            ID da Negociação: {selectedNegotiation.id}
+                            ID da Negociação: {selectedNegotiation.negotiationDisplayCode}
                         </DialogDescription>
                     </DialogHeader>
                     <ScrollArea className="max-h-[70vh]">
@@ -880,3 +903,4 @@ export default function NegotiationsPage() {
         </>
     );
 }
+
