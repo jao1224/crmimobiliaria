@@ -65,7 +65,7 @@ export default function NegotiationsPage() {
     // Dados para os selects, carregados uma vez
     const [availableProperties, setAvailableProperties] = useState<Property[]>([]);
     const [availableClients, setAvailableClients] = useState<Client[]>([]);
-    const [selectedDocs, setSelectedDocs] = useState<FileList | null>(null);
+    const [selectedDocs, setSelectedDocs] = useState<File[]>([]);
 
     // Estados para o diálogo de atribuição e exclusão
     const [isAssignDialogOpen, setAssignDialogOpen] = useState(false);
@@ -146,7 +146,7 @@ export default function NegotiationsPage() {
         setProposalValue("");
         setProposalDate("");
         setIsFinanced(false);
-        setSelectedDocs(null);
+        setSelectedDocs([]);
     };
 
     useEffect(() => {
@@ -217,7 +217,7 @@ export default function NegotiationsPage() {
             isDeleted: false,
         };
         
-        const newNegotiationId = await addNegotiation(newNegotiationData, selectedDocs ? Array.from(selectedDocs) : undefined);
+        const newNegotiationId = await addNegotiation(newNegotiationData, selectedDocs);
         
         if (isFinanced) {
              const newFinancingProcess: Omit<any, 'id'> = {
@@ -496,12 +496,12 @@ export default function NegotiationsPage() {
 
                                     <div className="space-y-2">
                                         <Label htmlFor="documents">Anexar Documentos do Cliente (Opcional)</Label>
-                                        <Input id="documents" name="documents" type="file" multiple onChange={(e) => setSelectedDocs(e.target.files)} />
+                                        <Input id="documents" name="documents" type="file" multiple onChange={(e) => setSelectedDocs(e.target.files ? Array.from(e.target.files) : [])} />
                                         {selectedDocs && selectedDocs.length > 0 && (
                                             <div className="mt-2 p-3 border rounded-md bg-muted/50 space-y-2">
                                                 <h4 className="text-sm font-medium">Arquivos Selecionados:</h4>
                                                 <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
-                                                    {Array.from(selectedDocs).map((file, index) => (
+                                                    {selectedDocs.map((file, index) => (
                                                         <li key={index}>{file.name}</li>
                                                     ))}
                                                 </ul>
@@ -721,5 +721,3 @@ export default function NegotiationsPage() {
         </>
     );
 }
-
-    
