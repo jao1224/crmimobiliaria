@@ -621,8 +621,8 @@ export default function NegotiationsPage() {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Cód. Processo</TableHead>
                                 <TableHead>Cód. Negociação</TableHead>
+                                <TableHead>Cód. Processo</TableHead>
                                 <TableHead>Imóvel</TableHead>
                                 <TableHead>Cliente</TableHead>
                                 <TableHead className="hidden md:table-cell">Data Criação</TableHead>
@@ -648,8 +648,8 @@ export default function NegotiationsPage() {
                                 <TableRow
                                     key={neg.id}
                                 >
-                                    <TableCell className="font-mono text-xs text-muted-foreground">{getProcessCodeForNegotiation(neg.id)}</TableCell>
                                     <TableCell className="font-mono text-xs text-muted-foreground">{neg.id.substring(0, 8)}...</TableCell>
+                                    <TableCell className="font-mono text-xs text-muted-foreground">{getProcessCodeForNegotiation(neg.id)}</TableCell>
                                     <TableCell>
                                         <div className="font-medium">{neg.property}</div>
                                         <div className="text-xs text-muted-foreground font-mono">{neg.propertyDisplayCode}</div>
