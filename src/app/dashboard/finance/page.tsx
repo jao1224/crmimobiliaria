@@ -132,7 +132,7 @@ export default function FinancePage() {
     
     const handleStatusChange = async (commissionId: string, newStatus: Commission['status']) => {
         try {
-            await updateDoc(doc(db, "commissions", commissionId), { status: newStatus });
+            await updateDoc(doc(db, "comissoes", commissionId), { status: newStatus });
             await refreshFinanceData();
             toast({ title: "Status Atualizado!", description: `A comissão foi marcada como ${newStatus}.` });
         } catch (error) {
@@ -405,7 +405,7 @@ export default function FinancePage() {
                                         ) : visibleCommissions.length > 0 ? (
                                             visibleCommissions.map(commission => (
                                                 <TableRow key={commission.id} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
-                                                    <TableCell className="font-mono text-xs text-muted-foreground">{commission.negotiationId.toUpperCase()}</TableCell>
+                                                    <TableCell className="font-mono text-xs text-muted-foreground">{commission.processoDisplayCode || commission.negotiationId.substring(0, 8).toUpperCase()}</TableCell>
                                                     <TableCell className="font-medium">{commission.clientName}</TableCell>
                                                     {hasPermission && <TableCell>{commission.realtorName}</TableCell>}
                                                     {hasPermission && <TableCell>{commission.salespersonName}</TableCell>}
