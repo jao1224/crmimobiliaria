@@ -109,8 +109,8 @@ export default function CorrespondentPage() {
     const handleAcceptRequest = async () => {
         if (!selectedRequest) return;
         
-        const clientNameFromRequest = selectedRequest.clientInfo.split(',')[0].replace('Nome:', '').trim();
-        const propertyNameFromRequest = selectedRequest.propertyInfo.split(',')[0].replace('Imóvel:', '').trim();
+        const clientNameFromRequest = selectedRequest.clientInfo.split('\n')[0].replace('Nome: ', '').trim();
+        const propertyNameFromRequest = selectedRequest.propertyInfo.split('\n')[0].replace('Imóvel: ', '').trim();
 
         // Tenta encontrar uma negociação existente que corresponda à solicitação.
         const matchingNegotiation = negotiations.find(
@@ -281,10 +281,10 @@ export default function CorrespondentPage() {
                         <AlertDialogTitle>Aceitar Solicitação e Iniciar Processo?</AlertDialogTitle>
                         <AlertDialogDescription>
                             Esta ação criará um novo processo de financiamento na aba "Meus Processos" com base nos dados desta solicitação e mudará o status da solicitação para "Em Análise".
-                            <div className="mt-4 text-sm text-foreground">
-                                <div><strong>Tipo:</strong> {selectedRequest?.type}</div>
+                            <div className="mt-4 text-sm text-foreground space-y-1">
+                                <div><strong>Tipo:</strong> {serviceRequestTypes.find(t => t.id === selectedRequest?.type)?.label || selectedRequest?.type}</div>
                                 <div><strong>Solicitante:</strong> {selectedRequest?.realtorName}</div>
-                                <div><strong>Cliente:</strong> {selectedRequest?.clientInfo}</div>
+                                <div><strong>Cliente:</strong> {selectedRequest?.clientInfo.split('\n')[0].replace('Nome: ', '').trim()}</div>
                             </div>
                         </AlertDialogDescription>
                     </AlertDialogHeader>
@@ -456,5 +456,6 @@ function ProcessDetailForm({ process, onSave, onCancel }: { process: FinancingPr
         </form>
     );
 }
+
 
 
