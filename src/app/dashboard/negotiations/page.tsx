@@ -86,6 +86,7 @@ export default function NegotiationsPage() {
     const [selectedNegotiation, setSelectedNegotiation] = useState<Negotiation | null>(null);
     const [isServiceRequestOpen, setServiceRequestOpen] = useState(false);
     const [serviceRequestType, setServiceRequestType] = useState<ServiceRequestType>('credit_approval');
+    const [clientForRequest, setClientForRequest] = useState<Client | null>(null);
 
 
     useEffect(() => {
@@ -312,7 +313,9 @@ export default function NegotiationsPage() {
         }
     };
     
-    const handleTriggerCorrespondent = (negotiation: Negotiation) => {
+    const handleTriggerCorrespondent = async (negotiation: Negotiation) => {
+        const client = availableClients.find(c => c.id === negotiation.clientId);
+        setClientForRequest(client || null);
         setSelectedNegotiation(negotiation);
         setServiceRequestOpen(true);
     };
@@ -922,7 +925,18 @@ export default function NegotiationsPage() {
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="clientInfo">Informações do Cliente</Label>
-                                <Textarea id="clientInfo" name="clientInfo" placeholder="Nome completo, CPF, Renda, etc." required defaultValue={`Nome: ${selectedNegotiation.client}, ...`}/>
+                                <Textarea 
+                                    id="clientInfo" 
+                                    name="clientInfo" 
+                                    placeholder="Nome completo, CPF, Renda, etc." 
+                                    required 
+                                    defaultValue={
+                                        clientForRequest 
+                                        ? `Nome: ${clientForRequest.name}\nCPF/CNPJ: ${clientForRequest.document || 'N/A'}\nRenda Mensal: ${clientForRequest.monthlyIncome ? formatCurrency(clientForRequest.monthlyIncome) : 'N/A'}\nEndereço: ${clientForRequest.address || 'N/A'}`
+                                        : `Nome: ${selectedNegotiation.client}`
+                                    }
+                                    rows={5}
+                                />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="propertyInfo">Informações do Imóvel</Label>
