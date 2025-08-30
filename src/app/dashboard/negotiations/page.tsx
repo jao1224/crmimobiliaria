@@ -21,14 +21,14 @@ import {
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MoreHorizontal, Search, Archive, Trash2, Landmark, Upload, Eye, X, FileText, Link as LinkIcon } from "lucide-react";
+import { MoreHorizontal, Search, Archive, Trash2, Landmark, Upload, Eye, X, FileText, Link as LinkIcon, Send } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { getNegotiations, addNegotiation, type Negotiation, addFinancingProcess, completeSaleAndGenerateCommission, getProperties, type Property, updateNegotiation, getUsers, type User, archiveNegotiation, addServiceRequest, markAsDeleted, getProcessos, type Processo } from "@/lib/data";
+import { getNegotiations, addNegotiation, type Negotiation, addFinancingProcess, completeSaleAndGenerateCommission, getProperties, type Property, updateNegotiation, getUsers, type User, archiveNegotiation, addServiceRequest, markAsDeleted, getProcessos, type Processo, ServiceRequestType } from "@/lib/data";
 import { getClients, type Client } from "@/lib/crm-data";
 import { cn } from "@/lib/utils";
 import { ProfileContext } from "@/contexts/ProfileContext";
@@ -38,6 +38,7 @@ import { AssignNegotiationDialog } from "@/components/dashboard/assign-negotiati
 import Link from "next/link";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 
 const formatCurrency = (value: number) => {
     if (typeof value !== 'number') return 'R$ 0,00';
@@ -83,6 +84,8 @@ export default function NegotiationsPage() {
     const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
     const [selectedNegotiation, setSelectedNegotiation] = useState<Negotiation | null>(null);
+    const [isServiceRequestOpen, setServiceRequestOpen] = useState(false);
+    const [serviceRequestType, setServiceRequestType] = useState<ServiceRequestType>('credit_approval');
 
 
     useEffect(() => {
@@ -265,32 +268,11 @@ export default function NegotiationsPage() {
         const newNegotiationId = await addNegotiation(newNegotiationData, selectedDocs);
         
         if (isFinanced) {
-             const newFinancingProcess: Omit<any, 'id'> = {
-                negotiationId: newNegotiationId, // O ID da negociação recém-criada
-                clientName: newNegotiationData.client,
-                propertyName: newNegotiationData.property,
-                realtorName: newNegotiationData.salesperson,
-                clientStatus: 'Pendente',
-                clientStatusReason: 'Aguardando documentação inicial',
-                approvedValue: 0,
-                bacenInfo: '',
-                engineeringStatus: 'Não solicitado',
-                engineeringReason: '',
-                appraisalValue: 0,
-                appraisalDate: '',
-                docs: {
-                    propertyRegistration: { updated: false, dueDate: '' },
-                    paycheck: { updated: false, dueDate: '' },
-                    addressProof: { updated: false, dueDate: '' },
-                    clientApproval: { updated: false, dueDate: '' },
-                    engineeringReport: { updated: false, dueDate: '' },
-                },
-                stages: { formSignature: false, compliance: false, financingResources: false, bankSignature: '', registryEntry: '', warranty: '' },
-                generalStatus: 'Ativo',
-                hasPendency: true,
-            };
-            await addFinancingProcess(newFinancingProcess);
-            toast({ title: "Sucesso!", description: "Nova negociação iniciada e processo de financiamento criado para o correspondente." });
+            // Em vez de criar o processo aqui, apenas notificamos que pode ser acionado.
+            toast({ 
+                title: "Sucesso!", 
+                description: "Nova negociação iniciada. Acione o correspondente no menu de ações para criar o processo de financiamento." 
+            });
         } else {
             toast({ title: "Sucesso!", description: "Nova negociação iniciada." });
         }
@@ -330,30 +312,36 @@ export default function NegotiationsPage() {
         }
     };
     
-    const handleTriggerCorrespondent = async (negotiation: Negotiation) => {
-        const client = await getClients().then(clients => clients.find(c => c.id === negotiation.clientId));
-        if (!client) {
-            toast({ variant: "destructive", title: "Erro", description: "Cliente da negociação não encontrado." });
-            return;
-        }
+    const handleTriggerCorrespondent = (negotiation: Negotiation) => {
+        setSelectedNegotiation(negotiation);
+        setServiceRequestOpen(true);
+    };
+    
+    const handleServiceRequestSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        if (!selectedNegotiation) return;
 
-        const request: Omit<any, 'id'> = {
-            type: 'credit_approval',
-            realtorName: negotiation.salesperson,
-            clientInfo: `Nome: ${client.name}, CPF: ${client.document}, Renda: ${client.monthlyIncome}`,
-            propertyInfo: `Imóvel: ${negotiation.property} (${negotiation.propertyDisplayCode})`,
-            status: 'Pendente',
+        const formData = new FormData(event.currentTarget);
+        
+        const requestData = {
+            type: formData.get('type') as ServiceRequestType,
+            realtorName: allUsers.find(u => u.id === formData.get('realtorName'))?.name || "N/A",
+            clientInfo: formData.get('clientInfo') as string,
+            propertyInfo: formData.get('propertyInfo') as string,
+            status: 'Pendente' as const,
             date: new Date().toISOString()
         };
 
         try {
-            await addServiceRequest(request);
+            await addServiceRequest(requestData);
             toast({
                 title: "Solicitação Enviada!",
-                description: "Uma solicitação de aprovação de crédito foi enviada ao Correspondente Bancário.",
+                description: `Uma solicitação de ${requestData.type} foi enviada ao Correspondente Bancário.`,
             });
+            setServiceRequestOpen(false);
+            setSelectedNegotiation(null);
         } catch (error) {
-             toast({ variant: "destructive", title: "Erro", description: "Não foi possível enviar a solicitação." });
+            toast({ variant: "destructive", title: "Erro", description: "Não foi possível enviar a solicitação." });
         }
     };
 
@@ -900,6 +888,56 @@ export default function NegotiationsPage() {
                 </DialogContent>
             </Dialog>
         )}
+        
+        {/* Service Request Modal */}
+        <Dialog open={isServiceRequestOpen} onOpenChange={setServiceRequestOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Criar Nova Solicitação</DialogTitle>
+                    <DialogDescription>Preencha os dados para enviar uma solicitação ao correspondente.</DialogDescription>
+                </DialogHeader>
+                {selectedNegotiation && (
+                    <form onSubmit={handleServiceRequestSubmit}>
+                        <div className="py-4 space-y-4">
+                           <div className="space-y-2">
+                               <Label>Tipo de Solicitação</Label>
+                               <Select value={serviceRequestType} onValueChange={(v) => setServiceRequestType(v as any)} required>
+                                   <SelectTrigger><SelectValue/></SelectTrigger>
+                                   <SelectContent>
+                                       <SelectItem value="credit_approval">Aprovação de Crédito</SelectItem>
+                                       <SelectItem value="engineering_report">Laudo de Engenharia</SelectItem>
+                                       <SelectItem value="property_registration">Matrícula Atualizada</SelectItem>
+                                       <SelectItem value="account_opening">Abertura de Conta</SelectItem>
+                                   </SelectContent>
+                               </Select>
+                           </div>
+                           <div className="space-y-2">
+                                <Label>Seu Nome (Corretor)</Label>
+                                <Select name="realtorName" required defaultValue={selectedNegotiation.salespersonId}>
+                                    <SelectTrigger><SelectValue placeholder="Selecione seu nome"/></SelectTrigger>
+                                    <SelectContent>
+                                        {allUsers.map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="clientInfo">Informações do Cliente</Label>
+                                <Textarea id="clientInfo" name="clientInfo" placeholder="Nome completo, CPF, Renda, etc." required defaultValue={`Nome: ${selectedNegotiation.client}, ...`}/>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="propertyInfo">Informações do Imóvel</Label>
+                                <Textarea id="propertyInfo" name="propertyInfo" placeholder="Nome ou código do imóvel, endereço completo, matrícula, etc." required defaultValue={`Imóvel: ${selectedNegotiation.property} (${selectedNegotiation.propertyDisplayCode})`}/>
+                            </div>
+                        </div>
+                       <DialogFooter>
+                            <Button type="button" variant="outline" onClick={() => setServiceRequestOpen(false)}>Cancelar</Button>
+                           <Button type="submit"><Send className="mr-2 h-4 w-4"/>Enviar Solicitação</Button>
+                       </DialogFooter>
+                    </form>
+                )}
+            </DialogContent>
+        </Dialog>
+
         </>
     );
 }
