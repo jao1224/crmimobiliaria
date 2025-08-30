@@ -306,9 +306,9 @@ export default function CorrespondentPage() {
                         <AlertDialogDescription>
                             Esta ação criará um novo processo de financiamento na aba "Meus Processos" com base nos dados desta solicitação e mudará o status da solicitação para "Em Análise".
                             <div className="mt-4 text-sm text-foreground">
-                                <p><strong>Tipo:</strong> {selectedRequest?.type}</p>
-                                <p><strong>Solicitante:</strong> {selectedRequest?.realtorName}</p>
-                                <p><strong>Cliente:</strong> {selectedRequest?.clientInfo}</p>
+                                <div><strong>Tipo:</strong> {selectedRequest?.type}</div>
+                                <div><strong>Solicitante:</strong> {selectedRequest?.realtorName}</div>
+                                <div><strong>Cliente:</strong> {selectedRequest?.clientInfo}</div>
                             </div>
                         </AlertDialogDescription>
                     </AlertDialogHeader>
@@ -480,3 +480,4 @@ function ProcessDetailForm({ process, onSave, onCancel }: { process: FinancingPr
         </form>
     );
 }
+
