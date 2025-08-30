@@ -622,6 +622,7 @@ export default function NegotiationsPage() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Cód. Processo</TableHead>
+                                <TableHead>Cód. Negociação</TableHead>
                                 <TableHead>Imóvel</TableHead>
                                 <TableHead>Cliente</TableHead>
                                 <TableHead className="hidden md:table-cell">Data Criação</TableHead>
@@ -639,7 +640,7 @@ export default function NegotiationsPage() {
                             {isLoading ? (
                                 Array.from({ length: 5 }).map((_, i) => (
                                     <TableRow key={i}>
-                                        <TableCell colSpan={10}><Skeleton className="h-8 w-full" /></TableCell>
+                                        <TableCell colSpan={11}><Skeleton className="h-8 w-full" /></TableCell>
                                     </TableRow>
                                 ))
                             ) : filteredNegotiations.length > 0 ? (
@@ -648,6 +649,7 @@ export default function NegotiationsPage() {
                                     key={neg.id}
                                 >
                                     <TableCell className="font-mono text-xs text-muted-foreground">{getProcessCodeForNegotiation(neg.id)}</TableCell>
+                                    <TableCell className="font-mono text-xs text-muted-foreground">{neg.id.substring(0, 8)}...</TableCell>
                                     <TableCell>
                                         <div className="font-medium">{neg.property}</div>
                                         <div className="text-xs text-muted-foreground font-mono">{neg.propertyDisplayCode}</div>
@@ -733,7 +735,7 @@ export default function NegotiationsPage() {
                             ))
                             ) : (
                                  <TableRow>
-                                    <TableCell colSpan={10} className="h-24 text-center">Nenhum processo de negociação encontrado.</TableCell>
+                                    <TableCell colSpan={11} className="h-24 text-center">Nenhum processo de negociação encontrado.</TableCell>
                                  </TableRow>
                             )}
                         </TableBody>
