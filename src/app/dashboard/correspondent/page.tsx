@@ -231,55 +231,6 @@ export default function CorrespondentPage() {
                                 <CardTitle>Solicitações de Corretores</CardTitle>
                                 <CardDescription>Gerencie as solicitações de aprovação de crédito, laudos e outros serviços.</CardDescription>
                             </div>
-                            <Dialog open={isRequestModalOpen} onOpenChange={setRequestModalOpen}>
-                                <DialogTrigger asChild><Button><PlusCircle className="mr-2 h-4 w-4"/>Nova Solicitação</Button></DialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader>
-                                        <DialogTitle>Criar Nova Solicitação</DialogTitle>
-                                        <DialogDescription>Preencha os dados para enviar uma solicitação ao correspondente.</DialogDescription>
-                                    </DialogHeader>
-                                     <form onSubmit={handleNewRequest}>
-                                         <div className="py-4 space-y-4">
-                                            <div className="space-y-2">
-                                                <Label>Tipo de Solicitação</Label>
-                                                <Select value={requestType} onValueChange={(v) => setRequestType(v as any)} required>
-                                                    <SelectTrigger><SelectValue/></SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="credit_approval">Aprovação de Crédito</SelectItem>
-                                                        <SelectItem value="engineering_report">Laudo de Engenharia</SelectItem>
-                                                        <SelectItem value="property_registration">Matrícula Atualizada</SelectItem>
-                                                        <SelectItem value="account_opening">Abertura de Conta</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label>Seu Nome (Corretor)</Label>
-                                                <Select name="realtorName" required>
-                                                    <SelectTrigger><SelectValue placeholder="Selecione seu nome"/></SelectTrigger>
-                                                    <SelectContent>
-                                                        {users.map(u => <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>)}
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                             {(requestType === 'credit_approval' || requestType === 'account_opening') && (
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="clientInfo">Informações do Cliente</Label>
-                                                    <Textarea id="clientInfo" name="clientInfo" placeholder="Nome completo, CPF, Renda, etc." required/>
-                                                </div>
-                                             )}
-                                             {(requestType === 'credit_approval' || requestType === 'engineering_report' || requestType === 'property_registration') && (
-                                                 <div className="space-y-2">
-                                                    <Label htmlFor="propertyInfo">Informações do Imóvel</Label>
-                                                    <Textarea id="propertyInfo" name="propertyInfo" placeholder="Nome ou código do imóvel, endereço completo, matrícula, etc." required/>
-                                                </div>
-                                             )}
-                                         </div>
-                                        <DialogFooter>
-                                            <Button type="submit"><Send className="mr-2 h-4 w-4"/>Enviar Solicitação</Button>
-                                        </DialogFooter>
-                                     </form>
-                                </DialogContent>
-                            </Dialog>
                         </CardHeader>
                         <CardContent>
                             <Table>
@@ -301,7 +252,7 @@ export default function CorrespondentPage() {
                                                     'engineering_report': 'Laudo de Engenharia',
                                                     'property_registration': 'Matrícula Atualizada',
                                                     'account_opening': 'Abertura de Conta'
-                                                }[req.type]
+                                                }[req.type] || req.type
                                             }</TableCell>
                                             <TableCell>{req.realtorName}</TableCell>
                                             <TableCell><Badge variant={req.status === 'Concluído' ? 'success' : req.status === 'Em Análise' ? 'warning' : 'secondary'}>{req.status}</Badge></TableCell>
