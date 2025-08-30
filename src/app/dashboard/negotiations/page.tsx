@@ -20,7 +20,7 @@ import {
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MoreHorizontal, Search, Archive, Trash2, Landmark, Upload, Eye, X } from "lucide-react";
+import { MoreHorizontal, Search, Archive, Trash2, Landmark, Upload, Eye, X, FileText, Link as LinkIcon } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -36,6 +36,12 @@ import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
 import { AssignNegotiationDialog } from "@/components/dashboard/assign-negotiation-dialog";
 import Link from "next/link";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+
+const formatCurrency = (value: number) => {
+    if (typeof value !== 'number') return 'R$ 0,00';
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+};
 
 
 export default function NegotiationsPage() {
@@ -68,10 +74,12 @@ export default function NegotiationsPage() {
     const [availableClients, setAvailableClients] = useState<Client[]>([]);
     const [selectedDocs, setSelectedDocs] = useState<File[]>([]);
 
-    // Estados para o diálogo de atribuição e exclusão
+    // Estados para os diálogos
     const [isAssignDialogOpen, setAssignDialogOpen] = useState(false);
     const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [isDetailOpen, setIsDetailOpen] = useState(false);
     const [selectedNegotiation, setSelectedNegotiation] = useState<Negotiation | null>(null);
+
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -337,6 +345,11 @@ export default function NegotiationsPage() {
         setAssignDialogOpen(true);
     };
     
+    const handleOpenDetailDialog = (negotiation: Negotiation) => {
+        setSelectedNegotiation(negotiation);
+        setIsDetailOpen(true);
+    };
+
     const handleArchiveNegotiation = async (negotiationId: string) => {
         try {
             await archiveNegotiation(negotiationId, true);
@@ -515,15 +528,18 @@ export default function NegotiationsPage() {
 
                                     <div className="space-y-2">
                                         <Label htmlFor="documents">Anexar Documentos do Cliente (Opcional)</Label>
-                                        <Input id="documents" name="documents" type="file" multiple onChange={handleFileSelection} />
-                                        {selectedDocs.length > 0 && (
-                                            <div className="mt-2 p-3 border rounded-md bg-muted/50 space-y-2 relative">
-                                                <Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6" onClick={clearSelectedFiles}>
+                                        <div className="flex items-center gap-2">
+                                            <Input id="documents" name="documents" type="file" multiple onChange={handleFileSelection} className="flex-grow" />
+                                            {selectedDocs.length > 0 && (
+                                                <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={clearSelectedFiles}>
                                                     <X className="h-4 w-4" />
-                                                    <span className="sr-only">Limpar arquivos</span>
                                                 </Button>
+                                            )}
+                                        </div>
+                                        {selectedDocs.length > 0 && (
+                                            <div className="mt-2 p-3 border rounded-md bg-muted/50 space-y-1">
                                                 <h4 className="text-sm font-medium">Arquivos Selecionados ({selectedDocs.length}):</h4>
-                                                <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1 max-h-24 overflow-y-auto">
+                                                <ul className="list-disc list-inside text-sm text-muted-foreground max-h-24 overflow-y-auto">
                                                     {selectedDocs.map((file, index) => (
                                                         <li key={index}>{file.name}</li>
                                                     ))}
@@ -540,6 +556,7 @@ export default function NegotiationsPage() {
                             </form>
                         </div>
                         <DialogFooter className="mt-auto pt-4 border-t -mx-6 px-6 bg-background">
+                            <Button type="button" variant="outline" onClick={() => setNewNegotiationOpen(false)}>Cancelar</Button>
                             <Button type="submit" form="new-negotiation-form" disabled={!foundProperty || !foundClient || !proposalValue || !proposalDate}>Criar Negociação</Button>
                         </DialogFooter>
                     </DialogContent>
@@ -630,7 +647,7 @@ export default function NegotiationsPage() {
                                     <TableCell className="hidden md:table-cell">
                                         {neg.createdAt ? new Date(neg.createdAt).toLocaleDateString('pt-BR') : 'N/A'}
                                     </TableCell>
-                                    <TableCell>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(neg.value)}</TableCell>
+                                    <TableCell>{formatCurrency(neg.value)}</TableCell>
                                     <TableCell>
                                         <Badge
                                             variant={getStageVariant(neg.stage)}
@@ -659,8 +676,11 @@ export default function NegotiationsPage() {
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                                                <DropdownMenuItem onSelect={() => handleOpenDetailDialog(neg)}>
+                                                    <Eye className="mr-2 h-4 w-4" />Ver Detalhes
+                                                </DropdownMenuItem>
                                                 <DropdownMenuItem onSelect={() => router.push(`/dashboard/processes`)}>
-                                                    <Eye className="mr-2 h-4 w-4" />Ver Processo
+                                                    Ver Processo
                                                 </DropdownMenuItem>
                                                 {neg.contractStatus === 'Não Gerado' ? (
                                                     <DropdownMenuItem onSelect={() => handleGenerateContract(neg)}>
@@ -741,6 +761,110 @@ export default function NegotiationsPage() {
             </AlertDialogContent>
         </AlertDialog>
 
+        {selectedNegotiation && (
+            <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+                <DialogContent className="sm:max-w-3xl">
+                    <DialogHeader>
+                        <DialogTitle>Detalhes da Negociação</DialogTitle>
+                        <DialogDescription>
+                            ID da Negociação: {selectedNegotiation.id}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <ScrollArea className="max-h-[70vh]">
+                        <div className="py-4 pr-6 space-y-6">
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-4">
+                                    <h4 className="font-semibold text-lg">Informações Gerais</h4>
+                                    <div className="text-sm space-y-2">
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Imóvel:</span>
+                                            <span className="font-medium text-right">{selectedNegotiation.property} ({selectedNegotiation.propertyDisplayCode})</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Cliente:</span>
+                                            <span className="font-medium text-right">{selectedNegotiation.client}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Tipo de Negócio:</span>
+                                            <span className="font-medium text-right">{selectedNegotiation.type}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Valor:</span>
+                                            <span className="font-medium text-right">{formatCurrency(selectedNegotiation.value)}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">É Financiado:</span>
+                                            <span className="font-medium text-right">{selectedNegotiation.isFinanced ? 'Sim' : 'Não'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="space-y-4">
+                                     <h4 className="font-semibold text-lg">Status</h4>
+                                     <div className="text-sm space-y-2">
+                                         <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Fase da Negociação:</span>
+                                            <div><Badge variant={getStageVariant(selectedNegotiation.stage)}>{selectedNegotiation.stage}</Badge></div>
+                                        </div>
+                                         <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Status do Contrato:</span>
+                                            <div><Badge variant={getContractStatusVariant(selectedNegotiation.contractStatus)}>{selectedNegotiation.contractStatus}</Badge></div>
+                                        </div>
+                                         <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Data de Criação:</span>
+                                            <span className="font-medium text-right">{new Date(selectedNegotiation.createdAt).toLocaleDateString('pt-BR')}</span>
+                                        </div>
+                                        {selectedNegotiation.completionDate && (
+                                            <div className="flex justify-between">
+                                                <span className="text-muted-foreground">Data de Conclusão:</span>
+                                                <span className="font-medium text-right">{new Date(selectedNegotiation.completionDate).toLocaleDateString('pt-BR')}</span>
+                                            </div>
+                                        )}
+                                     </div>
+                                </div>
+                            </div>
+
+                            <Separator />
+
+                             <div className="space-y-4">
+                                <h4 className="font-semibold text-lg">Responsáveis</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                    <p><span className="text-muted-foreground">Vendedor:</span> {selectedNegotiation.salesperson}</p>
+                                    <p><span className="text-muted-foreground">Captador:</span> {selectedNegotiation.realtor}</p>
+                                </div>
+                             </div>
+                             
+                             <Separator />
+
+                             <div className="space-y-4">
+                                <h4 className="font-semibold text-lg">Documentos Anexados</h4>
+                                <div className="text-sm text-muted-foreground space-y-2">
+                                  {(selectedNegotiation.documentUrls && selectedNegotiation.documentUrls.length > 0) ? (
+                                    selectedNegotiation.documentUrls.map((doc, index) => (
+                                        <a 
+                                            key={index}
+                                            href={doc.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-2 p-2 rounded-md bg-muted hover:bg-muted/80 transition-colors"
+                                        >
+                                            <FileText className="h-5 w-5 text-primary" />
+                                            <span className="truncate text-foreground hover:underline">{doc.name}</span>
+                                            <LinkIcon className="h-4 w-4 ml-auto" />
+                                        </a>
+                                    ))
+                                  ) : (
+                                    <p>Nenhum documento anexado a esta negociação.</p>
+                                  )}
+                                </div>
+                            </div>
+                        </div>
+                    </ScrollArea>
+                    <DialogFooter className="mt-4">
+                        <Button variant="outline" onClick={() => setIsDetailOpen(false)}>Fechar</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        )}
         </>
     );
 }
