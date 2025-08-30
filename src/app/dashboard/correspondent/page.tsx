@@ -243,7 +243,7 @@ export default function CorrespondentPage() {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>Data</TableHead>
+                                        <TableHead>Data/Hora da Solicitação</TableHead>
                                         <TableHead>Tipo</TableHead>
                                         <TableHead>Solicitante</TableHead>
                                         <TableHead>Status</TableHead>
@@ -252,7 +252,7 @@ export default function CorrespondentPage() {
                                 <TableBody>
                                     {filteredRequests.map(req => (
                                         <TableRow key={req.id} onClick={() => handleRequestClick(req)} className={cn("transition-all duration-200", req.status === 'Pendente' && "cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
-                                            <TableCell>{new Date(req.date).toLocaleDateString()}</TableCell>
+                                            <TableCell>{new Date(req.date).toLocaleString('pt-BR')}</TableCell>
                                             <TableCell className="font-medium">
                                                 {serviceRequestTypes.find(t => t.id === req.type)?.label || req.type}
                                             </TableCell>
@@ -456,4 +456,5 @@ function ProcessDetailForm({ process, onSave, onCancel }: { process: FinancingPr
         </form>
     );
 }
+
 
