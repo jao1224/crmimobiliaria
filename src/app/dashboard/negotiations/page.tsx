@@ -407,7 +407,7 @@ export default function NegotiationsPage() {
     return (
         <>
         <div className="flex flex-col gap-6">
-             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold">Processos de Negociação</h1>
                     <p className="text-muted-foreground">Acompanhe e gerencie todas as suas negociações.</p>
@@ -416,15 +416,15 @@ export default function NegotiationsPage() {
                     <DialogTrigger asChild>
                         <Button>Iniciar Nova Negociação</Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-2xl max-h-[90vh]">
+                    <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
                         <DialogHeader>
                             <DialogTitle>Iniciar Nova Negociação</DialogTitle>
                             <DialogDescription>
                                 Selecione um imóvel e um cliente da lista para buscar os dados.
                             </DialogDescription>
                         </DialogHeader>
-                        <ScrollArea className="pr-6 -mr-6">
-                            <form onSubmit={handleAddNegotiation} className="space-y-4 py-4">
+                        <div className="flex-grow overflow-y-auto -mx-6 px-6">
+                            <form id="new-negotiation-form" onSubmit={handleAddNegotiation} className="space-y-4 py-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label>Imóvel</Label>
@@ -537,11 +537,11 @@ export default function NegotiationsPage() {
                                         <Label htmlFor="financed">É financiado?</Label>
                                     </div>
                                 </div>
-                                <DialogFooter className="sticky bottom-0 bg-background pt-4 pb-0 -mb-4 -mx-6 px-6">
-                                  <Button type="submit" disabled={!foundProperty || !foundClient || !proposalValue || !proposalDate}>Criar Negociação</Button>
-                                </DialogFooter>
                             </form>
-                        </ScrollArea>
+                        </div>
+                        <DialogFooter className="mt-auto pt-4 border-t -mx-6 px-6 bg-background">
+                            <Button type="submit" form="new-negotiation-form" disabled={!foundProperty || !foundClient || !proposalValue || !proposalDate}>Criar Negociação</Button>
+                        </DialogFooter>
                     </DialogContent>
                 </Dialog>
             </div>
