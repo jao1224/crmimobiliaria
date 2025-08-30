@@ -20,7 +20,7 @@ import {
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MoreHorizontal, Search, Archive, Trash2, Landmark, Upload, Eye } from "lucide-react";
+import { MoreHorizontal, Search, Archive, Trash2, Landmark, Upload, Eye, X } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -148,6 +148,23 @@ export default function NegotiationsPage() {
         setIsFinanced(false);
         setSelectedDocs([]);
     };
+    
+    const handleFileSelection = (event: React.ChangeEvent<HTMLInputElement>) => {
+        if (event.target.files) {
+            const newFiles = Array.from(event.target.files);
+            setSelectedDocs(prevDocs => [...prevDocs, ...newFiles]);
+        }
+    };
+
+    const clearSelectedFiles = () => {
+        setSelectedDocs([]);
+        // Reset the file input visually
+        const input = document.getElementById('documents') as HTMLInputElement;
+        if (input) {
+            input.value = '';
+        }
+    };
+
 
     useEffect(() => {
         if (!isNewNegotiationOpen) {
@@ -496,11 +513,15 @@ export default function NegotiationsPage() {
 
                                     <div className="space-y-2">
                                         <Label htmlFor="documents">Anexar Documentos do Cliente (Opcional)</Label>
-                                        <Input id="documents" name="documents" type="file" multiple onChange={(e) => setSelectedDocs(e.target.files ? Array.from(e.target.files) : [])} />
-                                        {selectedDocs && selectedDocs.length > 0 && (
-                                            <div className="mt-2 p-3 border rounded-md bg-muted/50 space-y-2">
-                                                <h4 className="text-sm font-medium">Arquivos Selecionados:</h4>
-                                                <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+                                        <Input id="documents" name="documents" type="file" multiple onChange={handleFileSelection} />
+                                        {selectedDocs.length > 0 && (
+                                            <div className="mt-2 p-3 border rounded-md bg-muted/50 space-y-2 relative">
+                                                <Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6" onClick={clearSelectedFiles}>
+                                                    <X className="h-4 w-4" />
+                                                    <span className="sr-only">Limpar arquivos</span>
+                                                </Button>
+                                                <h4 className="text-sm font-medium">Arquivos Selecionados ({selectedDocs.length}):</h4>
+                                                <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1 max-h-24 overflow-y-auto">
                                                     {selectedDocs.map((file, index) => (
                                                         <li key={index}>{file.name}</li>
                                                     ))}
