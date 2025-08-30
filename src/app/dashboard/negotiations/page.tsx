@@ -640,8 +640,9 @@ export default function NegotiationsPage() {
                                     key={neg.id}
                                 >
                                     <TableCell className="font-mono text-xs text-muted-foreground">{neg.propertyDisplayCode}</TableCell>
-                                    <TableCell className="font-medium">
-                                        {neg.property}
+                                    <TableCell>
+                                        <div className="font-medium">{neg.property}</div>
+                                        <div className="text-xs text-muted-foreground font-mono">{neg.propertyDisplayCode}</div>
                                     </TableCell>
                                     <TableCell>{neg.client}</TableCell>
                                     <TableCell className="hidden md:table-cell">
