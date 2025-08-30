@@ -21,7 +21,7 @@ import {
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MoreHorizontal, Search, Archive, Trash2, Landmark } from "lucide-react";
+import { MoreHorizontal, Search, Archive, Trash2, Landmark, Upload } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -66,6 +66,7 @@ export default function NegotiationsPage() {
     // Dados para os selects, carregados uma vez
     const [availableProperties, setAvailableProperties] = useState<Property[]>([]);
     const [availableClients, setAvailableClients] = useState<Client[]>([]);
+    const [selectedDocs, setSelectedDocs] = useState<FileList | null>(null);
 
     // Estados para o diálogo de atribuição e exclusão
     const [isAssignDialogOpen, setAssignDialogOpen] = useState(false);
@@ -146,6 +147,7 @@ export default function NegotiationsPage() {
         setProposalValue("");
         setProposalDate("");
         setIsFinanced(false);
+        setSelectedDocs(null);
     };
 
     useEffect(() => {
@@ -216,7 +218,7 @@ export default function NegotiationsPage() {
             isDeleted: false,
         };
         
-        const newNegotiationId = await addNegotiation(newNegotiationData);
+        const newNegotiationId = await addNegotiation(newNegotiationData, selectedDocs ? Array.from(selectedDocs) : undefined);
         
         if (isFinanced) {
              const newFinancingProcess: Omit<any, 'id'> = {
@@ -493,6 +495,12 @@ export default function NegotiationsPage() {
                                         </div>
                                     )}
 
+                                    <div className="space-y-2">
+                                        <Label htmlFor="documents">Anexar Documentos do Cliente (Opcional)</Label>
+                                        <Input id="documents" name="documents" type="file" multiple onChange={(e) => setSelectedDocs(e.target.files)} />
+                                        {selectedDocs && <p className="text-xs text-muted-foreground">{selectedDocs.length} arquivo(s) selecionado(s).</p>}
+                                    </div>
+
                                     <div className="flex items-center space-x-2">
                                         <Checkbox id="financed" checked={isFinanced} onCheckedChange={(checked) => setIsFinanced(checked as boolean)} disabled={!foundProperty || !foundClient} />
                                         <Label htmlFor="financed">É financiado?</Label>
@@ -707,3 +715,4 @@ export default function NegotiationsPage() {
         </>
     );
 }
+

@@ -71,6 +71,7 @@ export type Negotiation = {
     contratoId?: string; // Link para o contrato
     isArchived?: boolean;
     isDeleted?: boolean;
+    documentUrls?: { url: string; name: string }[];
 };
 
 // --- TIPOS PARA GESTÃO DE PROCESSOS ---
@@ -339,6 +340,18 @@ export const uploadImage = async (file: File, propertyId: string): Promise<strin
     }
 };
 
+export const uploadNegotiationDocuments = async (files: File[], negotiationId: string): Promise<{ url: string; name: string }[]> => {
+    const uploadPromises = files.map(async (file) => {
+        const sanitizedName = sanitizeFileName(file.name);
+        const docRef = ref(storage, `negotiations/${negotiationId}/documents/${sanitizedName}`);
+        await uploadBytes(docRef, file);
+        const url = await getDownloadURL(docRef);
+        return { url, name: file.name };
+    });
+
+    return Promise.all(uploadPromises);
+};
+
 export const getUsers = async (): Promise<User[]> => {
     const snapshot = await getDocs(collection(db, 'users'));
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
@@ -421,7 +434,7 @@ export const getNegotiationsByRealtor = async (realtorName: string): Promise<Neg
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Negotiation));
 };
 
-export const addNegotiation = async (newNegotiation: Omit<Negotiation, 'id'>): Promise<string> => {
+export const addNegotiation = async (newNegotiation: Omit<Negotiation, 'id'>, documents?: File[]): Promise<string> => {
     const batch = writeBatch(db);
 
     // 1. Cria a negociação
@@ -454,8 +467,14 @@ export const addNegotiation = async (newNegotiation: Omit<Negotiation, 'id'>): P
     // 4. Atualiza a negociação com o ID do processo
     batch.update(negotiationRef, { processoId: processoRef.id });
 
-    // Executa as operações
+    // 5. Executa as operações iniciais
     await batch.commit();
+
+    // 6. Faz o upload dos documentos, se houver, e atualiza a negociação
+    if (documents && documents.length > 0) {
+        const documentUrls = await uploadNegotiationDocuments(documents, negotiationRef.id);
+        await updateDoc(negotiationRef, { documentUrls });
+    }
 
     return negotiationRef.id;
 };
@@ -595,7 +614,13 @@ export const getCommissions = async (): Promise<Commission[]> => {
 };
 
 export const addCommission = async (newCommission: Omit<Commission, 'id'>): Promise<string> => {
-    const docRef = await addDoc(collection(db, 'comissoes'), newCommission);
+    // Garante que nenhum campo opcional seja `undefined`
+    const commissionData = { ...newCommission };
+    if (commissionData.managerName === undefined) delete commissionData.managerName;
+    if (commissionData.clientSignal === undefined) delete commissionData.clientSignal;
+    if (commissionData.notes === undefined) delete commissionData.notes;
+
+    const docRef = await addDoc(collection(db, 'comissoes'), commissionData);
     return docRef.id;
 };
 
@@ -939,7 +964,7 @@ export const getActivitiesForRealtor = async (realtorId: string): Promise<Activi
     };
 
     // 1. Busca captações (imóveis capturados pelo ID do corretor)
-    const capturesQuery = query(collection(db, 'imoveis'), where('capturedById', '==', realtorId));
+    const capturesQuery = query(collection(db, 'imoveis'), where('capturedBy', '==', realtorName));
     const capturesSnapshot = await getDocs(capturesQuery);
     capturesSnapshot.docs.forEach(doc => {
         const prop = { id: doc.id, ...doc.data() } as Property;
@@ -1048,3 +1073,4 @@ export const updateActivityStatus = async (activityId: string, newStatus: Activi
     
     console.warn(`Activity with ID ${activityId} not found in 'negotiations' or 'imoveis'.`);
 };
+
