@@ -26,7 +26,7 @@ export type Deal = {
 export type NegotiationStage = 'Proposta Enviada' | 'Em Negociação' | 'Contrato Gerado' | 'Venda Concluída' | 'Aluguel Ativo';
 export type NegotiationType = 'Venda' | 'Aluguel' | 'Leilão';
 export type ContractStatus = 'Não Gerado' | 'Pendente Assinaturas' | 'Assinado' | 'Cancelado';
-export type PropertyType = 'Lançamento' | 'Revenda' | 'Terreno' | 'Casa' | 'Apartamento';
+export type PropertyType = 'Novo' | 'Usado' | 'Repasse' | 'Créd. Associativo' | 'Lote';
 
 // Define o tipo para um imóvel
 export type Property = {
@@ -305,7 +305,7 @@ export type User = {
 
 
 // --- Dados estáticos ---
-export const propertyTypes: PropertyType[] = ['Lançamento', 'Revenda', 'Terreno', 'Casa', 'Apartamento'];
+export const propertyTypes: PropertyType[] = ['Novo', 'Usado', 'Repasse', 'Créd. Associativo', 'Lote'];
 
 // --- FUNÇÕES DE MANIPULAÇÃO DE DADOS (FIRESTORE) ---
 
@@ -1090,3 +1090,4 @@ export const updateActivityStatus = async (activityId: string, newStatus: Activi
     
     console.warn(`Activity with ID ${activityId} not found in 'negotiations' or 'imoveis'.`);
 };
+
