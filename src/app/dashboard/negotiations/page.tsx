@@ -315,14 +315,18 @@ export default function NegotiationsPage() {
     
     const handleTriggerCorrespondent = async (negotiation: Negotiation) => {
         const client = availableClients.find(c => c.id === negotiation.clientId);
-        setClientForRequest(client || null);
+        if (!client) {
+            toast({ variant: 'destructive', title: "Erro", description: "Cliente da negociação não encontrado. Não é possível continuar." });
+            return;
+        }
+        setClientForRequest(client);
         setSelectedNegotiation(negotiation);
         setServiceRequestOpen(true);
     };
     
     const handleServiceRequestSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        if (!selectedNegotiation || !currentUser) return;
+        if (!selectedNegotiation || !currentUser || !clientForRequest) return;
 
         const formData = new FormData(event.currentTarget);
         
@@ -343,6 +347,7 @@ export default function NegotiationsPage() {
             });
             setServiceRequestOpen(false);
             setSelectedNegotiation(null);
+            setClientForRequest(null);
         } catch (error) {
             toast({ variant: "destructive", title: "Erro", description: "Não foi possível enviar a solicitação." });
         }
@@ -580,57 +585,57 @@ export default function NegotiationsPage() {
             
             <Card>
                 <CardHeader>
-                    <CardTitle>Negociações em Andamento</CardTitle>
-                    <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+                    <div className="space-y-2">
+                        <CardTitle>Negociações em Andamento</CardTitle>
                         <CardDescription>
                            Selecione os filtros para buscar as negociações.
                            <Link href="/dashboard/negotiations/archived" className="text-sm text-primary hover:underline ml-2">Ver Arquivadas</Link>
                            <Link href="/dashboard/negotiations/deleted" className="text-sm text-destructive hover:underline ml-2">Ver Excluídas</Link>
                         </CardDescription>
-                         {(activeProfile === 'Admin' || activeProfile === 'Imobiliária') && (
-                        <div className="flex flex-wrap items-end gap-2">
-                             <Select value={typeFilter} onValueChange={setTypeFilter}>
-                                <SelectTrigger className="w-full sm:w-[150px] h-9">
-                                    <SelectValue placeholder="Filtrar por Tipo" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Todos os Tipos</SelectItem>
-                                    <SelectItem value="Venda">Venda</SelectItem>
-                                    <SelectItem value="Aluguel">Aluguel</SelectItem>
-                                    <SelectItem value="Leilão">Leilão</SelectItem>
-                                </SelectContent>
-                            </Select>
-                             <Select value={statusFilter} onValueChange={setStatusFilter}>
-                                <SelectTrigger className="w-full sm:w-[150px] h-9">
-                                    <SelectValue placeholder="Filtrar por Status" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Todos os Status</SelectItem>
-                                    <SelectItem value="nao-gerado">Não Gerado</SelectItem>
-                                    <SelectItem value="pendente-assinaturas">Pendente Assinaturas</SelectItem>
-                                    <SelectItem value="assinado">Assinado</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <Select value={realtorFilter} onValueChange={setRealtorFilter}>
-                                <SelectTrigger className="w-full sm:w-[160px] h-9">
-                                    <SelectValue placeholder="Filtrar por Responsável" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Todos os Responsáveis</SelectItem>
-                                    {allUsers.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                            <div className="grid w-full sm:w-auto gap-1.5">
-                                <Label htmlFor="start-date" className="text-xs">Data Início</Label>
-                                <Input type="date" id="start-date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="h-9" />
-                            </div>
-                            <div className="grid w-full sm:w-auto gap-1.5">
-                                <Label htmlFor="end-date" className="text-xs">Data Fim</Label>
-                                <Input type="date" id="end-date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="h-9" />
-                            </div>
-                        </div>
-                        )}
                     </div>
+                     {(activeProfile === 'Admin' || activeProfile === 'Imobiliária') && (
+                    <div className="flex items-end gap-2 pt-4">
+                         <Select value={typeFilter} onValueChange={setTypeFilter}>
+                            <SelectTrigger className="h-9">
+                                <SelectValue placeholder="Filtrar por Tipo" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todos os Tipos</SelectItem>
+                                <SelectItem value="Venda">Venda</SelectItem>
+                                <SelectItem value="Aluguel">Aluguel</SelectItem>
+                                <SelectItem value="Leilão">Leilão</SelectItem>
+                            </SelectContent>
+                        </Select>
+                         <Select value={statusFilter} onValueChange={setStatusFilter}>
+                            <SelectTrigger className="h-9">
+                                <SelectValue placeholder="Filtrar por Status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todos os Status</SelectItem>
+                                <SelectItem value="nao-gerado">Não Gerado</SelectItem>
+                                <SelectItem value="pendente-assinaturas">Pendente Assinaturas</SelectItem>
+                                <SelectItem value="assinado">Assinado</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <Select value={realtorFilter} onValueChange={setRealtorFilter}>
+                            <SelectTrigger className="h-9">
+                                <SelectValue placeholder="Filtrar por Responsável" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todos os Responsáveis</SelectItem>
+                                {allUsers.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                        <div className="grid w-full sm:w-auto gap-1.5">
+                            <Label htmlFor="start-date" className="text-xs">Data Início</Label>
+                            <Input type="date" id="start-date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="h-9" />
+                        </div>
+                        <div className="grid w-full sm:w-auto gap-1.5">
+                            <Label htmlFor="end-date" className="text-xs">Data Fim</Label>
+                            <Input type="date" id="end-date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="h-9" />
+                        </div>
+                    </div>
+                    )}
                 </CardHeader>
                 <CardContent>
                     <Table>
@@ -899,7 +904,7 @@ export default function NegotiationsPage() {
                     <DialogTitle>Criar Nova Solicitação</DialogTitle>
                     <DialogDescription>Preencha os dados para enviar uma solicitação ao correspondente.</DialogDescription>
                 </DialogHeader>
-                {selectedNegotiation && (
+                {selectedNegotiation && clientForRequest && (
                     <form onSubmit={handleServiceRequestSubmit}>
                         <div className="py-4 space-y-4">
                            <div className="space-y-2">
@@ -931,9 +936,7 @@ export default function NegotiationsPage() {
                                     placeholder="Nome completo, CPF, Renda, etc." 
                                     required 
                                     defaultValue={
-                                        clientForRequest 
-                                        ? `Nome: ${clientForRequest.name}\nCPF/CNPJ: ${clientForRequest.document || 'N/A'}\nRenda Mensal: ${clientForRequest.monthlyIncome ? formatCurrency(clientForRequest.monthlyIncome) : 'N/A'}\nEndereço: ${clientForRequest.address || 'N/A'}`
-                                        : `Nome: ${selectedNegotiation.client}`
+                                        `Nome: ${clientForRequest.name}\nCPF/CNPJ: ${clientForRequest.document || 'N/A'}\nRenda Mensal: ${clientForRequest.monthlyIncome ? formatCurrency(clientForRequest.monthlyIncome) : 'N/A'}\nEndereço: ${clientForRequest.address || 'N/A'}`
                                     }
                                     rows={5}
                                 />
