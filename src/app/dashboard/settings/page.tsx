@@ -240,17 +240,34 @@ export default function SettingsPage() {
 
     const handleAddTeam = async (event: React.FormEvent<HTMLFormElement>) => {
        event.preventDefault();
-       if (!userData?.imobiliariaId) return;
-
+       
        setIsSaving(true);
        const formData = new FormData(event.currentTarget);
        const teamName = formData.get("team-name") as string;
+       
+       let imobiliariaIdForTeam = userData?.imobiliariaId;
+
+       // Se o admin está criando, ele precisa selecionar para quem.
+       if (isAdmin) {
+           imobiliariaIdForTeam = formData.get("imobiliariaId") as string;
+           if (!imobiliariaIdForTeam) {
+               toast({ variant: "destructive", title: "Erro", description: "Selecione uma imobiliária para criar a equipe." });
+               setIsSaving(false);
+               return;
+           }
+       }
+
+       if (!imobiliariaIdForTeam) {
+            toast({ variant: "destructive", title: "Erro", description: "ID da imobiliária não encontrado para criar a equipe." });
+            setIsSaving(false);
+            return;
+       }
        
        try {
             await addDoc(collection(db, "teams"), {
                 name: teamName,
                 memberIds: [],
-                imobiliariaId: userData.imobiliariaId
+                imobiliariaId: imobiliariaIdForTeam
             });
             if(user) await fetchTeamData(user);
             toast({ title: "Sucesso!", description: `A equipe "${teamName}" foi criada.`});
@@ -394,7 +411,7 @@ export default function SettingsPage() {
                     <TabsTrigger value="profile">Perfil</TabsTrigger>
                      {isAdmin && <TabsTrigger value="imobiliarias">Imobiliárias</TabsTrigger>}
                      {hasPermissionForTeamTabs && <TabsTrigger value="team">Membros</TabsTrigger>}
-                     {hasPermissionForTeamTabs && !isAdmin && <TabsTrigger value="teams">Equipes</TabsTrigger>}
+                     {hasPermissionForTeamTabs && <TabsTrigger value="teams">Equipes</TabsTrigger>}
                      {hasPermissionForTeamTabs && <TabsTrigger value="permissions">Permissões</TabsTrigger>}
                 </TabsList>
                 <TabsContent value="profile" className="space-y-6">
@@ -673,7 +690,7 @@ export default function SettingsPage() {
                         </Card>
                     </TabsContent>
                 )}
-                {hasPermissionForTeamTabs && !isAdmin && (
+                {hasPermissionForTeamTabs && (
                     <TabsContent value="teams">
                          <Card>
                             <CardHeader className="flex flex-row items-center justify-between">
@@ -692,6 +709,19 @@ export default function SettingsPage() {
                                         </DialogHeader>
                                         <form onSubmit={handleAddTeam}>
                                             <div className="grid gap-4 py-4">
+                                                 {isAdmin && (
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="imobiliariaId">Vincular à Imobiliária</Label>
+                                                        <Select name="imobiliariaId" required>
+                                                            <SelectTrigger>
+                                                                <SelectValue placeholder="Selecione uma imobiliária" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                {imobiliarias.map(imob => <SelectItem key={imob.id} value={imob.id}>{imob.name}</SelectItem>)}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+                                                )}
                                                 <div className="space-y-2">
                                                     <Label htmlFor="team-name">Nome da Equipe</Label>
                                                     <Input id="team-name" name="team-name" placeholder="Ex: Equipe de Lançamentos" required />
