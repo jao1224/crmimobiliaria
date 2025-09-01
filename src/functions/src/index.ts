@@ -80,19 +80,17 @@ interface ReportData {
 }
 
 export const createUser = onCall(async (request) => {
-    // Verifica se o usuário que está chamando a função é um admin de imobiliária ou o Admin do sistema.
+    // Verifica se o usuário que está chamando a função é um admin de imobiliária.
     const isImobiliariaAdmin = !!request.auth?.token.imobiliariaId;
-    const isAdmin = request.auth?.token.role === 'Admin';
 
-    if (!isImobiliariaAdmin && !isAdmin) {
-        throw new HttpsError('permission-denied', 'Apenas administradores podem criar usuários.');
+    if (!isImobiliariaAdmin) {
+        throw new HttpsError('permission-denied', 'Apenas administradores de imobiliária podem criar usuários.');
     }
 
     const { email, password, name, role } = request.data;
     
-    // Admin do sistema pode criar uma imobiliária. Neste caso, o imobiliariaId será o uid do novo usuário.
-    // Para outros perfis, usa o imobiliariaId do admin que está chamando.
-    let imobiliariaId = request.auth?.token.imobiliariaId;
+    // O imobiliariaId é sempre herdado do admin que está criando o usuário.
+    const imobiliariaId = request.auth?.token.imobiliariaId;
 
     try {
         const userRecord = await adminAuth.createUser({
@@ -100,11 +98,6 @@ export const createUser = onCall(async (request) => {
             password,
             displayName: name,
         });
-
-        // Se um Admin está criando uma imobiliária, o ID dela é o ID do novo usuário
-        if (isAdmin && role === 'Imobiliária') {
-            imobiliariaId = userRecord.uid;
-        }
         
         // Define as custom claims (role e imobiliariaId) para o novo usuário.
         await adminAuth.setCustomUserClaims(userRecord.uid, { role, imobiliariaId });
@@ -136,6 +129,7 @@ export const addRoleOnCreate = beforeUserCreated(async (event) => {
         const allUsers = await adminAuth.listUsers(1);
         if (allUsers.users.length === 0) {
              await adminAuth.setCustomUserClaims(user.uid, { role: 'Admin' });
+             // Também salva no documento do Firestore, pois o gatilho pode não ter essa info ainda
              await userDocRef.set({ role: 'Admin' }, { merge: true });
              return;
         }
@@ -352,7 +346,7 @@ export const generateContractPdf = onCall<ContractData, Promise<{pdfBase64: stri
   data.buyers.forEach((buyer) => {
       page.drawText(line, {x: margin, y, font, size: 12});
       y -= 15;
-      page.drawText(buyer.name, {x: margin, y, font, size: 10});
+      page.drawText(buyer.name, {x: margin, y, font: size: 10});
       y -= 15;
       page.drawText("COMPRADOR(A)", {x: margin, y, font: boldFont, size: 10});
       y -= 30;
@@ -372,7 +366,3 @@ export const generateContractPdf = onCall<ContractData, Promise<{pdfBase64: stri
 
   return {pdfBase64};
 });
-
-    
-
-    

@@ -87,13 +87,13 @@ export function RegisterForm() {
         const usersSnapshot = await getDocs(q);
         const isFirstUser = usersSnapshot.empty;
 
-        const role = isFirstUser ? 'Super Usuário' : values.profileType;
+        const role = isFirstUser ? 'Admin' : values.profileType;
 
         const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
         const user = userCredential.user;
         
         // Se for uma nova imobiliária, o ID da imobiliária é o próprio UID do usuário admin.
-        // Se for o Super Usuário, o imobiliariaId é nulo (ele não pertence a uma).
+        // Se for o Admin, o imobiliariaId é nulo (ele não pertence a uma).
         // Para outros, eles não pertencem a uma imobiliária neste momento.
         const imobiliariaId = role === 'Imobiliária' ? user.uid : null;
 

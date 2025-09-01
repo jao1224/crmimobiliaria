@@ -247,7 +247,7 @@ export default function SettingsPage() {
        
        let imobiliariaIdForTeam = userData?.imobiliariaId;
 
-       // Se o admin está criando, ele precisa selecionar para quem.
+       // Se o admin está criando, ele precisa selecionar para qual.
        if (isAdmin) {
            imobiliariaIdForTeam = formData.get("imobiliariaId") as string;
            if (!imobiliariaIdForTeam) {
@@ -485,39 +485,8 @@ export default function SettingsPage() {
                             <CardHeader className="flex flex-row items-center justify-between">
                                 <div>
                                     <CardTitle>Gestão de Imobiliárias</CardTitle>
-                                    <CardDescription>Gerencie as agências que têm acesso à plataforma.</CardDescription>
+                                    <CardDescription>Gerencie as agências que têm acesso à plataforma. Novas imobiliárias devem se cadastrar pela tela de registro.</CardDescription>
                                 </div>
-                                <Dialog open={isTeamMemberDialogOpen} onOpenChange={setTeamMemberDialogOpen}>
-                                    <DialogTrigger asChild>
-                                        <Button><Building2 className="mr-2 h-4 w-4"/>Adicionar Imobiliária</Button>
-                                    </DialogTrigger>
-                                    <DialogContent>
-                                        <DialogHeader>
-                                            <DialogTitle>Cadastrar Nova Imobiliária</DialogTitle>
-                                            <DialogDescription>Preencha os detalhes do administrador da nova agência.</DialogDescription>
-                                        </DialogHeader>
-                                        <form onSubmit={handleAddTeamMember}>
-                                            <input type="hidden" name="role" value="Imobiliária" />
-                                            <div className="grid gap-4 py-4">
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="name-imob">Nome da Imobiliária / Admin</Label>
-                                                    <Input id="name-imob" name="name" placeholder="Imobiliária Exemplo" required />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="email-imob">E-mail do Admin</Label>
-                                                    <Input id="email-imob" name="email" type="email" placeholder="admin@imobexemplo.com" required />
-                                                </div>
-                                                 <div className="space-y-2">
-                                                    <Label htmlFor="password-imob">Senha Provisória</Label>
-                                                    <Input id="password-imob" name="password" type="password" placeholder="••••••••" required />
-                                                </div>
-                                            </div>
-                                            <DialogFooter>
-                                                <Button type="submit" disabled={isSaving}>{isSaving ? "Salvando...": "Cadastrar Imobiliária"}</Button>
-                                            </DialogFooter>
-                                        </form>
-                                    </DialogContent>
-                                </Dialog>
                             </CardHeader>
                              <CardContent>
                                 <Table>
@@ -565,7 +534,7 @@ export default function SettingsPage() {
                              <CardHeader className="flex flex-row items-center justify-between">
                                 <div>
                                     <CardTitle>Membros da Equipe</CardTitle>
-                                    <CardDescription>Gerencie sua equipe e suas funções.</CardDescription>
+                                    <CardDescription>Gerencie sua equipe e suas funções. Novos membros devem ser cadastrados pela imobiliária.</CardDescription>
                                 </div>
                                  <Dialog open={isTeamMemberDialogOpen} onOpenChange={setTeamMemberDialogOpen}>
                                     <DialogTrigger asChild>
