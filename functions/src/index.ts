@@ -80,13 +80,19 @@ interface ReportData {
 }
 
 export const createUser = onCall(async (request) => {
-    // Verifica se o usuário que está chamando a função é um admin de imobiliária.
-    if (!request.auth?.token.imobiliariaId) {
-        throw new HttpsError('permission-denied', 'Apenas administradores de imobiliárias podem criar usuários.');
+    // Verifica se o usuário que está chamando a função é um admin de imobiliária ou Super Usuário.
+    const isImobiliariaAdmin = !!request.auth?.token.imobiliariaId;
+    const isSuperUser = request.auth?.token.role === 'Admin' || request.auth?.token.role === 'Super Usuário';
+
+    if (!isImobiliariaAdmin && !isSuperUser) {
+        throw new HttpsError('permission-denied', 'Apenas administradores podem criar usuários.');
     }
 
     const { email, password, name, role } = request.data;
-    const imobiliariaId = request.auth.token.imobiliariaId;
+    
+    // Super Usuário pode criar uma imobiliária. Neste caso, o imobiliariaId será o uid do novo usuário.
+    // Para outros perfis, usa o imobiliariaId do admin que está chamando.
+    let imobiliariaId = request.auth?.token.imobiliariaId;
 
     try {
         const userRecord = await adminAuth.createUser({
@@ -94,6 +100,11 @@ export const createUser = onCall(async (request) => {
             password,
             displayName: name,
         });
+
+        // Se um super admin está criando uma imobiliária, o ID dela é o ID do novo usuário
+        if (isSuperUser && role === 'Imobiliária') {
+            imobiliariaId = userRecord.uid;
+        }
         
         // Define as custom claims (role e imobiliariaId) para o novo usuário.
         await adminAuth.setCustomUserClaims(userRecord.uid, { role, imobiliariaId });

@@ -17,9 +17,9 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import { cn } from "@/lib/utils";
-import { type UserProfile, userProfiles, menuConfig, allModules } from "@/lib/permissions";
+import { type UserProfile, userProfiles, menuConfig, allModules, creatableRolesByImobiliaria, creatableRolesBySuperUser } from "@/lib/permissions";
 import { auth, db, app } from "@/lib/firebase";
-import { collection, getDocs, doc, setDoc, addDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc, query, where } from "firebase/firestore";
+import { collection, getDocs, doc, setDoc, addDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc, query, where, getDoc } from "firebase/firestore";
 import { EmailAuthProvider, onAuthStateChanged, reauthenticateWithCredential, updatePassword, updateProfile, type User } from "firebase/auth";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import {
@@ -35,6 +35,7 @@ type TeamMember = {
     email: string;
     role: string;
     imobiliariaId?: string;
+    imobiliariaName?: string;
 };
 
 type Team = {
@@ -46,12 +47,12 @@ type Team = {
 
 type PermissionsState = Record<UserProfile, string[]>;
 
-const roles = userProfiles.filter(p => ['Vendedor', 'Financeiro', 'Corretor Autônomo'].includes(p));
-
 
 export default function SettingsPage() {
     const { activeProfile } = useContext(ProfileContext);
-    const hasPermission = activeProfile === 'Admin' || activeProfile === 'Imobiliária';
+    const hasPermission = activeProfile === 'Admin' || activeProfile === 'Imobiliária' || activeProfile === 'Super Usuário';
+    const isSuperUser = activeProfile === 'Admin' || activeProfile === 'Super Usuário';
+
 
     const [isSaving, setIsSaving] = useState(false);
     const { toast } = useToast();
@@ -77,6 +78,10 @@ export default function SettingsPage() {
     const [openTeamId, setOpenTeamId] = useState<string | null>(null);
 
     const [permissions, setPermissions] = useState<PermissionsState>(menuConfig);
+    
+    // Roles que o usuário atual pode criar
+    const creatableRoles = isSuperUser ? creatableRolesBySuperUser : creatableRolesByImobiliaria;
+
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -109,15 +114,39 @@ export default function SettingsPage() {
         const userDocRef = doc(db, "users", currentUser.uid);
         const userDocSnap = await getDoc(userDocRef);
         const currentUserData = userDocSnap.data();
-        const imobiliariaId = currentUserData?.imobiliariaId;
+        
+        let usersQuery;
+        let teamsQuery;
 
-        if (!imobiliariaId) return;
+        if (isSuperUser) {
+            // Super usuário vê todos os usuários e equipes
+            usersQuery = query(collection(db, "users"));
+            teamsQuery = query(collection(db, "teams"));
+        } else {
+            // Admin de imobiliária vê apenas os seus
+            const imobiliariaId = currentUserData?.imobiliariaId;
+            if (!imobiliariaId) return;
+            usersQuery = query(collection(db, "users"), where("imobiliariaId", "==", imobiliariaId));
+            teamsQuery = query(collection(db, "teams"), where("imobiliariaId", "==", imobiliariaId));
+        }
 
-        const usersQuery = query(collection(db, "users"), where("imobiliariaId", "==", imobiliariaId));
         const usersSnapshot = await getDocs(usersQuery);
-        setTeamMembers(usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeamMember)));
+        const members = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeamMember));
+        
+        // Se for Super Usuário, buscar o nome da imobiliária de cada membro
+        if (isSuperUser) {
+             const imobiliariasSnapshot = await getDocs(query(collection(db, "users"), where("role", "==", "Imobiliária")));
+             const imobiliariasMap = new Map(imobiliariasSnapshot.docs.map(doc => [doc.id, doc.data().name]));
 
-        const teamsQuery = query(collection(db, "teams"), where("imobiliariaId", "==", imobiliariaId));
+             for (const member of members) {
+                 if (member.imobiliariaId) {
+                     member.imobiliariaName = imobiliariasMap.get(member.imobiliariaId) || 'N/A';
+                 }
+             }
+        }
+        
+        setTeamMembers(members);
+
         const teamsSnapshot = await getDocs(teamsQuery);
         setTeams(teamsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team)));
     };
@@ -467,7 +496,7 @@ export default function SettingsPage() {
                                                         <SelectValue placeholder="Selecione uma função" />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        {roles.map(role => <SelectItem key={role} value={role}>{role}</SelectItem>)}
+                                                        {creatableRoles.map(role => <SelectItem key={role} value={role}>{role}</SelectItem>)}
                                                     </SelectContent>
                                                 </Select>
                                             </div>
@@ -509,6 +538,7 @@ export default function SettingsPage() {
                                     <TableRow>
                                         <TableHead>Nome</TableHead>
                                         <TableHead>E-mail</TableHead>
+                                        {isSuperUser && <TableHead>Imobiliária</TableHead>}
                                         <TableHead>Equipe</TableHead>
                                         <TableHead>Função</TableHead>
                                         <TableHead className="text-right">Ações</TableHead>
@@ -520,6 +550,7 @@ export default function SettingsPage() {
                                             <TableRow key={member.id}>
                                                 <TableCell className="font-medium">{member.name}</TableCell>
                                                 <TableCell>{member.email}</TableCell>
+                                                {isSuperUser && <TableCell className="text-xs text-muted-foreground">{member.imobiliariaName || 'N/A'}</TableCell>}
                                                 <TableCell>{findTeamForMember(member.id)}</TableCell>
                                                 <TableCell><Badge variant={member.role === 'Admin' || member.role === 'Imobiliária' ? 'default' : 'secondary'}>{member.role}</Badge></TableCell>
                                                 <TableCell className="text-right">
@@ -532,7 +563,7 @@ export default function SettingsPage() {
                                                             <DropdownMenuSub>
                                                                 <DropdownMenuSubTrigger>Alterar Função</DropdownMenuSubTrigger>
                                                                 <DropdownMenuSubContent>
-                                                                    {roles.map(role => (
+                                                                    {creatableRoles.map(role => (
                                                                         <DropdownMenuItem 
                                                                             key={role} 
                                                                             onClick={() => handleChangeUserRole(member.id, role)}
@@ -550,7 +581,7 @@ export default function SettingsPage() {
                                             </TableRow>
                                         ))
                                     ) : (
-                                        <TableRow><TableCell colSpan={5} className="text-center h-24">Nenhum membro encontrado.</TableCell></TableRow>
+                                        <TableRow><TableCell colSpan={isSuperUser ? 6 : 5} className="text-center h-24">Nenhum membro encontrado.</TableCell></TableRow>
                                     )}
                                 </TableBody>
                             </Table>

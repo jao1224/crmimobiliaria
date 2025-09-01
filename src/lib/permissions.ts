@@ -17,6 +17,13 @@ export const menuConfig: Record<UserProfile, string[]> = {
     'Financeiro': ['/dashboard', '/dashboard/finance', '/dashboard/negotiations', '/dashboard/processes', '/dashboard/reporting', '/dashboard/settings', '/dashboard/agenda'],
 };
 
+// Perfis que um administrador de imobiliária pode criar para sua equipe.
+export const creatableRolesByImobiliaria: UserProfile[] = ['Vendedor', 'Financeiro', 'Corretor Autônomo'];
+
+// Perfis que um Super Usuário (Admin da plataforma) pode criar.
+export const creatableRolesBySuperUser: UserProfile[] = ['Imobiliária', 'Vendedor', 'Financeiro', 'Corretor Autônomo'];
+
+
 export const allModules = [
     { id: "/dashboard", label: "Painel" },
     { id: "/dashboard/activity-feed", label: "Feed de Atividades" },
