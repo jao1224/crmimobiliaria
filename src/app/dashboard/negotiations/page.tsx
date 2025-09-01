@@ -142,6 +142,12 @@ const RealtorKanban = ({ users }: { users: User[] }) => {
     const [activities, setActivities] = useState<Activity[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const { toast } = useToast();
+    
+    const brokerUsers = useMemo(() => {
+        const brokerRoles = ['Corretor Autônomo', 'Vendedor', 'Imobiliária', 'Admin'];
+        return users.filter(user => brokerRoles.includes(user.role));
+    }, [users]);
+
 
     useEffect(() => {
         if (selectedRealtorId) {
@@ -220,7 +226,7 @@ const RealtorKanban = ({ users }: { users: User[] }) => {
                         <SelectValue placeholder="Selecione..." />
                     </SelectTrigger>
                     <SelectContent>
-                        {users.map(user => (
+                        {brokerUsers.map(user => (
                              <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
                         ))}
                     </SelectContent>
@@ -841,7 +847,7 @@ export default function NegotiationsPage() {
             </div>
 
             <Tabs defaultValue="list" className="w-full">
-                 <TabsList className="grid w-full grid-cols-3">
+                 <TabsList className="inline-flex h-10 items-center justify-start rounded-md bg-muted p-1 text-muted-foreground">
                     <TabsTrigger value="list">Lista</TabsTrigger>
                     <TabsTrigger value="kanban">Kanban Negócios</TabsTrigger>
                     <TabsTrigger value="kanban_corretor">Kanban Corretor</TabsTrigger>
@@ -1033,7 +1039,7 @@ export default function NegotiationsPage() {
                     <div className="flex gap-4 overflow-x-auto pb-4">
                         {KANBAN_COLUMNS.map(stage => (
                              <div key={stage} className="flex-1 min-w-[300px] bg-muted/50 rounded-lg flex flex-col" onDragOver={(e) => e.preventDefault()} onDrop={(e) => handleDrop(e, stage)}>
-                                <div className="p-3 border-b-2" style={{ borderBottomColor: `var(--${getStageVariant(stage).toString().replace('status-', '')})`}}>
+                                <div className="p-3 border-b-2" style={{ borderBottomColor: badgeVariants({ variant: getStageVariant(stage) }).className.includes('bg-') ? `var(--${getStageVariant(stage).toString().replace('status-','')})` : 'var(--border)'}}>
                                     <h3 className="font-semibold text-sm flex justify-between">
                                         <span>{stage}</span>
                                         <span>({(negotiationsByStage[stage] || []).length})</span>
@@ -1274,6 +1280,7 @@ export default function NegotiationsPage() {
         </>
     );
 }
+
 
 
 
