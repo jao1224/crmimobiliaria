@@ -361,7 +361,7 @@ export const generateContractPdf = onCall<ContractData, Promise<{pdfBase64: stri
   data.sellers.forEach((seller) => {
       page.drawText(line, {x: margin, y, font, size: 12});
       y -= 15;
-      page.drawText(seller.name, {x: margin, y, font, size: 10});
+      page.drawText(seller.name, {x: margin, y, font: size: 10});
       y -= 15;
       page.drawText("VENDEDOR(A)", {x: margin, y, font: boldFont, size: 10});
       y -= 30;
@@ -372,5 +372,7 @@ export const generateContractPdf = onCall<ContractData, Promise<{pdfBase64: stri
 
   return {pdfBase64};
 });
+
+    
 
     
