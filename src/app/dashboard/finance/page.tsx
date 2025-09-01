@@ -6,9 +6,9 @@ import { useState, useEffect, useContext, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, PlusCircle, Upload } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Trash2, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -19,12 +19,22 @@ import { Textarea } from "@/components/ui/textarea";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import type { UserProfile } from "../layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getCommissions, type Commission, addCommission, getPayments, addPayment, type PaymentCLT, getExpenses, addExpense, type Expense, getNegotiations, type Negotiation, updateCommission, getUsers, type User } from "@/lib/data";
+import { getCommissions, type Commission, addCommission, getPayments, addPayment, type PaymentCLT, getExpenses, addExpense, type Expense, getNegotiations, type Negotiation, updateCommission, getUsers, type User, updatePayment, deletePayment } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount);
@@ -54,6 +64,11 @@ export default function FinancePage() {
     // Estados para Pagamentos CLT
     const [payments, setPayments] = useState<PaymentCLT[]>([]);
     const [isPaymentDialogOpen, setPaymentDialogOpen] = useState(false);
+    const [editingPayment, setEditingPayment] = useState<PaymentCLT | null>(null);
+    const [isEditPaymentOpen, setIsEditPaymentOpen] = useState(false);
+    const [isDeletePaymentOpen, setIsDeletePaymentOpen] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+
 
     // Estados para Despesas
     const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -256,6 +271,56 @@ export default function FinancePage() {
     const handleOpenEditDialog = (commission: Commission) => {
         setEditingCommission(commission);
         setEditCommissionDialogOpen(true);
+    };
+
+    const handleEditPayment = (payment: PaymentCLT) => {
+        setEditingPayment(payment);
+        setIsEditPaymentOpen(true);
+    };
+
+    const handleUpdatePayment = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        if (!editingPayment) return;
+
+        setIsSaving(true);
+        const formData = new FormData(event.currentTarget);
+        const employeeId = formData.get('employee') as string;
+        const employeeName = allUsers.find(u => u.id === employeeId)?.name || 'N/A';
+
+        const updatedData: Partial<PaymentCLT> = {
+            employee: employeeName,
+            type: formData.get('type') as PaymentCLT['type'],
+            amount: parseFloat(formData.get('amount') as string),
+            paymentDate: formData.get('paymentDate') as string,
+            status: formData.get('status') as PaymentCLT['status'],
+        };
+        
+        try {
+            await updatePayment(editingPayment.id, updatedData);
+            await refreshFinanceData();
+            toast({ title: "Sucesso!", description: "Pagamento atualizado." });
+            setIsEditPaymentOpen(false);
+            setEditingPayment(null);
+        } catch (error) {
+            toast({ variant: "destructive", title: "Erro", description: "Não foi possível atualizar o pagamento." });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+    
+    const handleDeletePayment = async () => {
+        if (!editingPayment) return;
+        
+        try {
+            await deletePayment(editingPayment.id);
+            await refreshFinanceData();
+            toast({ title: "Sucesso!", description: "Lançamento de pagamento excluído." });
+            setIsDeletePaymentOpen(false);
+            setIsEditPaymentOpen(false);
+            setEditingPayment(null);
+        } catch (error) {
+            toast({ variant: "destructive", title: "Erro", description: "Não foi possível excluir o pagamento." });
+        }
     };
 
 
@@ -517,21 +582,51 @@ export default function FinancePage() {
                         <CardContent>
                             <Table>
                                 <TableHeader>
-                                    <TableRow><TableHead>Colaborador</TableHead><TableHead>Tipo</TableHead><TableHead>Valor</TableHead><TableHead>Data</TableHead><TableHead>Status</TableHead></TableRow>
+                                    <TableRow>
+                                        <TableHead>Colaborador</TableHead>
+                                        <TableHead>Tipo</TableHead>
+                                        <TableHead>Valor</TableHead>
+                                        <TableHead>Data</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead><span className="sr-only">Ações</span></TableHead>
+                                    </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {isLoading ? (
                                          Array.from({ length: 2 }).map((_, i) => (
                                             <TableRow key={i}>
-                                                <TableCell colSpan={5}><Skeleton className="h-8 w-full" /></TableCell>
+                                                <TableCell colSpan={6}><Skeleton className="h-8 w-full" /></TableCell>
                                             </TableRow>
                                         ))
                                     ) : payments.map(p => (
-                                        <TableRow key={p.id} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
+                                        <TableRow key={p.id}>
                                             <TableCell className="font-medium">{p.employee}</TableCell>
-                                            <TableCell>{p.type}</TableCell><TableCell>{formatCurrency(p.amount)}</TableCell>
+                                            <TableCell>{p.type}</TableCell>
+                                            <TableCell>{formatCurrency(p.amount)}</TableCell>
                                             <TableCell>{new Date(p.paymentDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</TableCell>
                                             <TableCell><Badge variant={p.status === 'Pago' ? 'success' : 'secondary'}>{p.status}</Badge></TableCell>
+                                            <TableCell>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button aria-haspopup="true" size="icon" variant="ghost">
+                                                            <MoreHorizontal className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                                                        <DropdownMenuItem onClick={() => handleEditPayment(p)}>Editar</DropdownMenuItem>
+                                                        <DropdownMenuItem 
+                                                            className="text-destructive focus:text-destructive" 
+                                                            onClick={() => {
+                                                                setEditingPayment(p);
+                                                                setIsDeletePaymentOpen(true);
+                                                            }}
+                                                        >
+                                                            Excluir
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
@@ -706,6 +801,82 @@ export default function FinancePage() {
                     </DialogContent>
                 )}
             </Dialog>
+
+            {/* Modal de Edição de Pagamento */}
+            {editingPayment && (
+                <Dialog open={isEditPaymentOpen} onOpenChange={setIsEditPaymentOpen}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Editar Lançamento de Pagamento</DialogTitle>
+                            <DialogDescription>Atualize os detalhes do pagamento para {editingPayment.employee}.</DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={handleUpdatePayment}>
+                            <div className="grid gap-4 py-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="employee">Colaborador</Label>
+                                    <Select name="employee" required defaultValue={allUsers.find(u => u.name === editingPayment.employee)?.id}>
+                                        <SelectTrigger><SelectValue/></SelectTrigger>
+                                        <SelectContent>
+                                            {allUsers.map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="type">Tipo de Pagamento</Label>
+                                    <Select name="type" required defaultValue={editingPayment.type}>
+                                        <SelectTrigger><SelectValue/></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Salário">Salário</SelectItem>
+                                            <SelectItem value="13º Salário">13º Salário</SelectItem>
+                                            <SelectItem value="Férias">Férias</SelectItem>
+                                            <SelectItem value="Impostos">Impostos</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="amount_payment">Valor (R$)</Label>
+                                    <Input id="amount_payment" name="amount" type="number" step="0.01" min="0.01" required defaultValue={editingPayment.amount} />
+                                </div>
+                                 <div className="space-y-2">
+                                    <Label htmlFor="paymentDate_payment">Data de Pagamento</Label>
+                                    <Input id="paymentDate_payment" name="paymentDate" type="date" required defaultValue={editingPayment.paymentDate} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="status_payment">Status</Label>
+                                    <Select name="status" defaultValue={editingPayment.status} required>
+                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Agendado">Agendado</SelectItem>
+                                            <SelectItem value="Pago">Pago</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <Button type="button" variant="outline" onClick={() => setIsEditPaymentOpen(false)}>Cancelar</Button>
+                                <Button type="submit" disabled={isSaving}>{isSaving ? "Salvando..." : "Salvar Alterações"}</Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
+            )}
+
+             <AlertDialog open={isDeletePaymentOpen} onOpenChange={setIsDeletePaymentOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Esta ação não pode ser desfeita. Isso excluirá permanentemente o lançamento de pagamento.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setIsDeletePaymentOpen(false)}>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeletePayment} className={cn(buttonVariants({ variant: "destructive" }))}>
+                            Excluir
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }
