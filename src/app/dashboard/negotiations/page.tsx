@@ -21,14 +21,14 @@ import {
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MoreHorizontal, Search, Archive, Trash2, Landmark, Upload, Eye, X, FileText, Link as LinkIcon, Send, GripVertical } from "lucide-react";
+import { MoreHorizontal, Search, Archive, Trash2, Landmark, Upload, Eye, X, FileText, Link as LinkIcon, Send, GripVertical, Target, Handshake } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { getNegotiations, addNegotiation, type Negotiation, addFinancingProcess, completeSaleAndGenerateCommission, getProperties, type Property, updateNegotiation, getUsers, type User, archiveNegotiation, addServiceRequest, markAsDeleted, getProcessos, type Processo, ServiceRequestType, type NegotiationStage } from "@/lib/data";
+import { getNegotiations, addNegotiation, type Negotiation, addFinancingProcess, completeSaleAndGenerateCommission, getProperties, type Property, updateNegotiation, getUsers, type User, archiveNegotiation, addServiceRequest, markAsDeleted, getProcessos, type Processo, ServiceRequestType, type NegotiationStage, getActivitiesForRealtor, updateActivityStatus, Activity, ActivityStatus } from "@/lib/data";
 import { getClients, type Client } from "@/lib/crm-data";
 import { cn } from "@/lib/utils";
 import { ProfileContext } from "@/contexts/ProfileContext";
@@ -48,6 +48,212 @@ const formatCurrency = (value: number) => {
 };
 
 const KANBAN_COLUMNS: NegotiationStage[] = ['Proposta Enviada', 'Em Negociação', 'Contrato Gerado', 'Venda Concluída', 'Aluguel Ativo'];
+
+
+const statusConfig: { [key in ActivityStatus]: { title: string; borderColor: string; bgColor: string; textColor: string; } } = {
+    'Ativo': { title: 'ATIVO', borderColor: 'border-blue-500', bgColor: 'bg-blue-100 dark:bg-blue-800/50', textColor: 'text-blue-600 dark:text-blue-400' },
+    'Pendente': { title: 'PENDENTE', borderColor: 'border-orange-500', bgColor: 'bg-orange-100 dark:bg-orange-800/50', textColor: 'text-orange-600 dark:text-orange-400' },
+    'Concluído': { title: 'CONCLUÍDO', borderColor: 'border-green-600', bgColor: 'bg-green-100 dark:bg-green-800/50', textColor: 'text-green-700 dark:text-green-500' },
+    'Cancelado': { title: 'CANCELADO', borderColor: 'border-red-600', bgColor: 'bg-red-100 dark:bg-red-800/50', textColor: 'text-red-700 dark:text-red-500' },
+};
+
+
+const ActivityCard = ({ activity, onDragStart }: { activity: Activity, onDragStart: (e: React.DragEvent<HTMLDivElement>, activityId: string) => void }) => {
+    const isCapture = activity.type === 'capture';
+    const Icon = isCapture ? Target : Handshake;
+    const iconBg = isCapture ? 'bg-primary text-primary-foreground' : 'bg-success text-success-foreground';
+    
+    return (
+      <Card 
+        className="mb-3 cursor-grab active:cursor-grabbing transition-shadow duration-200 hover:shadow-lg bg-card"
+        draggable="true"
+        onDragStart={(e) => onDragStart(e, activity.id)}
+      >
+        <CardContent className="p-3">
+          <div className="flex justify-between items-start mb-2">
+              <div className="flex items-center gap-2">
+                  <div className={cn("flex h-8 w-8 items-center justify-center rounded-lg text-xs", iconBg)}>
+                      <Icon className="h-5 w-5" />
+                  </div>
+                  <div className="flex flex-col">
+                      <p className="font-bold text-sm text-foreground" title={activity.name}>
+                        {activity.name}
+                      </p>
+                      <span className="text-xs text-muted-foreground font-mono">ID: {activity.relatedId.substring(0, 8)}...</span>
+                  </div>
+              </div>
+          </div>
+          
+          <div className="flex justify-between items-center text-xs text-muted-foreground mt-3">
+            <Badge variant="outline">{isCapture ? 'Captação' : 'Negociação'}</Badge>
+            <span className={'font-semibold text-sm text-foreground'}>
+                {formatCurrency(activity.value)}
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+};
+
+
+const ActivityColumn = ({ 
+  status, 
+  activities, 
+  onDrop,
+  onDragOver,
+  onDragStart,
+}: { 
+  status: ActivityStatus; 
+  activities: Activity[];
+  onDrop: (e: React.DragEvent<HTMLDivElement>, newStatus: ActivityStatus) => void;
+  onDragOver: (e: React.DragEvent<HTMLDivElement>) => void;
+  onDragStart: (e: React.DragEvent<HTMLDivElement>, activityId: string) => void;
+}) => {
+  const config = statusConfig[status];
+  const totalValue = activities.reduce((acc, q) => acc + q.value, 0);
+
+  return (
+    <div 
+      className={cn("flex-1 min-w-[280px] rounded-lg", config.bgColor)}
+      onDrop={(e) => onDrop(e, status)}
+      onDragOver={onDragOver}
+    >
+      <div className={cn('flex justify-between items-center p-3 rounded-t-lg border-t-4', config.borderColor)}>
+        <h2 className={cn("font-bold text-sm uppercase tracking-wider", config.textColor)}>{`${config.title} (${activities.length})`}</h2>
+        <span className={cn("font-semibold text-sm", config.textColor)}>
+            {formatCurrency(totalValue)}
+        </span>
+      </div>
+      <div className="p-2 h-full overflow-y-auto">
+        {activities.length > 0 ? (
+          activities.map(activity => <ActivityCard key={activity.id} activity={activity} onDragStart={onDragStart} />)
+        ) : (
+          <div className="flex justify-center items-center h-24 text-sm text-muted-foreground/70">
+            Arraste os cards para cá
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const RealtorKanban = ({ users }: { users: User[] }) => {
+    const [selectedRealtorId, setSelectedRealtorId] = useState<string>('');
+    const [activities, setActivities] = useState<Activity[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const { toast } = useToast();
+
+    useEffect(() => {
+        if (selectedRealtorId) {
+            const fetchActivities = async () => {
+                setIsLoading(true);
+                try {
+                    const fetchedActivities = await getActivitiesForRealtor(selectedRealtorId);
+                    setActivities(fetchedActivities);
+                } catch (error) {
+                    toast({ variant: 'destructive', title: "Erro", description: "Não foi possível carregar as atividades do corretor." });
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+            fetchActivities();
+        } else {
+            setActivities([]);
+        }
+    }, [selectedRealtorId, toast]);
+    
+    const activitiesByStatus = useMemo(() => {
+        const grouped: { [key in ActivityStatus]: Activity[] } = {
+            'Ativo': [], 'Pendente': [], 'Concluído': [], 'Cancelado': []
+        };
+        activities.forEach(activity => {
+            if (grouped[activity.status]) {
+                grouped[activity.status].push(activity);
+            }
+        });
+        return grouped;
+    }, [activities]);
+
+    const onDragStart = (e: React.DragEvent<HTMLDivElement>, activityId: string) => {
+        e.dataTransfer.setData("activityId", activityId);
+    };
+
+    const onDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+    };
+
+    const onDrop = async (e: React.DragEvent<HTMLDivElement>, newStatus: ActivityStatus) => {
+        e.preventDefault();
+        const activityId = e.dataTransfer.getData("activityId");
+        if (!activityId) return;
+
+        const originalActivities = [...activities];
+
+        setActivities(prevActivities =>
+            prevActivities.map(act =>
+                act.id === activityId ? { ...act, status: newStatus } : act
+            )
+        );
+        
+        try {
+            await updateActivityStatus(activityId, newStatus);
+            toast({
+                title: "Status Atualizado!",
+                description: `Atividade movida para "${newStatus}".`,
+            });
+        } catch (error) {
+            toast({
+                variant: 'destructive',
+                title: "Erro ao salvar",
+                description: "A alteração não pôde ser salva. Revertendo.",
+            });
+            setActivities(originalActivities);
+        }
+    };
+    
+    return (
+        <div className="flex flex-col gap-4">
+             <div className="max-w-xs">
+                <Label>Selecione um Corretor</Label>
+                <Select value={selectedRealtorId} onValueChange={setSelectedRealtorId}>
+                    <SelectTrigger>
+                        <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {users.map(user => (
+                             <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+            {isLoading ? (
+                <div className="flex gap-4">
+                     <Skeleton className="h-[60vh] w-full" />
+                     <Skeleton className="h-[60vh] w-full" />
+                     <Skeleton className="h-[60vh] w-full" />
+                     <Skeleton className="h-[60vh] w-full" />
+                </div>
+            ) : selectedRealtorId ? (
+                 <div className="flex-grow flex gap-4 overflow-x-auto pb-4">
+                    {Object.keys(statusConfig).map(statusKey => (
+                        <ActivityColumn 
+                            key={statusKey} 
+                            status={statusKey as ActivityStatus} 
+                            activities={activitiesByStatus[statusKey as ActivityStatus] || []}
+                            onDrop={onDrop}
+                            onDragOver={onDragOver}
+                            onDragStart={onDragStart}
+                        />
+                    ))}
+                </div>
+            ) : (
+                <Card className="flex items-center justify-center h-60">
+                    <p className="text-muted-foreground">Selecione um corretor para ver suas atividades.</p>
+                </Card>
+            )}
+        </div>
+    )
+}
 
 
 export default function NegotiationsPage() {
@@ -632,7 +838,8 @@ export default function NegotiationsPage() {
             <Tabs defaultValue="list" className="w-full">
                  <TabsList>
                     <TabsTrigger value="list">Lista</TabsTrigger>
-                    <TabsTrigger value="kanban">Kanban</TabsTrigger>
+                    <TabsTrigger value="kanban">Kanban Negócios</TabsTrigger>
+                    <TabsTrigger value="kanban_corretor">Kanban Corretor</TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="list">
@@ -821,7 +1028,7 @@ export default function NegotiationsPage() {
                     <div className="flex gap-4 overflow-x-auto pb-4">
                         {KANBAN_COLUMNS.map(stage => (
                              <div key={stage} className="flex-1 min-w-[300px] bg-muted/50 rounded-lg flex flex-col" onDragOver={(e) => e.preventDefault()} onDrop={(e) => handleDrop(e, stage)}>
-                                <div className="p-3 border-b-2" style={{ borderColor: `var(--color-${getStageVariant(stage)?.toString().replace('status-','') || 'border'})`}}>
+                                <div className="p-3 border-b-2" style={{ borderColor: badgeVariants({ variant: getStageVariant(stage) }).className?.includes('bg-') ? `var(--${getStageVariant(stage)})` : 'var(--border)'}}>
                                     <h3 className="font-semibold text-sm flex justify-between">
                                         <span>{stage}</span>
                                         <span>({negotiationsByStage[stage]?.length || 0})</span>
@@ -863,6 +1070,9 @@ export default function NegotiationsPage() {
                             </div>
                         ))}
                     </div>
+                </TabsContent>
+                <TabsContent value="kanban_corretor">
+                    <RealtorKanban users={allUsers}/>
                 </TabsContent>
             </Tabs>
         </div>
@@ -1059,3 +1269,4 @@ export default function NegotiationsPage() {
         </>
     );
 }
+

@@ -198,7 +198,7 @@ export default function ReportingPage() {
     const userCanSeeAll = activeProfile === 'Admin' || activeProfile === 'Imobiliária';
     
     const handleRealtorClick = (realtorId: string) => {
-        router.push(`/dashboard/reporting/${realtorId}`);
+        router.push(`/dashboard/negotiations?tab=kanban_corretor&realtor=${realtorId}`);
     };
 
     const filterByDate = (items: (Negotiation | PaymentCLT | Expense)[], dateField: keyof (Negotiation | PaymentCLT | Expense)) => {
