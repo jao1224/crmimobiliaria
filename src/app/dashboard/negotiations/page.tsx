@@ -21,14 +21,14 @@ import {
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MoreHorizontal, Search, Archive, Trash2, Landmark, Upload, Eye, X, FileText, Link as LinkIcon, Send } from "lucide-react";
+import { MoreHorizontal, Search, Archive, Trash2, Landmark, Upload, Eye, X, FileText, Link as LinkIcon, Send, GripVertical } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { getNegotiations, addNegotiation, type Negotiation, addFinancingProcess, completeSaleAndGenerateCommission, getProperties, type Property, updateNegotiation, getUsers, type User, archiveNegotiation, addServiceRequest, markAsDeleted, getProcessos, type Processo, ServiceRequestType } from "@/lib/data";
+import { getNegotiations, addNegotiation, type Negotiation, addFinancingProcess, completeSaleAndGenerateCommission, getProperties, type Property, updateNegotiation, getUsers, type User, archiveNegotiation, addServiceRequest, markAsDeleted, getProcessos, type Processo, ServiceRequestType, type NegotiationStage } from "@/lib/data";
 import { getClients, type Client } from "@/lib/crm-data";
 import { cn } from "@/lib/utils";
 import { ProfileContext } from "@/contexts/ProfileContext";
@@ -39,11 +39,15 @@ import Link from "next/link";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 
 const formatCurrency = (value: number) => {
     if (typeof value !== 'number') return 'R$ 0,00';
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 };
+
+const KANBAN_COLUMNS: NegotiationStage[] = ['Proposta Enviada', 'Em Negociação', 'Contrato Gerado', 'Venda Concluída', 'Aluguel Ativo'];
 
 
 export default function NegotiationsPage() {
@@ -168,6 +172,22 @@ export default function NegotiationsPage() {
         return negotiations;
     }, [allNegotiations, typeFilter, statusFilter, realtorFilter, activeProfile, currentUser, allUsers, startDate, endDate]);
 
+    const negotiationsByStage = useMemo(() => {
+        const grouped: { [key in NegotiationStage]: Negotiation[] } = {
+            'Proposta Enviada': [],
+            'Em Negociação': [],
+            'Contrato Gerado': [],
+            'Venda Concluída': [],
+            'Aluguel Ativo': [],
+        };
+        filteredNegotiations.forEach(neg => {
+            if (grouped[neg.stage]) {
+                grouped[neg.stage].push(neg);
+            }
+        });
+        return grouped;
+    }, [filteredNegotiations]);
+
 
     const resetForm = () => {
         setPropertyCode("");
@@ -183,14 +203,12 @@ export default function NegotiationsPage() {
     const handleFileSelection = (event: React.ChangeEvent<HTMLInputElement>) => {
         if (event.target.files) {
             const newFiles = Array.from(event.target.files);
-            // Acumula os arquivos em vez de substituir
             setSelectedDocs(prevDocs => [...prevDocs, ...newFiles]);
         }
     };
 
     const clearSelectedFiles = () => {
         setSelectedDocs([]);
-        // Reset the file input visually
         const input = document.getElementById('documents') as HTMLInputElement;
         if (input) {
             input.value = '';
@@ -204,13 +222,12 @@ export default function NegotiationsPage() {
         }
     }, [isNewNegotiationOpen]);
     
-    // Busca automática ao selecionar
     useEffect(() => {
         if (propertyCode) {
              const prop = availableProperties.find(p => p.id === propertyCode);
              if (prop) {
                 setFoundProperty(prop);
-                setProposalValue(prop.price.toString()); // Preenche o valor da proposta
+                setProposalValue(prop.price.toString());
              } else {
                 setFoundProperty(null);
              }
@@ -218,8 +235,7 @@ export default function NegotiationsPage() {
             setFoundProperty(null);
             setProposalValue("");
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [propertyCode]);
+    }, [propertyCode, availableProperties]);
 
     useEffect(() => {
         if (clientCode) {
@@ -228,8 +244,7 @@ export default function NegotiationsPage() {
         } else {
             setFoundClient(null);
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [clientCode]);
+    }, [clientCode, availableClients]);
 
 
     const handleAddNegotiation = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -269,7 +284,6 @@ export default function NegotiationsPage() {
         const newNegotiationId = await addNegotiation(newNegotiationData, selectedDocs);
         
         if (isFinanced) {
-            // Em vez de criar o processo aqui, apenas notificamos que pode ser acionado.
             toast({ 
                 title: "Sucesso!", 
                 description: "Nova negociação iniciada. Acione o correspondente no menu de ações para criar o processo de financiamento." 
@@ -406,6 +420,38 @@ export default function NegotiationsPage() {
             setAssignDialogOpen(false);
         } catch (error) {
             toast({ variant: "destructive", title: "Erro", description: "Não foi possível atribuir a negociação." });
+        }
+    };
+
+    const handleDrop = async (e: React.DragEvent<HTMLDivElement>, newStage: NegotiationStage) => {
+        e.preventDefault();
+        const negotiationId = e.dataTransfer.getData("negotiationId");
+        const originalStage = e.dataTransfer.getData("originalStage") as NegotiationStage;
+
+        const negotiation = allNegotiations.find(n => n.id === negotiationId);
+        if (!negotiation || negotiation.stage === newStage) return;
+
+        // Optimistic UI update
+        setAllNegotiations(prev =>
+            prev.map(n =>
+                n.id === negotiationId ? { ...n, stage: newStage } : n
+            )
+        );
+
+        try {
+            await updateNegotiation(negotiationId, { stage: newStage });
+            toast({
+                title: "Status Atualizado!",
+                description: `Negociação movida para "${newStage}".`,
+            });
+        } catch (error) {
+            // Revert UI on error
+            setAllNegotiations(prev =>
+                prev.map(n =>
+                    n.id === negotiationId ? { ...n, stage: originalStage } : n
+                )
+            );
+            toast({ variant: "destructive", title: "Erro", description: "Não foi possível atualizar o status." });
         }
     };
 
@@ -582,186 +628,243 @@ export default function NegotiationsPage() {
                     </DialogContent>
                 </Dialog>
             </div>
-            
-            <Card>
-                <CardHeader>
-                    <div className="space-y-2">
-                        <CardTitle>Negociações em Andamento</CardTitle>
-                        <CardDescription>
-                           Selecione os filtros para buscar as negociações.
-                           <Link href="/dashboard/negotiations/archived" className="text-sm text-primary hover:underline ml-2">Ver Arquivadas</Link>
-                           <Link href="/dashboard/negotiations/deleted" className="text-sm text-destructive hover:underline ml-2">Ver Excluídas</Link>
-                        </CardDescription>
-                    </div>
-                     {(activeProfile === 'Admin' || activeProfile === 'Imobiliária') && (
-                    <div className="flex items-end gap-2 pt-4">
-                         <Select value={typeFilter} onValueChange={setTypeFilter}>
-                            <SelectTrigger className="h-9">
-                                <SelectValue placeholder="Filtrar por Tipo" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Todos os Tipos</SelectItem>
-                                <SelectItem value="Venda">Venda</SelectItem>
-                                <SelectItem value="Aluguel">Aluguel</SelectItem>
-                                <SelectItem value="Leilão">Leilão</SelectItem>
-                            </SelectContent>
-                        </Select>
-                         <Select value={statusFilter} onValueChange={setStatusFilter}>
-                            <SelectTrigger className="h-9">
-                                <SelectValue placeholder="Filtrar por Status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Todos os Status</SelectItem>
-                                <SelectItem value="nao-gerado">Não Gerado</SelectItem>
-                                <SelectItem value="pendente-assinaturas">Pendente Assinaturas</SelectItem>
-                                <SelectItem value="assinado">Assinado</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <Select value={realtorFilter} onValueChange={setRealtorFilter}>
-                            <SelectTrigger className="h-9">
-                                <SelectValue placeholder="Filtrar por Responsável" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Todos os Responsáveis</SelectItem>
-                                {allUsers.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                        <div className="grid w-full sm:w-auto gap-1.5">
-                            <Label htmlFor="start-date" className="text-xs">Data Início</Label>
-                            <Input type="date" id="start-date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="h-9" />
-                        </div>
-                        <div className="grid w-full sm:w-auto gap-1.5">
-                            <Label htmlFor="end-date" className="text-xs">Data Fim</Label>
-                            <Input type="date" id="end-date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="h-9" />
-                        </div>
-                    </div>
-                    )}
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Cód. Negociação</TableHead>
-                                <TableHead>Cód. Processo</TableHead>
-                                <TableHead>Imóvel</TableHead>
-                                <TableHead>Cliente</TableHead>
-                                <TableHead className="hidden md:table-cell">Data Criação</TableHead>
-                                <TableHead>Valor</TableHead>
-                                <TableHead>Fase</TableHead>
-                                <TableHead>Contrato</TableHead>
-                                <TableHead className="hidden lg:table-cell">Vendedor</TableHead>
-                                <TableHead className="hidden lg:table-cell">Captador</TableHead>
-                                <TableHead>
-                                  <span className="sr-only">Ações</span>
-                                </TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {isLoading ? (
-                                Array.from({ length: 5 }).map((_, i) => (
-                                    <TableRow key={i}>
-                                        <TableCell colSpan={11}><Skeleton className="h-8 w-full" /></TableCell>
-                                    </TableRow>
-                                ))
-                            ) : filteredNegotiations.length > 0 ? (
-                                filteredNegotiations.map((neg) => (
-                                <TableRow
-                                    key={neg.id}
-                                >
-                                    <TableCell className="font-mono text-xs text-muted-foreground">{neg.negotiationDisplayCode}</TableCell>
-                                    <TableCell className="font-mono text-xs text-muted-foreground">{getProcessCodeForNegotiation(neg.id)}</TableCell>
-                                    <TableCell>
-                                        <div className="font-medium">{neg.property}</div>
-                                        <div className="text-xs text-muted-foreground font-mono">{neg.propertyDisplayCode}</div>
-                                    </TableCell>
-                                    <TableCell>{neg.client}</TableCell>
-                                    <TableCell className="hidden md:table-cell">
-                                        {neg.createdAt ? new Date(neg.createdAt).toLocaleDateString('pt-BR') : 'N/A'}
-                                    </TableCell>
-                                    <TableCell>{formatCurrency(neg.value)}</TableCell>
-                                    <TableCell>
-                                        <Badge
-                                            variant={getStageVariant(neg.stage)}
-                                            className={'whitespace-nowrap'}
-                                        >
-                                            {neg.stage}
-                                        </Badge>
-                                    </TableCell>
-                                     <TableCell>
-                                        <Badge variant={getContractStatusVariant(neg.contractStatus)} className="whitespace-nowrap">{neg.contractStatus}</Badge>
-                                     </TableCell>
-                                    <TableCell className="hidden lg:table-cell">{neg.salesperson}</TableCell>
-                                    <TableCell className="hidden lg:table-cell">{neg.realtor}</TableCell>
-                                    <TableCell>
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button
-                                                    aria-haspopup="true"
-                                                    size="icon"
-                                                    variant="ghost"
-                                                    onClick={(e) => e.stopPropagation()}
-                                                >
-                                                    <MoreHorizontal className="h-4 w-4" />
-                                                    <span className="sr-only">Alternar menu</span>
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                                                <DropdownMenuItem onSelect={() => handleOpenDetailDialog(neg)}>
-                                                    <Eye className="mr-2 h-4 w-4" />Ver Detalhes
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onSelect={() => router.push(`/dashboard/processes`)}>
-                                                    Ver Processo
-                                                </DropdownMenuItem>
-                                                {neg.contractStatus === 'Não Gerado' ? (
-                                                    <DropdownMenuItem onSelect={() => handleGenerateContract(neg)}>
-                                                        Gerar Contrato
-                                                    </DropdownMenuItem>
-                                                ) : (
-                                                    <DropdownMenuItem onSelect={() => router.push(`/dashboard/negotiations/${neg.id}/contract`)}>
-                                                        Ver/Editar Contrato
-                                                    </DropdownMenuItem>
-                                                )}
-                                                <DropdownMenuItem onSelect={() => handleTriggerCorrespondent(neg)}>
-                                                    Acionar Correspondente
-                                                </DropdownMenuItem>
-                                                {(activeProfile === 'Admin' || activeProfile === 'Imobiliária') && (
-                                                    <DropdownMenuItem onSelect={() => handleOpenAssignDialog(neg)}>
-                                                        Enviar/Atribuir
-                                                    </DropdownMenuItem>
-                                                )}
-                                                <DropdownMenuItem onSelect={() => handleArchiveNegotiation(neg.id)}>
-                                                    Arquivar
-                                                </DropdownMenuItem>
-                                                 <DropdownMenuSeparator />
-                                                <DropdownMenuItem 
-                                                    onSelect={() => handleCompleteSale(neg)}
-                                                    disabled={neg.stage === 'Venda Concluída' || neg.stage === 'Aluguel Ativo'}
-                                                    className="text-green-600 focus:text-green-600 focus:bg-green-50"
-                                                >
-                                                    Concluir Venda
-                                                </DropdownMenuItem>
-                                                 <DropdownMenuSeparator />
-                                                <DropdownMenuItem 
-                                                    className="text-destructive focus:text-destructive"
-                                                    onSelect={() => handleOpenDeleteDialog(neg)}
-                                                >
-                                                    Excluir
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </TableCell>
-                                </TableRow>
-                            ))
-                            ) : (
-                                 <TableRow>
-                                    <TableCell colSpan={11} className="h-24 text-center">Nenhum processo de negociação encontrado.</TableCell>
-                                 </TableRow>
+
+            <Tabs defaultValue="list" className="w-full">
+                 <TabsList>
+                    <TabsTrigger value="list">Lista</TabsTrigger>
+                    <TabsTrigger value="kanban">Kanban</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="list">
+                    <Card>
+                        <CardHeader>
+                            <div className="space-y-2">
+                                <CardTitle>Negociações em Andamento</CardTitle>
+                                <CardDescription>
+                                   Selecione os filtros para buscar as negociações.
+                                   <Link href="/dashboard/negotiations/archived" className="text-sm text-primary hover:underline ml-2">Ver Arquivadas</Link>
+                                   <Link href="/dashboard/negotiations/deleted" className="text-sm text-destructive hover:underline ml-2">Ver Excluídas</Link>
+                                </CardDescription>
+                            </div>
+                             {(activeProfile === 'Admin' || activeProfile === 'Imobiliária') && (
+                            <div className="flex items-end gap-2 pt-4">
+                                 <Select value={typeFilter} onValueChange={setTypeFilter}>
+                                    <SelectTrigger className="h-9">
+                                        <SelectValue placeholder="Filtrar por Tipo" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Todos os Tipos</SelectItem>
+                                        <SelectItem value="Venda">Venda</SelectItem>
+                                        <SelectItem value="Aluguel">Aluguel</SelectItem>
+                                        <SelectItem value="Leilão">Leilão</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                 <Select value={statusFilter} onValueChange={setStatusFilter}>
+                                    <SelectTrigger className="h-9">
+                                        <SelectValue placeholder="Filtrar por Status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Todos os Status</SelectItem>
+                                        <SelectItem value="nao-gerado">Não Gerado</SelectItem>
+                                        <SelectItem value="pendente-assinaturas">Pendente Assinaturas</SelectItem>
+                                        <SelectItem value="assinado">Assinado</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <Select value={realtorFilter} onValueChange={setRealtorFilter}>
+                                    <SelectTrigger className="h-9">
+                                        <SelectValue placeholder="Filtrar por Responsável" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Todos os Responsáveis</SelectItem>
+                                        {allUsers.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                                <div className="grid w-full sm:w-auto gap-1.5">
+                                    <Label htmlFor="start-date" className="text-xs">Data Início</Label>
+                                    <Input type="date" id="start-date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="h-9" />
+                                </div>
+                                <div className="grid w-full sm:w-auto gap-1.5">
+                                    <Label htmlFor="end-date" className="text-xs">Data Fim</Label>
+                                    <Input type="date" id="end-date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="h-9" />
+                                </div>
+                            </div>
                             )}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
+                        </CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Cód. Negociação</TableHead>
+                                        <TableHead>Cód. Processo</TableHead>
+                                        <TableHead>Imóvel</TableHead>
+                                        <TableHead>Cliente</TableHead>
+                                        <TableHead className="hidden md:table-cell">Data Criação</TableHead>
+                                        <TableHead>Valor</TableHead>
+                                        <TableHead>Fase</TableHead>
+                                        <TableHead>Contrato</TableHead>
+                                        <TableHead className="hidden lg:table-cell">Vendedor</TableHead>
+                                        <TableHead className="hidden lg:table-cell">Captador</TableHead>
+                                        <TableHead>
+                                          <span className="sr-only">Ações</span>
+                                        </TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {isLoading ? (
+                                        Array.from({ length: 5 }).map((_, i) => (
+                                            <TableRow key={i}>
+                                                <TableCell colSpan={11}><Skeleton className="h-8 w-full" /></TableCell>
+                                            </TableRow>
+                                        ))
+                                    ) : filteredNegotiations.length > 0 ? (
+                                        filteredNegotiations.map((neg) => (
+                                        <TableRow
+                                            key={neg.id}
+                                        >
+                                            <TableCell className="font-mono text-xs text-muted-foreground">{neg.negotiationDisplayCode}</TableCell>
+                                            <TableCell className="font-mono text-xs text-muted-foreground">{getProcessCodeForNegotiation(neg.id)}</TableCell>
+                                            <TableCell>
+                                                <div className="font-medium">{neg.property}</div>
+                                                <div className="text-xs text-muted-foreground font-mono">{neg.propertyDisplayCode}</div>
+                                            </TableCell>
+                                            <TableCell>{neg.client}</TableCell>
+                                            <TableCell className="hidden md:table-cell">
+                                                {neg.createdAt ? new Date(neg.createdAt).toLocaleDateString('pt-BR') : 'N/A'}
+                                            </TableCell>
+                                            <TableCell>{formatCurrency(neg.value)}</TableCell>
+                                            <TableCell>
+                                                <Badge
+                                                    variant={getStageVariant(neg.stage)}
+                                                    className={'whitespace-nowrap'}
+                                                >
+                                                    {neg.stage}
+                                                </Badge>
+                                            </TableCell>
+                                             <TableCell>
+                                                <Badge variant={getContractStatusVariant(neg.contractStatus)} className="whitespace-nowrap">{neg.contractStatus}</Badge>
+                                             </TableCell>
+                                            <TableCell className="hidden lg:table-cell">{neg.salesperson}</TableCell>
+                                            <TableCell className="hidden lg:table-cell">{neg.realtor}</TableCell>
+                                            <TableCell>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button
+                                                            aria-haspopup="true"
+                                                            size="icon"
+                                                            variant="ghost"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        >
+                                                            <MoreHorizontal className="h-4 w-4" />
+                                                            <span className="sr-only">Alternar menu</span>
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                                                        <DropdownMenuItem onSelect={() => handleOpenDetailDialog(neg)}>
+                                                            <Eye className="mr-2 h-4 w-4" />Ver Detalhes
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem onSelect={() => router.push(`/dashboard/processes`)}>
+                                                            Ver Processo
+                                                        </DropdownMenuItem>
+                                                        {neg.contractStatus === 'Não Gerado' ? (
+                                                            <DropdownMenuItem onSelect={() => handleGenerateContract(neg)}>
+                                                                Gerar Contrato
+                                                            </DropdownMenuItem>
+                                                        ) : (
+                                                            <DropdownMenuItem onSelect={() => router.push(`/dashboard/negotiations/${neg.id}/contract`)}>
+                                                                Ver/Editar Contrato
+                                                            </DropdownMenuItem>
+                                                        )}
+                                                        <DropdownMenuItem onSelect={() => handleTriggerCorrespondent(neg)}>
+                                                            Acionar Correspondente
+                                                        </DropdownMenuItem>
+                                                        {(activeProfile === 'Admin' || activeProfile === 'Imobiliária') && (
+                                                            <DropdownMenuItem onSelect={() => handleOpenAssignDialog(neg)}>
+                                                                Enviar/Atribuir
+                                                            </DropdownMenuItem>
+                                                        )}
+                                                        <DropdownMenuItem onSelect={() => handleArchiveNegotiation(neg.id)}>
+                                                            Arquivar
+                                                        </DropdownMenuItem>
+                                                         <DropdownMenuSeparator />
+                                                        <DropdownMenuItem 
+                                                            onSelect={() => handleCompleteSale(neg)}
+                                                            disabled={neg.stage === 'Venda Concluída' || neg.stage === 'Aluguel Ativo'}
+                                                            className="text-green-600 focus:text-green-600 focus:bg-green-50"
+                                                        >
+                                                            Concluir Venda
+                                                        </DropdownMenuItem>
+                                                         <DropdownMenuSeparator />
+                                                        <DropdownMenuItem 
+                                                            className="text-destructive focus:text-destructive"
+                                                            onSelect={() => handleOpenDeleteDialog(neg)}
+                                                        >
+                                                            Excluir
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                    ) : (
+                                         <TableRow>
+                                            <TableCell colSpan={11} className="h-24 text-center">Nenhum processo de negociação encontrado.</TableCell>
+                                         </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                <TabsContent value="kanban">
+                    <div className="flex gap-4 overflow-x-auto pb-4">
+                        {KANBAN_COLUMNS.map(stage => (
+                             <div key={stage} className="flex-1 min-w-[300px] bg-muted/50 rounded-lg flex flex-col" onDragOver={(e) => e.preventDefault()} onDrop={(e) => handleDrop(e, stage)}>
+                                <div className="p-3 border-b-2" style={{ borderColor: `var(--color-${getStageVariant(stage)?.toString().replace('status-','') || 'border'})`}}>
+                                    <h3 className="font-semibold text-sm flex justify-between">
+                                        <span>{stage}</span>
+                                        <span>({negotiationsByStage[stage]?.length || 0})</span>
+                                    </h3>
+                                </div>
+                                <ScrollArea className="flex-1 p-2">
+                                     {negotiationsByStage[stage]?.map(neg => (
+                                        <Card 
+                                            key={neg.id} 
+                                            className="mb-3 cursor-grab active:cursor-grabbing" 
+                                            draggable 
+                                            onDragStart={(e) => {
+                                                e.dataTransfer.setData("negotiationId", neg.id);
+                                                e.dataTransfer.setData("originalStage", neg.stage);
+                                            }}
+                                        >
+                                            <CardContent className="p-3 space-y-2">
+                                                <div className="flex justify-between items-start">
+                                                    <span className="font-semibold text-sm leading-tight">{neg.property}</span>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" size="icon" className="h-6 w-6 -mr-2 -mt-1"><MoreHorizontal className="h-4 w-4"/></Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                          <DropdownMenuItem onSelect={() => handleOpenDetailDialog(neg)}>Ver Detalhes</DropdownMenuItem>
+                                                          <DropdownMenuItem onSelect={() => router.push(`/dashboard/negotiations/${neg.id}/contract`)}>Ver Contrato</DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </div>
+                                                <p className="text-xs text-muted-foreground">{neg.client}</p>
+                                                <div className="flex justify-between items-center pt-1">
+                                                    <span className="text-sm font-bold">{formatCurrency(neg.value)}</span>
+                                                    <Badge variant="secondary" className="text-xs">{neg.salesperson}</Badge>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                     )) || <p className="p-4 text-center text-xs text-muted-foreground">Nenhuma negociação nesta fase.</p>}
+                                </ScrollArea>
+                            </div>
+                        ))}
+                    </div>
+                </TabsContent>
+            </Tabs>
         </div>
 
         <AssignNegotiationDialog
@@ -897,7 +1000,6 @@ export default function NegotiationsPage() {
             </Dialog>
         )}
         
-        {/* Service Request Modal */}
         <Dialog open={isServiceRequestOpen} onOpenChange={setServiceRequestOpen}>
             <DialogContent>
                 <DialogHeader>
@@ -954,7 +1056,6 @@ export default function NegotiationsPage() {
                 )}
             </DialogContent>
         </Dialog>
-
         </>
     );
 }

@@ -77,10 +77,22 @@ export default {
           border: 'hsl(var(--sidebar-border))',
           ring: 'hsl(var(--sidebar-ring))',
         },
-        'status-blue': 'hsl(var(--status-blue))',
-        'status-orange': 'hsl(var(--accent))',
-        'status-info': 'hsl(var(--info))',
-        'status-red-orange': '#ff6e49',
+        'status-blue': {
+          DEFAULT: 'hsl(var(--status-blue))',
+          foreground: 'hsl(var(--status-blue-foreground))'
+        },
+        'status-orange': {
+          DEFAULT: 'hsl(var(--status-orange))',
+          foreground: 'hsl(var(--status-orange-foreground))'
+        },
+        info: {
+          DEFAULT: 'hsl(var(--info))',
+          foreground: 'hsl(var(--info-foreground))'
+        },
+        warning: {
+          DEFAULT: 'hsl(var(--warning))',
+          foreground: 'hsl(var(--warning-foreground))'
+        }
       },
       borderRadius: {
         lg: 'var(--radius)',
