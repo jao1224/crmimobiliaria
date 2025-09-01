@@ -1,9 +1,9 @@
 
-export type UserProfile = 'Admin' | 'Super Usuário' | 'Imobiliária' | 'Corretor Autônomo' | 'Investidor' | 'Construtora' | 'Financeiro' | 'Vendedor';
+export type UserProfile = 'Super Usuário' | 'Imobiliária' | 'Corretor Autônomo' | 'Investidor' | 'Construtora' | 'Financeiro' | 'Vendedor' | 'Admin';
 
 // O perfil "Admin" será tratado como "Super Usuário" para consistência.
 // O dono do sistema é o Super Usuário.
-export const userProfiles: UserProfile[] = ['Admin', 'Super Usuário', 'Imobiliária', 'Vendedor', 'Corretor Autônomo', 'Investidor', 'Construtora', 'Financeiro'];
+export const userProfiles: UserProfile[] = ['Super Usuário', 'Admin', 'Imobiliária', 'Vendedor', 'Corretor Autônomo', 'Investidor', 'Construtora', 'Financeiro'];
 
 // O perfil "Admin" foi removido para evitar ambiguidade. Usamos "Super Usuário".
 export const menuConfig: Record<UserProfile, string[]> = {
@@ -18,7 +18,7 @@ export const menuConfig: Record<UserProfile, string[]> = {
 };
 
 // Perfis que um administrador de imobiliária pode criar para sua equipe.
-export const creatableRolesByImobiliaria: UserProfile[] = ['Vendedor', 'Financeiro', 'Corretor Autônomo'];
+export const creatableRolesByImobiliaria: UserProfile[] = ['Imobiliária', 'Vendedor', 'Financeiro', 'Corretor Autônomo'];
 
 // Perfis que um Super Usuário (dono do sistema) pode criar.
 // Apenas ele pode criar uma nova 'Imobiliária'.

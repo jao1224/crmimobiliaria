@@ -82,7 +82,7 @@ interface ReportData {
 export const createUser = onCall(async (request) => {
     // Verifica se o usuário que está chamando a função é um admin de imobiliária ou Super Usuário.
     const isImobiliariaAdmin = !!request.auth?.token.imobiliariaId;
-    const isSuperUser = request.auth?.token.role === 'Admin' || request.auth?.token.role === 'Super Usuário';
+    const isSuperUser = request.auth?.token.role === 'Super Usuário';
 
     if (!isImobiliariaAdmin && !isSuperUser) {
         throw new HttpsError('permission-denied', 'Apenas administradores podem criar usuários.');
