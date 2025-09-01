@@ -51,7 +51,7 @@ type PermissionsState = Record<UserProfile, string[]>;
 
 export default function SettingsPage() {
     const { activeProfile } = useContext(ProfileContext);
-    const hasPermission = activeProfile === 'Admin' || activeProfile === 'Imobiliária' || activeProfile === 'Super Usuário';
+    const hasPermissionForTeamTabs = activeProfile === 'Admin' || activeProfile === 'Imobiliária';
     const isSuperUser = activeProfile === 'Admin' || activeProfile === 'Super Usuário';
 
 
@@ -101,7 +101,7 @@ export default function SettingsPage() {
                     setUserData(userDocSnap.data() as TeamMember);
                 }
 
-                if (hasPermission) {
+                if (hasPermissionForTeamTabs || isSuperUser) {
                     fetchTeamData(currentUser);
                 }
             } else {
@@ -111,7 +111,7 @@ export default function SettingsPage() {
         });
 
         return () => unsubscribe();
-    }, [hasPermission]);
+    }, [hasPermissionForTeamTabs, isSuperUser]);
 
     const fetchTeamData = async (currentUser: User) => {
         if (!currentUser) return;
@@ -393,8 +393,8 @@ export default function SettingsPage() {
                 <TabsList>
                     <TabsTrigger value="profile">Perfil</TabsTrigger>
                      {isSuperUser && <TabsTrigger value="imobiliarias">Imobiliárias</TabsTrigger>}
-                     {hasPermission && <TabsTrigger value="team">Membros</TabsTrigger>}
-                     {hasPermission && !isSuperUser && <TabsTrigger value="teams">Equipes</TabsTrigger>}
+                     {hasPermissionForTeamTabs && <TabsTrigger value="team">Membros</TabsTrigger>}
+                     {hasPermissionForTeamTabs && !isSuperUser && <TabsTrigger value="teams">Equipes</TabsTrigger>}
                      {isSuperUser && <TabsTrigger value="permissions">Permissões</TabsTrigger>}
                 </TabsList>
                 <TabsContent value="profile" className="space-y-6">
@@ -467,7 +467,7 @@ export default function SettingsPage() {
                         <Card>
                             <CardHeader className="flex flex-row items-center justify-between">
                                 <div>
-                                    <CardTitle>Imobiliárias Cadastradas</CardTitle>
+                                    <CardTitle>Gestão de Imobiliárias</CardTitle>
                                     <CardDescription>Gerencie as agências que têm acesso à plataforma.</CardDescription>
                                 </div>
                                 <Dialog open={isTeamMemberDialogOpen} onOpenChange={setTeamMemberDialogOpen}>
@@ -546,12 +546,12 @@ export default function SettingsPage() {
                     <Card>
                          <CardHeader className="flex flex-row items-center justify-between">
                             <div>
-                                <CardTitle>Membros</CardTitle>
+                                <CardTitle>Membros da Equipe</CardTitle>
                                 <CardDescription>Gerencie sua equipe e suas funções.</CardDescription>
                             </div>
                              <Dialog open={isTeamMemberDialogOpen && !isSuperUser} onOpenChange={setTeamMemberDialogOpen}>
                                 <DialogTrigger asChild>
-                                    {!isSuperUser && <Button>Adicionar Membro</Button>}
+                                    <Button>Adicionar Membro</Button>
                                 </DialogTrigger>
                                 <DialogContent>
                                     <DialogHeader>
