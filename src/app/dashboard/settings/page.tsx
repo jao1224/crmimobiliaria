@@ -52,7 +52,7 @@ type PermissionsState = Record<UserProfile, string[]>;
 export default function SettingsPage() {
     const { activeProfile } = useContext(ProfileContext);
     const isSuperUser = activeProfile === 'Super Usuário';
-    const hasPermissionForTeamTabs = isSuperUser || activeProfile === 'Imobiliária';
+    const hasPermissionForTeamTabs = isSuperUser || activeProfile === 'Imobiliária' || activeProfile === 'Admin';
 
 
     const [isSaving, setIsSaving] = useState(false);
@@ -395,7 +395,7 @@ export default function SettingsPage() {
                      {isSuperUser && <TabsTrigger value="imobiliarias">Imobiliárias</TabsTrigger>}
                      {hasPermissionForTeamTabs && <TabsTrigger value="team">Membros</TabsTrigger>}
                      {hasPermissionForTeamTabs && !isSuperUser && <TabsTrigger value="teams">Equipes</TabsTrigger>}
-                     {isSuperUser && <TabsTrigger value="permissions">Permissões</TabsTrigger>}
+                     {hasPermissionForTeamTabs && <TabsTrigger value="permissions">Permissões</TabsTrigger>}
                 </TabsList>
                 <TabsContent value="profile" className="space-y-6">
                     <Card>
@@ -780,7 +780,7 @@ export default function SettingsPage() {
                         </Card>
                     </TabsContent>
                 )}
-                {isSuperUser && (
+                {hasPermissionForTeamTabs && (
                     <TabsContent value="permissions">
                         <Card>
                             <CardHeader>
