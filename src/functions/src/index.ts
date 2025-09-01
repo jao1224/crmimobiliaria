@@ -83,7 +83,7 @@ interface ReportData {
 export const createUser = onCall(async (request) => {
     // Verifica se o usuário que está chamando a função é um admin de imobiliária ou Super Usuário.
     const isImobiliariaAdmin = !!request.auth?.token.imobiliariaId;
-    const isSuperUser = request.auth?.token.role === 'Admin' || request.auth?.token.role === 'Super Usuário';
+    const isSuperUser = request.auth?.token.role === 'Super Usuário';
 
     if (!isImobiliariaAdmin && !isSuperUser) {
         throw new HttpsError('permission-denied', 'Apenas administradores podem criar usuários.');
@@ -152,8 +152,17 @@ export const addRoleOnCreate = beforeUserCreated(async (event) => {
                 return;
             }
         }
-        // Fallback: se não encontrar o documento a tempo, define um cargo padrão.
-        await adminAuth.setCustomUserClaims(user.uid, { role: 'Corretor Autônomo' });
+        
+        // Verifica se já existe algum usuário. Se não, este é o primeiro e será Super Usuário.
+        const allUsers = await adminAuth.listUsers(1);
+        if (allUsers.users.length === 0) {
+             await adminAuth.setCustomUserClaims(user.uid, { role: 'Super Usuário' });
+             await userDocRef.set({ role: 'Super Usuário' }, { merge: true });
+        } else {
+            // Fallback: se não encontrar o documento a tempo, define um cargo padrão.
+            await adminAuth.setCustomUserClaims(user.uid, { role: 'Corretor Autônomo' });
+        }
+
 
     } catch (error) {
         console.error("Erro ao definir custom claims:", error);

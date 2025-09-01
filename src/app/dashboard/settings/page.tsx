@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useContext } from "react";
@@ -392,7 +393,7 @@ export default function SettingsPage() {
                     <TabsTrigger value="profile">Perfil</TabsTrigger>
                      {hasPermission && <TabsTrigger value="team">Membros</TabsTrigger>}
                      {hasPermission && <TabsTrigger value="teams">Equipes</TabsTrigger>}
-                     {hasPermission && <TabsTrigger value="permissions">Permissões</TabsTrigger>}
+                     {isSuperUser && <TabsTrigger value="permissions">Permissões</TabsTrigger>}
                 </TabsList>
                 <TabsContent value="profile" className="space-y-6">
                     <Card>
@@ -552,7 +553,7 @@ export default function SettingsPage() {
                                                 <TableCell>{member.email}</TableCell>
                                                 {isSuperUser && <TableCell className="text-xs text-muted-foreground">{member.imobiliariaName || 'N/A'}</TableCell>}
                                                 <TableCell>{findTeamForMember(member.id)}</TableCell>
-                                                <TableCell><Badge variant={member.role === 'Admin' || member.role === 'Imobiliária' ? 'default' : 'secondary'}>{member.role}</Badge></TableCell>
+                                                <TableCell><Badge variant={member.role === 'Admin' || member.role === 'Imobiliária' || member.role === 'Super Usuário' ? 'default' : 'secondary'}>{member.role}</Badge></TableCell>
                                                 <TableCell className="text-right">
                                                     <DropdownMenu>
                                                         <DropdownMenuTrigger asChild>

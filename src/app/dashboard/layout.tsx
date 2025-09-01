@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -74,7 +75,7 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const { toast } = useToast();
-  const [activeProfile, setActiveProfile] = useState<UserProfile>('Admin');
+  const [activeProfile, setActiveProfile] = useState<UserProfile>('Imobiliária');
   const [user, setUser] = useState<User | null>(null);
   const [userRole, setUserRole] = useState<UserProfile | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
@@ -140,7 +141,12 @@ export default function DashboardLayout({
   
   const isNegotiationsActive = pathname.startsWith('/dashboard/negotiations');
   
-  const checkPermission = (path: string) => menuConfig[activeProfile].some(p => path.startsWith(p));
+  const checkPermission = (path: string) => {
+    if (!activeProfile || !menuConfig[activeProfile]) {
+        return false; // Não renderiza nada se o perfil ainda não está definido
+    }
+    return menuConfig[activeProfile].some(p => path.startsWith(p));
+  };
   
   const visibleMenuItems = menuItems.filter(item => {
     if (item.href) return checkPermission(item.href);
@@ -179,7 +185,7 @@ export default function DashboardLayout({
           </SidebarContent>
           <SidebarFooter>
             <SidebarMenu>
-              {menuConfig[activeProfile].includes('/dashboard/settings') && (
+              {checkPermission('/dashboard/settings') && (
               <SidebarMenuItem>
                  <SidebarMenuButton
                   href="/dashboard/settings"
@@ -227,7 +233,7 @@ export default function DashboardLayout({
                             <span>Perfil</span>
                         </Link>
                       </DropdownMenuItem>
-                      {userRole === 'Admin' && (
+                      {(userRole === 'Super Usuário' || userRole === 'Admin') && (
                         <DropdownMenuSub>
                           <DropdownMenuSubTrigger>
                             <Eye className="mr-2 h-4 w-4" />
@@ -265,3 +271,4 @@ export default function DashboardLayout({
     </ProfileProvider>
   );
 }
+

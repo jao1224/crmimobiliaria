@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from "react";
@@ -86,13 +87,14 @@ export function RegisterForm() {
         const usersSnapshot = await getDocs(q);
         const isFirstUser = usersSnapshot.empty;
 
-        const role = isFirstUser ? 'Admin' : values.profileType;
+        const role = isFirstUser ? 'Super Usuário' : values.profileType;
 
         const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
         const user = userCredential.user;
         
         // Se for uma nova imobiliária, o ID da imobiliária é o próprio UID do usuário admin.
-        // Caso contrário, (ex: corretor, investidor), eles não pertencem a uma imobiliária neste momento.
+        // Se for o Super Usuário, o imobiliariaId é nulo (ele não pertence a uma).
+        // Para outros, eles não pertencem a uma imobiliária neste momento.
         const imobiliariaId = role === 'Imobiliária' ? user.uid : null;
 
         await updateProfile(user, { displayName: values.name });
@@ -102,7 +104,7 @@ export function RegisterForm() {
             name: values.name,
             email: values.email,
             role: role,
-            imobiliariaId: imobiliariaId, // Adiciona o ID da imobiliária
+            imobiliariaId: imobiliariaId,
             document: values.document,
             whatsapp: values.whatsapp,
             creci: values.creci || null,
