@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect, useMemo, useContext } from "react";
@@ -143,12 +142,6 @@ const RealtorKanban = ({ users }: { users: User[] }) => {
     const [isLoading, setIsLoading] = useState(false);
     const { toast } = useToast();
     
-    const brokerUsers = useMemo(() => {
-        const brokerRoles = ['Corretor Autônomo', 'Vendedor', 'Imobiliária', 'Admin'];
-        return users.filter(user => brokerRoles.includes(user.role));
-    }, [users]);
-
-
     useEffect(() => {
         if (selectedRealtorId) {
             const fetchActivities = async () => {
@@ -226,7 +219,7 @@ const RealtorKanban = ({ users }: { users: User[] }) => {
                         <SelectValue placeholder="Selecione..." />
                     </SelectTrigger>
                     <SelectContent>
-                        {brokerUsers.map(user => (
+                        {users.map(user => (
                              <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
                         ))}
                     </SelectContent>
@@ -1288,7 +1281,4 @@ export default function NegotiationsPage() {
     );
 }
 
-
-
-
-
+    
