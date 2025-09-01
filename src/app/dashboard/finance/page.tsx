@@ -322,6 +322,16 @@ export default function FinancePage() {
             toast({ variant: "destructive", title: "Erro", description: "Não foi possível excluir o pagamento." });
         }
     };
+    
+    const handlePaymentStatusChange = async (paymentId: string, newStatus: PaymentCLT['status']) => {
+        try {
+            await updatePayment(paymentId, { status: newStatus });
+            await refreshFinanceData();
+            toast({ title: "Status Atualizado!", description: `O pagamento foi marcado como ${newStatus}.` });
+        } catch (error) {
+            toast({ variant: 'destructive', title: "Erro", description: "Não foi possível atualizar o status do pagamento."});
+        }
+    };
 
 
     return (
@@ -614,7 +624,12 @@ export default function FinancePage() {
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
                                                         <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                                                        <DropdownMenuItem onClick={() => handleEditPayment(p)}>Editar</DropdownMenuItem>
+                                                        <DropdownMenuItem onSelect={() => handleEditPayment(p)}>Editar</DropdownMenuItem>
+                                                        {p.status !== 'Pago' && (
+                                                            <DropdownMenuItem onSelect={() => handlePaymentStatusChange(p.id, 'Pago')}>
+                                                                Marcar como Pago
+                                                            </DropdownMenuItem>
+                                                        )}
                                                         <DropdownMenuItem 
                                                             className="text-destructive focus:text-destructive" 
                                                             onClick={() => {
