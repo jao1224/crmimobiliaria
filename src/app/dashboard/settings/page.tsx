@@ -51,8 +51,8 @@ type PermissionsState = Record<UserProfile, string[]>;
 
 export default function SettingsPage() {
     const { activeProfile } = useContext(ProfileContext);
-    const hasPermissionForTeamTabs = activeProfile === 'Admin' || activeProfile === 'Imobiliária';
     const isSuperUser = activeProfile === 'Super Usuário';
+    const hasPermissionForTeamTabs = isSuperUser || activeProfile === 'Imobiliária';
 
 
     const [isSaving, setIsSaving] = useState(false);
@@ -101,7 +101,7 @@ export default function SettingsPage() {
                     setUserData(userDocSnap.data() as TeamMember);
                 }
 
-                if (hasPermissionForTeamTabs || isSuperUser) {
+                if (hasPermissionForTeamTabs) {
                     fetchTeamData(currentUser);
                 }
             } else {
@@ -111,7 +111,7 @@ export default function SettingsPage() {
         });
 
         return () => unsubscribe();
-    }, [hasPermissionForTeamTabs, isSuperUser]);
+    }, [hasPermissionForTeamTabs]);
 
     const fetchTeamData = async (currentUser: User) => {
         if (!currentUser) return;
@@ -542,277 +542,283 @@ export default function SettingsPage() {
                         </Card>
                     </TabsContent>
                 )}
-                <TabsContent value="team">
-                    <Card>
-                         <CardHeader className="flex flex-row items-center justify-between">
-                            <div>
-                                <CardTitle>Membros da Equipe</CardTitle>
-                                <CardDescription>Gerencie sua equipe e suas funções.</CardDescription>
-                            </div>
-                             <Dialog open={isTeamMemberDialogOpen && !isSuperUser} onOpenChange={setTeamMemberDialogOpen}>
-                                <DialogTrigger asChild>
-                                    <Button>Adicionar Membro</Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader>
-                                        <DialogTitle>Adicionar Novo Membro</DialogTitle>
-                                        <DialogDescription>Preencha os detalhes para convidar um novo membro para a equipe.</DialogDescription>
-                                    </DialogHeader>
-                                    <form onSubmit={handleAddTeamMember}>
-                                        <div className="grid gap-4 py-4">
-                                            <div className="space-y-2">
-                                                <Label htmlFor="name-member">Nome</Label>
-                                                <Input id="name-member" name="name" placeholder="Nome completo" required />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="email-member">E-mail</Label>
-                                                <Input id="email-member" name="email" type="email" placeholder="email@example.com" required />
-                                            </div>
-                                             <div className="space-y-2">
-                                                <Label htmlFor="password-member">Senha</Label>
-                                                <Input id="password-member" name="password" type="password" placeholder="••••••••" required />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="role">Função</Label>
-                                                <Select name="role" required>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Selecione uma função" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {creatableRoles.map(role => <SelectItem key={role} value={role}>{role}</SelectItem>)}
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                        </div>
-                                        <DialogFooter>
-                                            <Button type="submit" disabled={isSaving}>{isSaving ? "Salvando...": "Adicionar Membro"}</Button>
-                                        </DialogFooter>
-                                    </form>
-                                </DialogContent>
-                            </Dialog>
-                        </CardHeader>
-                        <CardContent>
-                             <div className="mb-4 flex items-center gap-2">
-                                <div className="relative w-full">
-                                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                    <Input
-                                        type="search"
-                                        placeholder="Buscar por nome ou e-mail..."
-                                        className="pl-8"
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                    />
+                {hasPermissionForTeamTabs && (
+                    <TabsContent value="team">
+                        <Card>
+                             <CardHeader className="flex flex-row items-center justify-between">
+                                <div>
+                                    <CardTitle>Membros da Equipe</CardTitle>
+                                    <CardDescription>Gerencie sua equipe e suas funções.</CardDescription>
                                 </div>
-                                <Select value={teamFilter} onValueChange={setTeamFilter}>
-                                    <SelectTrigger className="w-[180px]">
-                                        <SelectValue placeholder="Filtrar por equipe" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">Todas as Equipes</SelectItem>
-                                        <SelectItem value="Sem Equipe">Sem Equipe</SelectItem>
-                                        {teams.map((team) => (
-                                            <SelectItem key={team.id} value={team.name}>{team.name}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Nome</TableHead>
-                                        <TableHead>E-mail</TableHead>
-                                        {isSuperUser && <TableHead>Imobiliária</TableHead>}
-                                        <TableHead>Equipe</TableHead>
-                                        <TableHead>Função</TableHead>
-                                        <TableHead className="text-right">Ações</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {filteredMembers.length > 0 ? (
-                                        filteredMembers.map((member) => (
-                                            <TableRow key={member.id}>
-                                                <TableCell className="font-medium">{member.name}</TableCell>
-                                                <TableCell>{member.email}</TableCell>
-                                                {isSuperUser && <TableCell className="text-xs text-muted-foreground">{member.imobiliariaName || 'N/A'}</TableCell>}
-                                                <TableCell>{findTeamForMember(member.id)}</TableCell>
-                                                <TableCell><Badge variant={member.role === 'Admin' || member.role === 'Imobiliária' || member.role === 'Super Usuário' ? 'default' : 'secondary'}>{member.role}</Badge></TableCell>
-                                                <TableCell className="text-right">
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button size="icon" variant="ghost"><MoreHorizontal /></Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent>
-                                                            <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                                                            <DropdownMenuSub>
-                                                                <DropdownMenuSubTrigger>Alterar Função</DropdownMenuSubTrigger>
-                                                                <DropdownMenuSubContent>
-                                                                    {creatableRoles.map(role => (
-                                                                        <DropdownMenuItem 
-                                                                            key={role} 
-                                                                            onClick={() => handleChangeUserRole(member.id, role)}
-                                                                            disabled={isSaving}
-                                                                        >
-                                                                            {role}
-                                                                        </DropdownMenuItem>
-                                                                    ))}
-                                                                </DropdownMenuSubContent>
-                                                            </DropdownMenuSub>
-                                                            <DropdownMenuItem className="text-destructive">Remover</DropdownMenuItem>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))
-                                    ) : (
-                                        <TableRow><TableCell colSpan={isSuperUser ? 6 : 5} className="text-center h-24">Nenhum membro encontrado.</TableCell></TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-                <TabsContent value="teams">
-                     <Card>
-                        <CardHeader className="flex flex-row items-center justify-between">
-                            <div>
-                                <CardTitle>Equipes</CardTitle>
-                                <CardDescription>Crie e gerencie as equipes de vendas da sua imobiliária.</CardDescription>
-                            </div>
-                            <Dialog open={isTeamDialogOpen} onOpenChange={setTeamDialogOpen}>
-                                <DialogTrigger asChild>
-                                    <Button>Criar Nova Equipe</Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader>
-                                        <DialogTitle>Criar Nova Equipe</DialogTitle>
-                                        <DialogDescription>Dê um nome para a sua nova equipe.</DialogDescription>
-                                    </DialogHeader>
-                                    <form onSubmit={handleAddTeam}>
-                                        <div className="grid gap-4 py-4">
-                                            <div className="space-y-2">
-                                                <Label htmlFor="team-name">Nome da Equipe</Label>
-                                                <Input id="team-name" name="team-name" placeholder="Ex: Equipe de Lançamentos" required />
+                                 <Dialog open={isTeamMemberDialogOpen} onOpenChange={setTeamMemberDialogOpen}>
+                                    <DialogTrigger asChild>
+                                        <Button><UserPlus className="mr-2 h-4 w-4"/>Adicionar Membro</Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                        <DialogHeader>
+                                            <DialogTitle>Adicionar Novo Membro</DialogTitle>
+                                            <DialogDescription>Preencha os detalhes para convidar um novo membro para a equipe.</DialogDescription>
+                                        </DialogHeader>
+                                        <form onSubmit={handleAddTeamMember}>
+                                            <div className="grid gap-4 py-4">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="name-member">Nome</Label>
+                                                    <Input id="name-member" name="name" placeholder="Nome completo" required />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="email-member">E-mail</Label>
+                                                    <Input id="email-member" name="email" type="email" placeholder="email@example.com" required />
+                                                </div>
+                                                 <div className="space-y-2">
+                                                    <Label htmlFor="password-member">Senha</Label>
+                                                    <Input id="password-member" name="password" type="password" placeholder="••••••••" required />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="role">Função</Label>
+                                                    <Select name="role" required>
+                                                        <SelectTrigger>
+                                                            <SelectValue placeholder="Selecione uma função" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {creatableRoles.map(role => <SelectItem key={role} value={role}>{role}</SelectItem>)}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
                                             </div>
-                                        </div>
-                                        <DialogFooter>
-                                            <Button type="submit" disabled={isSaving}>{isSaving ? "Salvando..." : "Salvar Equipe"}</Button>
-                                        </DialogFooter>
-                                    </form>
-                                </DialogContent>
-                            </Dialog>
-                        </CardHeader>
-                        <CardContent>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Nome da Equipe</TableHead>
-                                        <TableHead>Nº de Membros</TableHead>
-                                        <TableHead><span className="sr-only">Ações</span></TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {teams.length > 0 ? (
-                                        teams.map((team) => (
-                                           <React.Fragment key={team.id}>
-                                                <TableRow>
-                                                    <TableCell className="font-medium">
-                                                        <button className="flex items-center gap-2 w-full text-left" onClick={() => setOpenTeamId(openTeamId === team.id ? null : team.id)}>
-                                                            <ChevronRight className={cn("h-4 w-4 transition-transform duration-200", openTeamId === team.id && "rotate-90")} />
-                                                            {team.name}
-                                                        </button>
-                                                    </TableCell>
-                                                    <TableCell>{team.memberIds.length}</TableCell>
+                                            <DialogFooter>
+                                                <Button type="submit" disabled={isSaving}>{isSaving ? "Salvando...": "Adicionar Membro"}</Button>
+                                            </DialogFooter>
+                                        </form>
+                                    </DialogContent>
+                                </Dialog>
+                            </CardHeader>
+                            <CardContent>
+                                 <div className="mb-4 flex items-center gap-2">
+                                    <div className="relative w-full">
+                                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                        <Input
+                                            type="search"
+                                            placeholder="Buscar por nome ou e-mail..."
+                                            className="pl-8"
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                        />
+                                    </div>
+                                    <Select value={teamFilter} onValueChange={setTeamFilter}>
+                                        <SelectTrigger className="w-[180px]">
+                                            <SelectValue placeholder="Filtrar por equipe" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Todas as Equipes</SelectItem>
+                                            <SelectItem value="Sem Equipe">Sem Equipe</SelectItem>
+                                            {teams.map((team) => (
+                                                <SelectItem key={team.id} value={team.name}>{team.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Nome</TableHead>
+                                            <TableHead>E-mail</TableHead>
+                                            {isSuperUser && <TableHead>Imobiliária</TableHead>}
+                                            <TableHead>Equipe</TableHead>
+                                            <TableHead>Função</TableHead>
+                                            <TableHead className="text-right">Ações</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {filteredMembers.length > 0 ? (
+                                            filteredMembers.map((member) => (
+                                                <TableRow key={member.id}>
+                                                    <TableCell className="font-medium">{member.name}</TableCell>
+                                                    <TableCell>{member.email}</TableCell>
+                                                    {isSuperUser && <TableCell className="text-xs text-muted-foreground">{member.imobiliariaName || 'N/A'}</TableCell>}
+                                                    <TableCell>{findTeamForMember(member.id)}</TableCell>
+                                                    <TableCell><Badge variant={member.role === 'Admin' || member.role === 'Imobiliária' || member.role === 'Super Usuário' ? 'default' : 'secondary'}>{member.role}</Badge></TableCell>
                                                     <TableCell className="text-right">
                                                         <DropdownMenu>
                                                             <DropdownMenuTrigger asChild>
-                                                                <Button aria-haspopup="true" size="icon" variant="ghost"><MoreHorizontal className="h-4 w-4" /></Button>
+                                                                <Button size="icon" variant="ghost"><MoreHorizontal /></Button>
                                                             </DropdownMenuTrigger>
-                                                            <DropdownMenuContent align="end">
+                                                            <DropdownMenuContent>
                                                                 <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                                                                <DropdownMenuItem onClick={() => handleManageMembers(team)}>Gerenciar Membros</DropdownMenuItem>
-                                                                <DropdownMenuItem disabled>Renomear</DropdownMenuItem>
-                                                                <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteTeam(team.id)}>Excluir</DropdownMenuItem>
+                                                                <DropdownMenuSub>
+                                                                    <DropdownMenuSubTrigger>Alterar Função</DropdownMenuSubTrigger>
+                                                                    <DropdownMenuSubContent>
+                                                                        {creatableRoles.map(role => (
+                                                                            <DropdownMenuItem 
+                                                                                key={role} 
+                                                                                onClick={() => handleChangeUserRole(member.id, role)}
+                                                                                disabled={isSaving}
+                                                                            >
+                                                                                {role}
+                                                                            </DropdownMenuItem>
+                                                                        ))}
+                                                                    </DropdownMenuSubContent>
+                                                                </DropdownMenuSub>
+                                                                <DropdownMenuItem className="text-destructive">Remover</DropdownMenuItem>
                                                             </DropdownMenuContent>
                                                         </DropdownMenu>
                                                     </TableCell>
                                                 </TableRow>
-                                                {openTeamId === team.id && (
-                                                     <tr className="bg-muted/50">
-                                                        <td colSpan={3} className="p-0">
-                                                            <div className="p-4">
-                                                                {getMembersForTeam(team).length > 0 ? (
-                                                                    <Table>
-                                                                        <TableHeader>
-                                                                            <TableRow>
-                                                                                <TableHead>Nome</TableHead>
-                                                                                <TableHead>E-mail</TableHead>
-                                                                                <TableHead>Função</TableHead>
-                                                                            </TableRow>
-                                                                        </TableHeader>
-                                                                        <TableBody>
-                                                                            {getMembersForTeam(team).map(member => (
-                                                                                <TableRow key={member.id}>
-                                                                                    <TableCell>{member.name}</TableCell>
-                                                                                    <TableCell>{member.email}</TableCell>
-                                                                                    <TableCell><Badge variant="secondary">{member.role}</Badge></TableCell>
-                                                                                </TableRow>
-                                                                            ))}
-                                                                        </TableBody>
-                                                                    </Table>
-                                                                ) : (
-                                                                    <p className="text-center text-sm text-muted-foreground py-4">Nenhum membro nesta equipe.</p>
-                                                                )}
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                )}
-                                           </React.Fragment>
-                                        ))
-                                    ) : (
-                                        <TableRow><TableCell colSpan={3} className="text-center h-24">Nenhuma equipe encontrada.</TableCell></TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-                <TabsContent value="permissions">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Gerenciador de Permissões por Perfil</CardTitle>
-                            <CardDescription>
-                                Controle o acesso de cada perfil aos módulos do sistema.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            {Object.entries(permissions).map(([profile, profilePermissions]) => (
-                                <div key={profile}>
-                                    <h3 className="text-lg font-semibold mb-2">{profile}</h3>
-                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 rounded-md border p-4">
-                                        {allModules.map(module => (
-                                            <div key={module.id} className="flex items-center space-x-2">
-                                                <Checkbox
-                                                    id={`${profile}-${module.id}`}
-                                                    checked={profilePermissions.includes(module.id)}
-                                                    onCheckedChange={(checked) => handlePermissionChange(profile as UserProfile, module.id, !!checked)}
-                                                    disabled={profile === 'Admin' || profile === 'Super Usuário'}
-                                                />
-                                                <Label htmlFor={`${profile}-${module.id}`} className={cn("font-normal", (profile === 'Admin' || profile === 'Super Usuário') && "text-muted-foreground")}>
-                                                    {module.label}
-                                                </Label>
-                                            </div>
-                                        ))}
-                                    </div>
+                                            ))
+                                        ) : (
+                                            <TableRow><TableCell colSpan={isSuperUser ? 6 : 5} className="text-center h-24">Nenhum membro encontrado.</TableCell></TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                )}
+                {hasPermissionForTeamTabs && !isSuperUser && (
+                    <TabsContent value="teams">
+                         <Card>
+                            <CardHeader className="flex flex-row items-center justify-between">
+                                <div>
+                                    <CardTitle>Equipes</CardTitle>
+                                    <CardDescription>Crie e gerencie as equipes de vendas da sua imobiliária.</CardDescription>
                                 </div>
-                            ))}
-                        </CardContent>
-                         <CardFooter>
-                            <Button onClick={handleSavePermissions} disabled={isSaving}>
-                                {isSaving ? "Salvando..." : "Salvar Permissões"}
-                            </Button>
-                         </CardFooter>
-                    </Card>
-                </TabsContent>
+                                <Dialog open={isTeamDialogOpen} onOpenChange={setTeamDialogOpen}>
+                                    <DialogTrigger asChild>
+                                        <Button>Criar Nova Equipe</Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                        <DialogHeader>
+                                            <DialogTitle>Criar Nova Equipe</DialogTitle>
+                                            <DialogDescription>Dê um nome para a sua nova equipe.</DialogDescription>
+                                        </DialogHeader>
+                                        <form onSubmit={handleAddTeam}>
+                                            <div className="grid gap-4 py-4">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="team-name">Nome da Equipe</Label>
+                                                    <Input id="team-name" name="team-name" placeholder="Ex: Equipe de Lançamentos" required />
+                                                </div>
+                                            </div>
+                                            <DialogFooter>
+                                                <Button type="submit" disabled={isSaving}>{isSaving ? "Salvando..." : "Salvar Equipe"}</Button>
+                                            </DialogFooter>
+                                        </form>
+                                    </DialogContent>
+                                </Dialog>
+                            </CardHeader>
+                            <CardContent>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Nome da Equipe</TableHead>
+                                            <TableHead>Nº de Membros</TableHead>
+                                            <TableHead><span className="sr-only">Ações</span></TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {teams.length > 0 ? (
+                                            teams.map((team) => (
+                                               <React.Fragment key={team.id}>
+                                                    <TableRow>
+                                                        <TableCell className="font-medium">
+                                                            <button className="flex items-center gap-2 w-full text-left" onClick={() => setOpenTeamId(openTeamId === team.id ? null : team.id)}>
+                                                                <ChevronRight className={cn("h-4 w-4 transition-transform duration-200", openTeamId === team.id && "rotate-90")} />
+                                                                {team.name}
+                                                            </button>
+                                                        </TableCell>
+                                                        <TableCell>{team.memberIds.length}</TableCell>
+                                                        <TableCell className="text-right">
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger asChild>
+                                                                    <Button aria-haspopup="true" size="icon" variant="ghost"><MoreHorizontal className="h-4 w-4" /></Button>
+                                                                </DropdownMenuTrigger>
+                                                                <DropdownMenuContent align="end">
+                                                                    <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                                                                    <DropdownMenuItem onClick={() => handleManageMembers(team)}>Gerenciar Membros</DropdownMenuItem>
+                                                                    <DropdownMenuItem disabled>Renomear</DropdownMenuItem>
+                                                                    <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteTeam(team.id)}>Excluir</DropdownMenuItem>
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                    {openTeamId === team.id && (
+                                                         <tr className="bg-muted/50">
+                                                            <td colSpan={3} className="p-0">
+                                                                <div className="p-4">
+                                                                    {getMembersForTeam(team).length > 0 ? (
+                                                                        <Table>
+                                                                            <TableHeader>
+                                                                                <TableRow>
+                                                                                    <TableHead>Nome</TableHead>
+                                                                                    <TableHead>E-mail</TableHead>
+                                                                                    <TableHead>Função</TableHead>
+                                                                                </TableRow>
+                                                                            </TableHeader>
+                                                                            <TableBody>
+                                                                                {getMembersForTeam(team).map(member => (
+                                                                                    <TableRow key={member.id}>
+                                                                                        <TableCell>{member.name}</TableCell>
+                                                                                        <TableCell>{member.email}</TableCell>
+                                                                                        <TableCell><Badge variant="secondary">{member.role}</Badge></TableCell>
+                                                                                    </TableRow>
+                                                                                ))}
+                                                                            </TableBody>
+                                                                        </Table>
+                                                                    ) : (
+                                                                        <p className="text-center text-sm text-muted-foreground py-4">Nenhum membro nesta equipe.</p>
+                                                                    )}
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                               </React.Fragment>
+                                            ))
+                                        ) : (
+                                            <TableRow><TableCell colSpan={3} className="text-center h-24">Nenhuma equipe encontrada.</TableCell></TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                )}
+                {isSuperUser && (
+                    <TabsContent value="permissions">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Gerenciador de Permissões por Perfil</CardTitle>
+                                <CardDescription>
+                                    Controle o acesso de cada perfil aos módulos do sistema.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                {Object.entries(permissions).map(([profile, profilePermissions]) => (
+                                    <div key={profile}>
+                                        <h3 className="text-lg font-semibold mb-2">{profile}</h3>
+                                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 rounded-md border p-4">
+                                            {allModules.map(module => (
+                                                <div key={module.id} className="flex items-center space-x-2">
+                                                    <Checkbox
+                                                        id={`${profile}-${module.id}`}
+                                                        checked={profilePermissions.includes(module.id)}
+                                                        onCheckedChange={(checked) => handlePermissionChange(profile as UserProfile, module.id, !!checked)}
+                                                        disabled={profile === 'Admin' || profile === 'Super Usuário'}
+                                                    />
+                                                    <Label htmlFor={`${profile}-${module.id}`} className={cn("font-normal", (profile === 'Admin' || profile === 'Super Usuário') && "text-muted-foreground")}>
+                                                        {module.label}
+                                                    </Label>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </CardContent>
+                             <CardFooter>
+                                <Button onClick={handleSavePermissions} disabled={isSaving}>
+                                    {isSaving ? "Salvando..." : "Salvar Permissões"}
+                                </Button>
+                             </CardFooter>
+                        </Card>
+                    </TabsContent>
+                )}
             </Tabs>
             
             <Dialog open={isManageMembersDialogOpen} onOpenChange={(isOpen) => {
