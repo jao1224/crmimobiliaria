@@ -393,6 +393,11 @@ export default function NegotiationsPage() {
         });
         return grouped;
     }, [filteredNegotiations]);
+    
+    const brokerUsers = useMemo(() => {
+        const brokerRoles = ['Corretor Autônomo', 'Vendedor', 'Imobiliária', 'Admin'];
+        return allUsers.filter(user => brokerRoles.includes(user.role));
+    }, [allUsers]);
 
 
     const resetForm = () => {
@@ -1072,7 +1077,7 @@ export default function NegotiationsPage() {
                     </div>
                 </TabsContent>
                 <TabsContent value="kanban_corretor">
-                    <RealtorKanban users={allUsers}/>
+                    <RealtorKanban users={brokerUsers}/>
                 </TabsContent>
             </Tabs>
         </div>
@@ -1269,5 +1274,6 @@ export default function NegotiationsPage() {
         </>
     );
 }
+
 
 
