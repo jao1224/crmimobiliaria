@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import { cn } from "@/lib/utils";
-import { type UserProfile, userProfiles, menuConfig, allModules, creatableRolesByImobiliaria, creatableRolesBySuperUser } from "@/lib/permissions";
+import { type UserProfile, userProfiles, menuConfig, allModules, creatableRolesByImobiliaria, creatableRolesByAdmin } from "@/lib/permissions";
 import { auth, db, app } from "@/lib/firebase";
 import { collection, getDocs, doc, setDoc, addDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc, query, where, getDoc } from "firebase/firestore";
 import { EmailAuthProvider, onAuthStateChanged, reauthenticateWithCredential, updatePassword, updateProfile, type User } from "firebase/auth";
@@ -51,8 +51,8 @@ type PermissionsState = Record<UserProfile, string[]>;
 
 export default function SettingsPage() {
     const { activeProfile } = useContext(ProfileContext);
-    const isSuperUser = activeProfile === 'Super Usuário';
-    const hasPermissionForTeamTabs = isSuperUser || activeProfile === 'Imobiliária';
+    const isAdmin = activeProfile === 'Admin';
+    const hasPermissionForTeamTabs = isAdmin || activeProfile === 'Imobiliária';
 
 
     const [isSaving, setIsSaving] = useState(false);
@@ -80,7 +80,7 @@ export default function SettingsPage() {
 
     const [permissions, setPermissions] = useState<PermissionsState>(menuConfig);
     
-    const creatableRoles = isSuperUser ? creatableRolesBySuperUser : creatableRolesByImobiliaria;
+    const creatableRoles = isAdmin ? creatableRolesByAdmin : creatableRolesByImobiliaria;
     
     const imobiliarias = teamMembers.filter(m => m.role === 'Imobiliária');
     const getMemberCountForImobiliaria = (imobiliariaId: string) => {
@@ -123,7 +123,7 @@ export default function SettingsPage() {
         let usersQuery;
         let teamsQuery;
 
-        if (isSuperUser) {
+        if (isAdmin) {
             usersQuery = query(collection(db, "users"));
             teamsQuery = query(collection(db, "teams"));
         } else {
@@ -136,7 +136,7 @@ export default function SettingsPage() {
         const usersSnapshot = await getDocs(usersQuery);
         const members = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeamMember));
         
-        if (isSuperUser) {
+        if (isAdmin) {
              const imobiliariasSnapshot = await getDocs(query(collection(db, "users"), where("role", "==", "Imobiliária")));
              const imobiliariasMap = new Map(imobiliariasSnapshot.docs.map(doc => [doc.id, doc.data().name]));
 
@@ -392,9 +392,9 @@ export default function SettingsPage() {
             <Tabs defaultValue="profile" className="w-full">
                 <TabsList>
                     <TabsTrigger value="profile">Perfil</TabsTrigger>
-                     {isSuperUser && <TabsTrigger value="imobiliarias">Imobiliárias</TabsTrigger>}
+                     {isAdmin && <TabsTrigger value="imobiliarias">Imobiliárias</TabsTrigger>}
                      {hasPermissionForTeamTabs && <TabsTrigger value="team">Membros</TabsTrigger>}
-                     {hasPermissionForTeamTabs && !isSuperUser && <TabsTrigger value="teams">Equipes</TabsTrigger>}
+                     {hasPermissionForTeamTabs && !isAdmin && <TabsTrigger value="teams">Equipes</TabsTrigger>}
                      {hasPermissionForTeamTabs && <TabsTrigger value="permissions">Permissões</TabsTrigger>}
                 </TabsList>
                 <TabsContent value="profile" className="space-y-6">
@@ -462,7 +462,7 @@ export default function SettingsPage() {
                         </CardFooter>
                     </Card>
                 </TabsContent>
-                {isSuperUser && (
+                {isAdmin && (
                     <TabsContent value="imobiliarias">
                         <Card>
                             <CardHeader className="flex flex-row items-center justify-between">
@@ -622,7 +622,7 @@ export default function SettingsPage() {
                                         <TableRow>
                                             <TableHead>Nome</TableHead>
                                             <TableHead>E-mail</TableHead>
-                                            {isSuperUser && <TableHead>Imobiliária</TableHead>}
+                                            {isAdmin && <TableHead>Imobiliária</TableHead>}
                                             <TableHead>Equipe</TableHead>
                                             <TableHead>Função</TableHead>
                                             <TableHead className="text-right">Ações</TableHead>
@@ -634,9 +634,9 @@ export default function SettingsPage() {
                                                 <TableRow key={member.id}>
                                                     <TableCell className="font-medium">{member.name}</TableCell>
                                                     <TableCell>{member.email}</TableCell>
-                                                    {isSuperUser && <TableCell className="text-xs text-muted-foreground">{member.imobiliariaName || 'N/A'}</TableCell>}
+                                                    {isAdmin && <TableCell className="text-xs text-muted-foreground">{member.imobiliariaName || 'N/A'}</TableCell>}
                                                     <TableCell>{findTeamForMember(member.id)}</TableCell>
-                                                    <TableCell><Badge variant={member.role === 'Imobiliária' || member.role === 'Super Usuário' ? 'default' : 'secondary'}>{member.role}</Badge></TableCell>
+                                                    <TableCell><Badge variant={member.role === 'Imobiliária' || member.role === 'Admin' ? 'default' : 'secondary'}>{member.role}</Badge></TableCell>
                                                     <TableCell className="text-right">
                                                         <DropdownMenu>
                                                             <DropdownMenuTrigger asChild>
@@ -665,7 +665,7 @@ export default function SettingsPage() {
                                                 </TableRow>
                                             ))
                                         ) : (
-                                            <TableRow><TableCell colSpan={isSuperUser ? 6 : 5} className="text-center h-24">Nenhum membro encontrado.</TableCell></TableRow>
+                                            <TableRow><TableCell colSpan={isAdmin ? 6 : 5} className="text-center h-24">Nenhum membro encontrado.</TableCell></TableRow>
                                         )}
                                     </TableBody>
                                 </Table>
@@ -673,7 +673,7 @@ export default function SettingsPage() {
                         </Card>
                     </TabsContent>
                 )}
-                {hasPermissionForTeamTabs && !isSuperUser && (
+                {hasPermissionForTeamTabs && !isAdmin && (
                     <TabsContent value="teams">
                          <Card>
                             <CardHeader className="flex flex-row items-center justify-between">
@@ -800,9 +800,9 @@ export default function SettingsPage() {
                                                         id={`${profile}-${module.id}`}
                                                         checked={profilePermissions.includes(module.id)}
                                                         onCheckedChange={(checked) => handlePermissionChange(profile as UserProfile, module.id, !!checked)}
-                                                        disabled={profile === 'Super Usuário'}
+                                                        disabled={profile === 'Admin'}
                                                     />
-                                                    <Label htmlFor={`${profile}-${module.id}`} className={cn("font-normal", (profile === 'Super Usuário') && "text-muted-foreground")}>
+                                                    <Label htmlFor={`${profile}-${module.id}`} className={cn("font-normal", (profile === 'Admin') && "text-muted-foreground")}>
                                                         {module.label}
                                                     </Label>
                                                 </div>

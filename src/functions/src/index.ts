@@ -1,5 +1,4 @@
 
-
 import {initializeApp} from "firebase-admin/app";
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {beforeUserCreated} from "firebase-functions/v2/identity";
@@ -81,17 +80,17 @@ interface ReportData {
 }
 
 export const createUser = onCall(async (request) => {
-    // Verifica se o usuário que está chamando a função é um admin de imobiliária ou Super Usuário.
+    // Verifica se o usuário que está chamando a função é um admin de imobiliária ou Admin (dono do sistema).
     const isImobiliariaAdmin = !!request.auth?.token.imobiliariaId;
-    const isSuperUser = request.auth?.token.role === 'Super Usuário';
+    const isAdmin = request.auth?.token.role === 'Admin';
 
-    if (!isImobiliariaAdmin && !isSuperUser) {
+    if (!isImobiliariaAdmin && !isAdmin) {
         throw new HttpsError('permission-denied', 'Apenas administradores podem criar usuários.');
     }
 
     const { email, password, name, role } = request.data;
     
-    // Super Usuário pode criar uma imobiliária. Neste caso, o imobiliariaId será o uid do novo usuário.
+    // Admin pode criar uma imobiliária. Neste caso, o imobiliariaId será o uid do novo usuário.
     // Para outros perfis, usa o imobiliariaId do admin que está chamando.
     let imobiliariaId = request.auth?.token.imobiliariaId;
 
@@ -102,8 +101,8 @@ export const createUser = onCall(async (request) => {
             displayName: name,
         });
 
-        // Se um super admin está criando uma imobiliária, o ID dela é o ID do novo usuário
-        if (isSuperUser && role === 'Imobiliária') {
+        // Se um admin do sistema está criando uma imobiliária, o ID dela é o ID do novo usuário
+        if (isAdmin && role === 'Imobiliária') {
             imobiliariaId = userRecord.uid;
         }
         
@@ -133,6 +132,14 @@ export const addRoleOnCreate = beforeUserCreated(async (event) => {
     const userDocRef = adminDb.collection('users').doc(user.uid);
     
     try {
+        // Verifica se já existe algum usuário. Se não, este é o primeiro e será Admin.
+        const allUsers = await adminAuth.listUsers(1);
+        if (allUsers.users.length === 0) {
+             await adminAuth.setCustomUserClaims(user.uid, { role: 'Admin' });
+             await userDocRef.set({ role: 'Admin' }, { merge: true });
+             return;
+        }
+
         const userDoc = await userDocRef.get();
         if (userDoc.exists) {
             const userData = userDoc.data();
@@ -153,16 +160,8 @@ export const addRoleOnCreate = beforeUserCreated(async (event) => {
             }
         }
         
-        // Verifica se já existe algum usuário. Se não, este é o primeiro e será Super Usuário.
-        const allUsers = await adminAuth.listUsers(1);
-        if (allUsers.users.length === 0) {
-             await adminAuth.setCustomUserClaims(user.uid, { role: 'Super Usuário' });
-             await userDocRef.set({ role: 'Super Usuário' }, { merge: true });
-        } else {
-            // Fallback: se não encontrar o documento a tempo, define um cargo padrão.
-            await adminAuth.setCustomUserClaims(user.uid, { role: 'Corretor Autônomo' });
-        }
-
+        // Fallback: se não encontrar o documento a tempo, define um cargo padrão.
+        await adminAuth.setCustomUserClaims(user.uid, { role: 'Corretor Autônomo' });
 
     } catch (error) {
         console.error("Erro ao definir custom claims:", error);
@@ -373,5 +372,3 @@ export const generateContractPdf = onCall<ContractData, Promise<{pdfBase64: stri
 
   return {pdfBase64};
 });
-
-    

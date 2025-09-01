@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useContext, useMemo } from "react";
@@ -53,7 +54,7 @@ const processSalesData = (negotiations: Negotiation[]) => {
 export default function DashboardPage() {
   const { activeProfile } = useContext(ProfileContext);
   const [greeting, setGreeting] = useState("Bem-vindo(a) de volta,");
-  const { title, subtitle } = welcomeMessages[activeProfile] || welcomeMessages['Admin'];
+  const { title, subtitle } = welcomeMessages[activeProfile] || welcomeMessages['Imobiliária'];
   
   const [negotiations, setNegotiations] = useState<Negotiation[]>([]);
   const [leads, setLeads] = useState<any[]>([]);
