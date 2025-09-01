@@ -836,7 +836,7 @@ export default function NegotiationsPage() {
             </div>
 
             <Tabs defaultValue="list" className="w-full">
-                 <TabsList>
+                 <TabsList className="grid w-full grid-cols-3">
                     <TabsTrigger value="list">Lista</TabsTrigger>
                     <TabsTrigger value="kanban">Kanban Negócios</TabsTrigger>
                     <TabsTrigger value="kanban_corretor">Kanban Corretor</TabsTrigger>
@@ -1028,14 +1028,14 @@ export default function NegotiationsPage() {
                     <div className="flex gap-4 overflow-x-auto pb-4">
                         {KANBAN_COLUMNS.map(stage => (
                              <div key={stage} className="flex-1 min-w-[300px] bg-muted/50 rounded-lg flex flex-col" onDragOver={(e) => e.preventDefault()} onDrop={(e) => handleDrop(e, stage)}>
-                                <div className="p-3 border-b-2" style={{ borderColor: badgeVariants({ variant: getStageVariant(stage) }).className?.includes('bg-') ? `var(--${getStageVariant(stage)})` : 'var(--border)'}}>
+                                <div className="p-3 border-b-2" style={{ borderBottomColor: `var(--${getStageVariant(stage).toString().replace('status-', '')})`}}>
                                     <h3 className="font-semibold text-sm flex justify-between">
                                         <span>{stage}</span>
-                                        <span>({negotiationsByStage[stage]?.length || 0})</span>
+                                        <span>({(negotiationsByStage[stage] || []).length})</span>
                                     </h3>
                                 </div>
                                 <ScrollArea className="flex-1 p-2">
-                                     {negotiationsByStage[stage]?.map(neg => (
+                                     {(negotiationsByStage[stage] || []).map(neg => (
                                         <Card 
                                             key={neg.id} 
                                             className="mb-3 cursor-grab active:cursor-grabbing" 
@@ -1269,4 +1269,5 @@ export default function NegotiationsPage() {
         </>
     );
 }
+
 
