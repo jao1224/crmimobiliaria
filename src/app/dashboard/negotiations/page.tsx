@@ -1038,8 +1038,15 @@ export default function NegotiationsPage() {
                 <TabsContent value="kanban">
                     <div className="flex gap-4 overflow-x-auto pb-4">
                         {KANBAN_COLUMNS.map(stage => (
-                             <div key={stage} className="flex-1 min-w-[300px] bg-muted/50 rounded-lg flex flex-col" onDragOver={(e) => e.preventDefault()} onDrop={(e) => handleDrop(e, stage)}>
-                                <div className="p-3 border-b-2" style={{ borderBottomColor: badgeVariants({ variant: getStageVariant(stage) }).className.includes('bg-') ? `var(--${getStageVariant(stage).toString().replace('status-','')})` : 'var(--border)'}}>
+                             <div key={stage} className={cn("flex-1 min-w-[300px] bg-muted/50 rounded-lg flex flex-col")} onDragOver={(e) => e.preventDefault()} onDrop={(e) => handleDrop(e, stage)}>
+                                <div className={cn("p-3 border-b-2", 
+                                    stage === 'Proposta Enviada' ? 'border-status-blue' :
+                                    stage === 'Em Negociação' ? 'border-status-orange' :
+                                    stage === 'Contrato Gerado' ? 'border-success' :
+                                    stage === 'Venda Concluída' ? 'border-success' :
+                                    stage === 'Aluguel Ativo' ? 'border-success' :
+                                    'border-border'
+                                )}>
                                     <h3 className="font-semibold text-sm flex justify-between">
                                         <span>{stage}</span>
                                         <span>({(negotiationsByStage[stage] || []).length})</span>
@@ -1280,6 +1287,7 @@ export default function NegotiationsPage() {
         </>
     );
 }
+
 
 
 
