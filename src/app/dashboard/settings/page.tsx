@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { MoreHorizontal, UserPlus, Trash2, Eye, EyeOff, Search, ChevronRight } from "lucide-react";
+import { MoreHorizontal, UserPlus, Trash2, Eye, EyeOff, Search, ChevronRight, Building2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -80,8 +80,12 @@ export default function SettingsPage() {
 
     const [permissions, setPermissions] = useState<PermissionsState>(menuConfig);
     
-    // Roles que o usuário atual pode criar
     const creatableRoles = isSuperUser ? creatableRolesBySuperUser : creatableRolesByImobiliaria;
+    
+    const imobiliarias = teamMembers.filter(m => m.role === 'Imobiliária');
+    const getMemberCountForImobiliaria = (imobiliariaId: string) => {
+        return teamMembers.filter(m => m.imobiliariaId === imobiliariaId).length;
+    };
 
 
     useEffect(() => {
@@ -120,11 +124,9 @@ export default function SettingsPage() {
         let teamsQuery;
 
         if (isSuperUser) {
-            // Super usuário vê todos os usuários e equipes
             usersQuery = query(collection(db, "users"));
             teamsQuery = query(collection(db, "teams"));
         } else {
-            // Admin de imobiliária vê apenas os seus
             const imobiliariaId = currentUserData?.imobiliariaId;
             if (!imobiliariaId) return;
             usersQuery = query(collection(db, "users"), where("imobiliariaId", "==", imobiliariaId));
@@ -134,7 +136,6 @@ export default function SettingsPage() {
         const usersSnapshot = await getDocs(usersQuery);
         const members = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeamMember));
         
-        // Se for Super Usuário, buscar o nome da imobiliária de cada membro
         if (isSuperUser) {
              const imobiliariasSnapshot = await getDocs(query(collection(db, "users"), where("role", "==", "Imobiliária")));
              const imobiliariasMap = new Map(imobiliariasSnapshot.docs.map(doc => [doc.id, doc.data().name]));
@@ -391,8 +392,9 @@ export default function SettingsPage() {
             <Tabs defaultValue="profile" className="w-full">
                 <TabsList>
                     <TabsTrigger value="profile">Perfil</TabsTrigger>
+                     {isSuperUser && <TabsTrigger value="imobiliarias">Imobiliárias</TabsTrigger>}
                      {hasPermission && <TabsTrigger value="team">Membros</TabsTrigger>}
-                     {hasPermission && <TabsTrigger value="teams">Equipes</TabsTrigger>}
+                     {hasPermission && !isSuperUser && <TabsTrigger value="teams">Equipes</TabsTrigger>}
                      {isSuperUser && <TabsTrigger value="permissions">Permissões</TabsTrigger>}
                 </TabsList>
                 <TabsContent value="profile" className="space-y-6">
@@ -460,6 +462,86 @@ export default function SettingsPage() {
                         </CardFooter>
                     </Card>
                 </TabsContent>
+                {isSuperUser && (
+                    <TabsContent value="imobiliarias">
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between">
+                                <div>
+                                    <CardTitle>Imobiliárias Cadastradas</CardTitle>
+                                    <CardDescription>Gerencie as agências que têm acesso à plataforma.</CardDescription>
+                                </div>
+                                <Dialog open={isTeamMemberDialogOpen} onOpenChange={setTeamMemberDialogOpen}>
+                                    <DialogTrigger asChild>
+                                        <Button><Building2 className="mr-2 h-4 w-4"/>Adicionar Imobiliária</Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                        <DialogHeader>
+                                            <DialogTitle>Cadastrar Nova Imobiliária</DialogTitle>
+                                            <DialogDescription>Preencha os detalhes do administrador da nova agência.</DialogDescription>
+                                        </DialogHeader>
+                                        <form onSubmit={handleAddTeamMember}>
+                                            <input type="hidden" name="role" value="Imobiliária" />
+                                            <div className="grid gap-4 py-4">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="name-imob">Nome da Imobiliária / Admin</Label>
+                                                    <Input id="name-imob" name="name" placeholder="Imobiliária Exemplo" required />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="email-imob">E-mail do Admin</Label>
+                                                    <Input id="email-imob" name="email" type="email" placeholder="admin@imobexemplo.com" required />
+                                                </div>
+                                                 <div className="space-y-2">
+                                                    <Label htmlFor="password-imob">Senha Provisória</Label>
+                                                    <Input id="password-imob" name="password" type="password" placeholder="••••••••" required />
+                                                </div>
+                                            </div>
+                                            <DialogFooter>
+                                                <Button type="submit" disabled={isSaving}>{isSaving ? "Salvando...": "Cadastrar Imobiliária"}</Button>
+                                            </DialogFooter>
+                                        </form>
+                                    </DialogContent>
+                                </Dialog>
+                            </CardHeader>
+                             <CardContent>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Nome da Imobiliária</TableHead>
+                                            <TableHead>E-mail do Admin</TableHead>
+                                            <TableHead>Membros</TableHead>
+                                            <TableHead className="text-right">Ações</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {imobiliarias.length > 0 ? (
+                                            imobiliarias.map((imob) => (
+                                                <TableRow key={imob.id}>
+                                                    <TableCell className="font-medium">{imob.name}</TableCell>
+                                                    <TableCell>{imob.email}</TableCell>
+                                                    <TableCell>{getMemberCountForImobiliaria(imob.id)}</TableCell>
+                                                    <TableCell className="text-right">
+                                                         <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <Button size="icon" variant="ghost"><MoreHorizontal /></Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent>
+                                                                <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                                                                <DropdownMenuItem>Ver Detalhes</DropdownMenuItem>
+                                                                <DropdownMenuItem className="text-destructive">Suspender</DropdownMenuItem>
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))
+                                        ) : (
+                                            <TableRow><TableCell colSpan={4} className="text-center h-24">Nenhuma imobiliária cadastrada.</TableCell></TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                )}
                 <TabsContent value="team">
                     <Card>
                          <CardHeader className="flex flex-row items-center justify-between">
@@ -467,9 +549,9 @@ export default function SettingsPage() {
                                 <CardTitle>Membros</CardTitle>
                                 <CardDescription>Gerencie sua equipe e suas funções.</CardDescription>
                             </div>
-                             <Dialog open={isTeamMemberDialogOpen} onOpenChange={setTeamMemberDialogOpen}>
+                             <Dialog open={isTeamMemberDialogOpen && !isSuperUser} onOpenChange={setTeamMemberDialogOpen}>
                                 <DialogTrigger asChild>
-                                    <Button>Adicionar Membro</Button>
+                                    {!isSuperUser && <Button>Adicionar Membro</Button>}
                                 </DialogTrigger>
                                 <DialogContent>
                                     <DialogHeader>
