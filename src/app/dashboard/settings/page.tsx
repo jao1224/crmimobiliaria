@@ -52,7 +52,7 @@ type PermissionsState = Record<UserProfile, string[]>;
 export default function SettingsPage() {
     const { activeProfile } = useContext(ProfileContext);
     const hasPermissionForTeamTabs = activeProfile === 'Admin' || activeProfile === 'Imobiliária';
-    const isSuperUser = activeProfile === 'Admin' || activeProfile === 'Super Usuário';
+    const isSuperUser = activeProfile === 'Super Usuário';
 
 
     const [isSaving, setIsSaving] = useState(false);
@@ -890,5 +890,3 @@ export default function SettingsPage() {
         </div>
     );
 }
-
-    
