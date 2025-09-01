@@ -52,7 +52,7 @@ type PermissionsState = Record<UserProfile, string[]>;
 export default function SettingsPage() {
     const { activeProfile } = useContext(ProfileContext);
     const isSuperUser = activeProfile === 'Super Usuário';
-    const hasPermissionForTeamTabs = isSuperUser || activeProfile === 'Imobiliária' || activeProfile === 'Admin';
+    const hasPermissionForTeamTabs = isSuperUser || activeProfile === 'Imobiliária';
 
 
     const [isSaving, setIsSaving] = useState(false);
@@ -636,7 +636,7 @@ export default function SettingsPage() {
                                                     <TableCell>{member.email}</TableCell>
                                                     {isSuperUser && <TableCell className="text-xs text-muted-foreground">{member.imobiliariaName || 'N/A'}</TableCell>}
                                                     <TableCell>{findTeamForMember(member.id)}</TableCell>
-                                                    <TableCell><Badge variant={member.role === 'Admin' || member.role === 'Imobiliária' || member.role === 'Super Usuário' ? 'default' : 'secondary'}>{member.role}</Badge></TableCell>
+                                                    <TableCell><Badge variant={member.role === 'Imobiliária' || member.role === 'Super Usuário' ? 'default' : 'secondary'}>{member.role}</Badge></TableCell>
                                                     <TableCell className="text-right">
                                                         <DropdownMenu>
                                                             <DropdownMenuTrigger asChild>
@@ -650,7 +650,7 @@ export default function SettingsPage() {
                                                                         {creatableRoles.map(role => (
                                                                             <DropdownMenuItem 
                                                                                 key={role} 
-                                                                                onClick={() => handleChangeUserRole(member.id, role)}
+                                                                                onClick={() => handleChangeUserRole(member.id, role as UserProfile)}
                                                                                 disabled={isSaving}
                                                                             >
                                                                                 {role}
@@ -800,9 +800,9 @@ export default function SettingsPage() {
                                                         id={`${profile}-${module.id}`}
                                                         checked={profilePermissions.includes(module.id)}
                                                         onCheckedChange={(checked) => handlePermissionChange(profile as UserProfile, module.id, !!checked)}
-                                                        disabled={profile === 'Admin' || profile === 'Super Usuário'}
+                                                        disabled={profile === 'Super Usuário'}
                                                     />
-                                                    <Label htmlFor={`${profile}-${module.id}`} className={cn("font-normal", (profile === 'Admin' || profile === 'Super Usuário') && "text-muted-foreground")}>
+                                                    <Label htmlFor={`${profile}-${module.id}`} className={cn("font-normal", (profile === 'Super Usuário') && "text-muted-foreground")}>
                                                         {module.label}
                                                     </Label>
                                                 </div>
