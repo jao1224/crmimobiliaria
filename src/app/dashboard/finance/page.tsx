@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect, useContext, useMemo } from "react";
@@ -8,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, PlusCircle, Trash2, Upload } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Trash2, Upload, User, DollarSign, Percent, Plus, MinusCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -19,7 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import type { UserProfile } from "../layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getCommissions, type Commission, addCommission, getPayments, addPayment, type PaymentCLT, getExpenses, addExpense, type Expense, getNegotiations, type Negotiation, updateCommission, getUsers, type User, updatePayment, deletePayment } from "@/lib/data";
+import { getCommissions, type Commission, addCommission, getPayments, addPayment, type PaymentCLT, getExpenses, addExpense, type Expense, getNegotiations, type Negotiation, updateCommission, getUsers, type User as AppUser, updatePayment, deletePayment, type CommissionSplit } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -35,6 +34,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
 
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount);
@@ -45,10 +46,165 @@ const isExpenseOverdue = (expense: Expense) => {
     return new Date(expense.dueDate) < new Date() && expense.status === 'Pendente';
 };
 
+const CommissionCalculator = () => {
+    const [totalCommission, setTotalCommission] = useState<number>(0);
+    const [commissionNote, setCommissionNote] = useState<string>('');
+    const [notePercentage, setNotePercentage] = useState<number>(0);
+    
+    const [divisions, setDivisions] = useState<{ role: string; value: number }[]>([
+        { role: 'IMOB', value: 0 },
+        { role: 'Captador', value: 0 },
+        { role: 'Corretor', value: 0 },
+        { role: 'Gerente', value: 0 },
+    ]);
+
+    const [advances, setAdvances] = useState<{ date: string; value: number; paid: boolean }[]>([
+        { date: '', value: 0, paid: false },
+    ]);
+    
+    const [bonuses, setBonuses] = useState<{ role: string; value: number }[]>([
+         { role: 'IMOB', value: 0 },
+         { role: 'Corretor', value: 0 },
+    ]);
+    
+    const [observations, setObservations] = useState<string>('');
+    
+    const handleAddDivision = () => {
+        setDivisions([...divisions, { role: 'Novo Papel', value: 0 }]);
+    };
+    
+    const handleRemoveDivision = (index: number) => {
+        setDivisions(divisions.filter((_, i) => i !== index));
+    };
+
+    const handleDivisionChange = (index: number, field: 'role' | 'value', value: string | number) => {
+        const newDivisions = [...divisions];
+        (newDivisions[index] as any)[field] = value;
+        setDivisions(newDivisions);
+    };
+    
+    const handleAddAdvance = () => {
+        setAdvances([...advances, { date: '', value: 0, paid: false }]);
+    };
+
+    const handleRemoveAdvance = (index: number) => {
+        setAdvances(advances.filter((_, i) => i !== index));
+    };
+
+    const handleAdvanceChange = (index: number, field: 'date' | 'value' | 'paid', value: string | number | boolean) => {
+        const newAdvances = [...advances];
+        (newAdvances[index] as any)[field] = value;
+        setAdvances(newAdvances);
+    };
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Calculadora de Comissão Detalhada</CardTitle>
+                <CardDescription>
+                    Use esta ferramenta para detalhar a divisão, adiantamentos e bônus de uma comissão específica.
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                <div className="p-4 border rounded-lg space-y-4">
+                     <h3 className="font-semibold text-lg">Valores Gerais</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="total-commission">Valor Total da Comissão</Label>
+                            <Input id="total-commission" type="number" placeholder="25000" value={totalCommission} onChange={(e) => setTotalCommission(Number(e.target.value))} />
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="commission-note">NF - Nota</Label>
+                            <Input id="commission-note" placeholder="Número ou observação da nota" value={commissionNote} onChange={(e) => setCommissionNote(e.target.value)}/>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="note-percentage">Imposto da Nota (%)</Label>
+                             <Input id="note-percentage" type="number" placeholder="6" value={notePercentage} onChange={(e) => setNotePercentage(Number(e.target.value))} />
+                        </div>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="p-4 border rounded-lg space-y-4">
+                        <div className="flex justify-between items-center">
+                            <h3 className="font-semibold text-lg">Divisão da Comissão</h3>
+                            <Button variant="outline" size="sm" onClick={handleAddDivision}><Plus className="mr-2 h-4 w-4"/> Adicionar</Button>
+                        </div>
+                        <div className="space-y-3">
+                            {divisions.map((division, index) => (
+                                <div key={index} className="flex items-center gap-2">
+                                    <Input value={division.role} onChange={(e) => handleDivisionChange(index, 'role', e.target.value)} className="w-1/3" />
+                                    <div className="relative flex-grow">
+                                         <DollarSign className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                         <Input type="number" value={division.value} onChange={(e) => handleDivisionChange(index, 'value', Number(e.target.value))} className="pl-7" />
+                                    </div>
+                                    <Button variant="ghost" size="icon" onClick={() => handleRemoveDivision(index)} className="text-destructive">
+                                        <MinusCircle className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            ))}
+                        </div>
+                         <Separator/>
+                        <div className="p-4 border rounded-lg space-y-4 bg-muted/50">
+                             <div className="flex justify-between items-center">
+                                <h3 className="font-semibold text-lg">Bônus</h3>
+                             </div>
+                             {bonuses.map((bonus, index) => (
+                                 <div key={index} className="flex items-center gap-2">
+                                     <Input value={bonus.role} readOnly className="w-1/3 bg-background font-medium"/>
+                                     <div className="relative flex-grow">
+                                        <DollarSign className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                        <Input type="number" value={bonus.value} onChange={(e) => {
+                                            const newBonuses = [...bonuses];
+                                            newBonuses[index].value = Number(e.target.value);
+                                            setBonuses(newBonuses);
+                                        }} className="pl-7" />
+                                     </div>
+                                 </div>
+                             ))}
+                        </div>
+                    </div>
+                     <div className="p-4 border rounded-lg space-y-4">
+                        <div className="flex justify-between items-center">
+                            <h3 className="font-semibold text-lg">Adiantamentos</h3>
+                            <Button variant="outline" size="sm" onClick={handleAddAdvance}><Plus className="mr-2 h-4 w-4"/> Adicionar</Button>
+                        </div>
+                         <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
+                            {advances.map((advance, index) => (
+                                <div key={index} className="flex items-center gap-2">
+                                     <Input type="date" value={advance.date} onChange={(e) => handleAdvanceChange(index, 'date', e.target.value)} className="w-1/3" />
+                                     <div className="relative flex-grow">
+                                         <DollarSign className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                         <Input type="number" value={advance.value} onChange={(e) => handleAdvanceChange(index, 'value', Number(e.target.value))} className="pl-7" />
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <Checkbox id={`paid-${index}`} checked={advance.paid} onCheckedChange={(checked) => handleAdvanceChange(index, 'paid', !!checked)} />
+                                        <Label htmlFor={`paid-${index}`}>Pago</Label>
+                                    </div>
+                                     <Button variant="ghost" size="icon" onClick={() => handleRemoveAdvance(index)} className="text-destructive">
+                                        <MinusCircle className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            ))}
+                        </div>
+                         <div className="space-y-2 border-t pt-4">
+                             <Label htmlFor="observations">Observações (Parcelamento / Acordo)</Label>
+                             <Textarea id="observations" placeholder="Descreva os termos do pagamento..." value={observations} onChange={(e) => setObservations(e.target.value)} />
+                         </div>
+                    </div>
+                </div>
+            </CardContent>
+            <CardFooter>
+                <Button>Salvar Detalhes da Comissão</Button>
+            </CardFooter>
+        </Card>
+    );
+};
+
 
 export default function FinancePage() {
     const { activeProfile } = useContext(ProfileContext);
-    const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
 
     // Estados para Comissões
     const [commissions, setCommissions] = useState<Commission[]>([]);
@@ -75,7 +231,7 @@ export default function FinancePage() {
     const [isExpenseDialogOpen, setExpenseDialogOpen] = useState(false);
     
     const [isLoading, setIsLoading] = useState(true);
-    const [allUsers, setAllUsers] = useState<User[]>([]);
+    const [allUsers, setAllUsers] = useState<AppUser[]>([]);
 
     const { toast } = useToast();
     
@@ -344,6 +500,7 @@ export default function FinancePage() {
             <Tabs defaultValue="commissions">
                 <TabsList>
                     <TabsTrigger value="commissions">Comissões</TabsTrigger>
+                    {hasPermission && <TabsTrigger value="salary_commissions">Salário e Comissões</TabsTrigger>}
                     {hasPermission && <TabsTrigger value="payments">Pagamentos (CLT)</TabsTrigger>}
                     {hasPermission && <TabsTrigger value="expenses">Despesas</TabsTrigger>}
                 </TabsList>
@@ -523,6 +680,14 @@ export default function FinancePage() {
                         </Card>
                     </div>
                 </TabsContent>
+                
+                {/* Aba de Salário e Comissões Detalhadas */}
+                {hasPermission && (
+                <TabsContent value="salary_commissions" className="mt-4">
+                    <CommissionCalculator />
+                </TabsContent>
+                )}
+
 
                 {/* Aba de Pagamentos (CLT) */}
                  {hasPermission && (<TabsContent value="payments">

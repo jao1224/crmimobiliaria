@@ -1,5 +1,4 @@
 
-
 import { db, storage } from './firebase';
 import { collection, getDocs, addDoc, doc, updateDoc, writeBatch, serverTimestamp, query, orderBy, limit, where, getDoc, setDoc, deleteDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -140,6 +139,31 @@ export type Commission = {
     paymentDate: string;
     status: 'Pago' | 'Pendente' | 'Vencido';
     notes?: string;
+    // Detalhamento da comissão
+    detailedSplit?: CommissionSplit;
+};
+
+// Novo tipo para o detalhamento da comissão
+export type CommissionSplit = {
+    totalCommission: number;
+    invoiceInfo?: {
+        number: string;
+        taxPercentage: number;
+    };
+    divisions: {
+        role: string;
+        value: number;
+    }[];
+    advances: {
+        date: string;
+        value: number;
+        paid: boolean;
+    }[];
+    bonuses: {
+        role: string;
+        value: number;
+    }[];
+    observations?: string;
 };
 
 // --- NOVOS TIPOS PARA CORRESPONDENTE ---
