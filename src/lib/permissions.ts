@@ -1,10 +1,9 @@
 
-
 export type UserProfile = 'Admin' | 'Super Usuário' | 'Imobiliária' | 'Corretor Autônomo' | 'Investidor' | 'Construtora' | 'Financeiro' | 'Vendedor';
 
 // O perfil "Admin" será tratado como "Super Usuário" para consistência.
 // O dono do sistema é o Super Usuário.
-export const userProfiles: UserProfile[] = ['Super Usuário', 'Imobiliária', 'Vendedor', 'Corretor Autônomo', 'Investidor', 'Construtora', 'Financeiro'];
+export const userProfiles: UserProfile[] = ['Admin', 'Super Usuário', 'Imobiliária', 'Vendedor', 'Corretor Autônomo', 'Investidor', 'Construtora', 'Financeiro'];
 
 // O perfil "Admin" foi removido para evitar ambiguidade. Usamos "Super Usuário".
 export const menuConfig: Record<UserProfile, string[]> = {
