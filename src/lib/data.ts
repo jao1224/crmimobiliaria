@@ -270,6 +270,27 @@ export type OtherServiceRequest = {
     createdAt: string;
 };
 
+// --- NOVO TIPO PARA DESPACHANTE ---
+export type DispatcherProgressItem = {
+    label: string;
+    status: 'Pendente' | 'Em Andamento' | 'Concluído' | 'N/A';
+};
+
+export type DispatcherChecklistItem = {
+    label: string;
+    status: 'Sim' | 'Não' | 'N/A';
+    details?: string;
+};
+
+export type DispatcherProcess = {
+    id: string; // O mesmo ID da negociação correspondente
+    overallStatus: 'Ativo' | 'Cancelado' | 'Suspenso' | 'Concluído';
+    progressStatus: 'Em Andamento' | 'Parado' | 'Outros';
+    progress: DispatcherProgressItem[];
+    checklist: DispatcherChecklistItem[];
+    observations: string;
+};
+
 
 export type EventType = 'personal' | 'company' | 'team_visit';
 
@@ -875,6 +896,21 @@ export const addOtherServiceRequest = async (newRequest: Omit<OtherServiceReques
     });
 
     return docRef.id;
+};
+
+// --- FUNÇÕES PARA DESPACHANTE ---
+export const getDispatcherProcess = async (negotiationId: string): Promise<DispatcherProcess | null> => {
+    const docRef = doc(db, 'processos_despachante', negotiationId);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+        return { id: docSnap.id, ...docSnap.data() } as DispatcherProcess;
+    }
+    return null;
+};
+
+export const createOrUpdateDispatcherProcess = async (negotiationId: string, data: Partial<DispatcherProcess>): Promise<void> => {
+    const docRef = doc(db, 'processos_despachante', negotiationId);
+    await setDoc(docRef, data, { merge: true });
 };
 
 

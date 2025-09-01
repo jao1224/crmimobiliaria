@@ -5,7 +5,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Scale, Gavel, Hammer, FileCheck2, Building, PlusCircle, Send, Wallet, Link as LinkIcon } from "lucide-react";
+import { Scale, Gavel, Hammer, FileCheck2, Building, PlusCircle, Send, Wallet, Link as LinkIcon, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -13,11 +13,14 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { getLegalRequests, addLegalRequest, type LegalRequest, type LegalRequestType, getNegotiations, type Negotiation, getUsers, type User, getRentalContracts, addRentalContract, type RentalContract, addRentalPayment, getRentalPayments, type RentalPayment, getProperties, type Property, getOtherServiceRequests, addOtherServiceRequest, type OtherServiceRequest, type OtherServiceType } from "@/lib/data";
+import { getLegalRequests, addLegalRequest, type LegalRequest, type LegalRequestType, getNegotiations, type Negotiation, getUsers, type User, getRentalContracts, addRentalContract, type RentalContract, addRentalPayment, getRentalPayments, type RentalPayment, getProperties, type Property, getOtherServiceRequests, addOtherServiceRequest, type OtherServiceRequest, type OtherServiceType, getDispatcherProcess, createOrUpdateDispatcherProcess, DispatcherProcess } from "@/lib/data";
 import { getClients, type Client } from "@/lib/crm-data";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 const services = [
     { id: "rental", label: "Locação", icon: Building, description: "Administração de contratos de locação." },
@@ -38,7 +41,6 @@ const legalRequestTypes: { id: LegalRequestType, label: string }[] = [
 const otherServiceTypes: { id: OtherServiceType, label: string, buttonLabel: string, description: string }[] = [
     { id: 'evaluation', label: 'Avaliação de Imóvel', buttonLabel: 'Solicitar Avaliação', description: 'Peça uma avaliação profissional para um imóvel.' },
     { id: 'auction', label: 'Inclusão em Leilão', buttonLabel: 'Solicitar Inclusão', description: 'Solicite a inclusão de um imóvel no próximo leilão.' },
-    { id: 'dispatcher', label: 'Serviços de Despachante', buttonLabel: 'Solicitar Serviço', description: 'Peça ajuda com a burocracia e documentação.' }
 ];
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount);
@@ -621,6 +623,221 @@ function OtherServiceTabContent({ serviceType }: { serviceType: OtherServiceType
     );
 }
 
+const progressItemsConfig: { label: string }[] = [
+  { label: 'Contrato CV' }, { label: 'ITBI' }, { label: 'Escritura' }, { label: 'Registro' },
+  { label: 'Aguardando Aprovação' }, { label: 'Procuração' }, { label: 'Engenharia' },
+  { label: 'Aguardando Recursos' }, { label: 'Bacen' }, { label: 'Aguardando Assinatura' },
+  { label: 'Conformidade' }, { label: 'Formulários' }, { label: 'Garantia' },
+  { label: 'Pagamento de Comissão' }, { label: 'Finalizado' }, { label: 'Outros' }
+];
+
+const checklistItemsConfig: { label: string }[] = [
+    { label: 'Contrato CV' }, { label: 'Procuração' }, { label: 'Débitos Condomínio' },
+    { label: 'CND/IPTU' }, { label: 'Sinal Entrada Valor' }, { label: 'Financiamento em Dias' }
+];
+
+
+function DispatcherTabContent() {
+    const { toast } = useToast();
+    const [negotiations, setNegotiations] = useState<Negotiation[]>([]);
+    const [selectedNegotiationId, setSelectedNegotiationId] = useState<string>('');
+    const [processData, setProcessData] = useState<DispatcherProcess | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+    
+    const createNewDispatcherProcess = (negotiationId: string): DispatcherProcess => ({
+        id: negotiationId,
+        overallStatus: 'Ativo',
+        progressStatus: 'Em Andamento',
+        progress: progressItemsConfig.map(item => ({ label: item.label, status: 'Pendente' })),
+        checklist: checklistItemsConfig.map(item => ({ label: item.label, status: 'N/A' })),
+        observations: ''
+    });
+
+    useEffect(() => {
+        const fetchNegotiations = async () => {
+            setIsLoading(true);
+            try {
+                const negs = await getNegotiations();
+                // Filtra para mostrar apenas negociações de Venda ativas
+                setNegotiations(negs.filter(n => n.type === 'Venda' && n.stage !== 'Venda Concluída'));
+            } catch (error) {
+                toast({ variant: 'destructive', title: "Erro", description: "Não foi possível carregar as negociações." });
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchNegotiations();
+    }, [toast]);
+    
+    useEffect(() => {
+        const fetchProcessData = async () => {
+            if (!selectedNegotiationId) {
+                setProcessData(null);
+                return;
+            }
+            setIsLoading(true);
+            try {
+                let data = await getDispatcherProcess(selectedNegotiationId);
+                if (!data) {
+                    data = createNewDispatcherProcess(selectedNegotiationId);
+                }
+                setProcessData(data);
+            } catch (error) {
+                toast({ variant: 'destructive', title: "Erro", description: "Não foi possível carregar os dados do processo." });
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchProcessData();
+    }, [selectedNegotiationId, toast]);
+    
+    const handleSave = async () => {
+        if (!processData) return;
+        setIsSaving(true);
+        try {
+            await createOrUpdateDispatcherProcess(processData.id, processData);
+            toast({ title: "Sucesso!", description: "Processo do despachante salvo com sucesso." });
+        } catch (error) {
+            toast({ variant: 'destructive', title: "Erro ao Salvar", description: "Não foi possível salvar as alterações." });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+    
+    const handleProgressChange = (index: number, newStatus: DispatcherProgressItem['status']) => {
+        if (!processData) return;
+        const newProgress = [...processData.progress];
+        newProgress[index].status = newStatus;
+        setProcessData({ ...processData, progress: newProgress });
+    };
+
+    const handleChecklistChange = (index: number, newStatus: DispatcherChecklistItem['status']) => {
+        if (!processData) return;
+        const newChecklist = [...processData.checklist];
+        newChecklist[index].status = newStatus;
+        setProcessData({ ...processData, checklist: newChecklist });
+    };
+    
+    const handleInputChange = (field: keyof DispatcherProcess, value: string) => {
+        if (!processData) return;
+        setProcessData({ ...processData, [field]: value });
+    }
+
+    return (
+        <Card className="mt-4">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2"><FileCheck2 className="h-6 w-6" /><span>Processo do Despachante</span></CardTitle>
+                <CardDescription>Acompanhe cada etapa do processo de documentação de uma venda.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                <div className="max-w-md">
+                    <Label htmlFor="negotiation-select">Selecione uma Negociação de Venda</Label>
+                    <Select value={selectedNegotiationId} onValueChange={setSelectedNegotiationId}>
+                        <SelectTrigger id="negotiation-select"><SelectValue placeholder="Escolha um processo..."/></SelectTrigger>
+                        <SelectContent>
+                            {negotiations.map(neg => <SelectItem key={neg.id} value={neg.id}>{neg.property} (Cliente: {neg.client})</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+                
+                {isLoading && selectedNegotiationId ? (
+                    <Skeleton className="h-96 w-full"/>
+                ) : processData ? (
+                    <div className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                           <div className="space-y-2">
+                                <Label>Status Geral</Label>
+                                <Select value={processData.overallStatus} onValueChange={(v) => handleInputChange('overallStatus', v)}>
+                                    <SelectTrigger><SelectValue/></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Ativo">Ativo</SelectItem>
+                                        <SelectItem value="Cancelado">Cancelado</SelectItem>
+                                        <SelectItem value="Suspenso">Suspenso</SelectItem>
+                                        <SelectItem value="Concluído">Concluído</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                           </div>
+                           <div className="space-y-2">
+                                <Label>Status do Andamento</Label>
+                                <Select value={processData.progressStatus} onValueChange={(v) => handleInputChange('progressStatus', v)}>
+                                    <SelectTrigger><SelectValue/></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Em Andamento">Em Andamento</SelectItem>
+                                        <SelectItem value="Parado">Parado</SelectItem>
+                                        <SelectItem value="Outros">Outros</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                           </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                             <div className="space-y-4">
+                                <h3 className="font-semibold text-lg border-b pb-2">Checklist de Andamento</h3>
+                                <div className="space-y-3">
+                                    {processData.progress.map((item, index) => (
+                                        <div key={index} className="flex justify-between items-center p-2 rounded-md hover:bg-muted">
+                                            <Label htmlFor={`progress-${index}`} className="font-normal">{item.label}</Label>
+                                            <Select value={item.status} onValueChange={(value) => handleProgressChange(index, value as any)}>
+                                                <SelectTrigger className="w-[150px] h-8 text-xs"><SelectValue/></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="Pendente">Pendente</SelectItem>
+                                                    <SelectItem value="Em Andamento">Em Andamento</SelectItem>
+                                                    <SelectItem value="Concluído">Concluído</SelectItem>
+                                                    <SelectItem value="N/A">N/A</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="space-y-4">
+                                <h3 className="font-semibold text-lg border-b pb-2">Verificação de Processos</h3>
+                                <div className="space-y-3">
+                                     {processData.checklist.map((item, index) => (
+                                        <div key={index} className="flex justify-between items-center p-2 rounded-md hover:bg-muted">
+                                            <Label htmlFor={`checklist-${index}`} className="font-normal">{item.label}</Label>
+                                            <RadioGroup
+                                                id={`checklist-${index}`}
+                                                value={item.status}
+                                                onValueChange={(value) => handleChecklistChange(index, value as any)}
+                                                className="flex items-center gap-4"
+                                            >
+                                                <div className="flex items-center space-x-2"><RadioGroupItem value="Sim" id={`checklist-${index}-sim`} /><Label htmlFor={`checklist-${index}-sim`} className="font-normal">Sim</Label></div>
+                                                <div className="flex items-center space-x-2"><RadioGroupItem value="Não" id={`checklist-${index}-nao`} /><Label htmlFor={`checklist-${index}-nao`} className="font-normal">Não</Label></div>
+                                            </RadioGroup>
+                                        </div>
+                                    ))}
+                                </div>
+                                <Separator className="my-4"/>
+                                <div className="space-y-2">
+                                    <Label htmlFor="observations">Observações</Label>
+                                    <Textarea 
+                                        id="observations" 
+                                        value={processData.observations} 
+                                        onChange={(e) => handleInputChange('observations', e.target.value)} 
+                                        placeholder="Adicione observações relevantes aqui..."
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex justify-end pt-4">
+                            <Button onClick={handleSave} disabled={isSaving}>
+                                <Save className="mr-2 h-4 w-4" />
+                                {isSaving ? "Salvando..." : "Salvar Processo"}
+                            </Button>
+                        </div>
+                    </div>
+                ) : (
+                    selectedNegotiationId && <p className="text-center text-muted-foreground py-10">Este processo ainda não foi iniciado. Os dados serão criados ao salvar.</p>
+                )}
+            </CardContent>
+        </Card>
+    );
+}
+
+
 export default function ServicesPage() {
     return (
         <div className="flex flex-col gap-6">
@@ -640,7 +857,7 @@ export default function ServicesPage() {
                  <TabsContent value="juridico"><LegalTabContent /></TabsContent>
                  <TabsContent value="evaluator"><OtherServiceTabContent serviceType="evaluation" /></TabsContent>
                  <TabsContent value="auction"><OtherServiceTabContent serviceType="auction" /></TabsContent>
-                 <TabsContent value="dispatcher"><OtherServiceTabContent serviceType="dispatcher" /></TabsContent>
+                 <TabsContent value="dispatcher"><DispatcherTabContent /></TabsContent>
             </Tabs>
         </div>
     );
