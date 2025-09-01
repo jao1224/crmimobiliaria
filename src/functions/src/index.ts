@@ -80,7 +80,7 @@ interface ReportData {
 }
 
 export const createUser = onCall(async (request) => {
-    // Verifica se o usuário que está chamando a função é um admin de imobiliária ou Admin (dono do sistema).
+    // Verifica se o usuário que está chamando a função é um admin de imobiliária ou o Admin do sistema.
     const isImobiliariaAdmin = !!request.auth?.token.imobiliariaId;
     const isAdmin = request.auth?.token.role === 'Admin';
 
@@ -90,7 +90,7 @@ export const createUser = onCall(async (request) => {
 
     const { email, password, name, role } = request.data;
     
-    // Admin pode criar uma imobiliária. Neste caso, o imobiliariaId será o uid do novo usuário.
+    // Admin do sistema pode criar uma imobiliária. Neste caso, o imobiliariaId será o uid do novo usuário.
     // Para outros perfis, usa o imobiliariaId do admin que está chamando.
     let imobiliariaId = request.auth?.token.imobiliariaId;
 
@@ -101,7 +101,7 @@ export const createUser = onCall(async (request) => {
             displayName: name,
         });
 
-        // Se um admin do sistema está criando uma imobiliária, o ID dela é o ID do novo usuário
+        // Se um Admin está criando uma imobiliária, o ID dela é o ID do novo usuário
         if (isAdmin && role === 'Imobiliária') {
             imobiliariaId = userRecord.uid;
         }
@@ -361,7 +361,7 @@ export const generateContractPdf = onCall<ContractData, Promise<{pdfBase64: stri
   data.sellers.forEach((seller) => {
       page.drawText(line, {x: margin, y, font, size: 12});
       y -= 15;
-      page.drawText(seller.name, {x: margin, y, font: size: 10});
+      page.drawText(seller.name, {x: margin, y, font, size: 10});
       y -= 15;
       page.drawText("VENDEDOR(A)", {x: margin, y, font: boldFont, size: 10});
       y -= 30;
@@ -372,3 +372,5 @@ export const generateContractPdf = onCall<ContractData, Promise<{pdfBase64: stri
 
   return {pdfBase64};
 });
+
+    
