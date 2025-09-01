@@ -80,17 +80,17 @@ interface ReportData {
 }
 
 export const createUser = onCall(async (request) => {
-    // Verifica se o usuário que está chamando a função é um admin de imobiliária ou Super Usuário.
+    // Verifica se o usuário que está chamando a função é um admin de imobiliária ou o Admin do sistema.
     const isImobiliariaAdmin = !!request.auth?.token.imobiliariaId;
-    const isSuperUser = request.auth?.token.role === 'Super Usuário';
+    const isAdmin = request.auth?.token.role === 'Admin';
 
-    if (!isImobiliariaAdmin && !isSuperUser) {
+    if (!isImobiliariaAdmin && !isAdmin) {
         throw new HttpsError('permission-denied', 'Apenas administradores podem criar usuários.');
     }
 
     const { email, password, name, role } = request.data;
     
-    // Super Usuário pode criar uma imobiliária. Neste caso, o imobiliariaId será o uid do novo usuário.
+    // Admin do sistema pode criar uma imobiliária. Neste caso, o imobiliariaId será o uid do novo usuário.
     // Para outros perfis, usa o imobiliariaId do admin que está chamando.
     let imobiliariaId = request.auth?.token.imobiliariaId;
 
@@ -101,8 +101,8 @@ export const createUser = onCall(async (request) => {
             displayName: name,
         });
 
-        // Se um super admin está criando uma imobiliária, o ID dela é o ID do novo usuário
-        if (isSuperUser && role === 'Imobiliária') {
+        // Se um Admin está criando uma imobiliária, o ID dela é o ID do novo usuário
+        if (isAdmin && role === 'Imobiliária') {
             imobiliariaId = userRecord.uid;
         }
         
@@ -132,6 +132,15 @@ export const addRoleOnCreate = beforeUserCreated(async (event) => {
     const userDocRef = adminDb.collection('users').doc(user.uid);
     
     try {
+        // Verifica se já existe algum usuário. Se não, este é o primeiro e será Admin.
+        const allUsers = await adminAuth.listUsers(1);
+        if (allUsers.users.length === 0) {
+             await adminAuth.setCustomUserClaims(user.uid, { role: 'Admin' });
+             // Também salva no documento do Firestore, pois o gatilho pode não ter essa info ainda
+             await userDocRef.set({ role: 'Admin' }, { merge: true });
+             return;
+        }
+
         const userDoc = await userDocRef.get();
         if (userDoc.exists) {
             const userData = userDoc.data();
@@ -151,6 +160,7 @@ export const addRoleOnCreate = beforeUserCreated(async (event) => {
                 return;
             }
         }
+        
         // Fallback: se não encontrar o documento a tempo, define um cargo padrão.
         await adminAuth.setCustomUserClaims(user.uid, { role: 'Corretor Autônomo' });
 
@@ -343,7 +353,7 @@ export const generateContractPdf = onCall<ContractData, Promise<{pdfBase64: stri
   data.buyers.forEach((buyer) => {
       page.drawText(line, {x: margin, y, font, size: 12});
       y -= 15;
-      page.drawText(buyer.name, {x: margin, y, font, size: 10});
+      page.drawText(buyer.name, {x: margin, y, font: size: 10});
       y -= 15;
       page.drawText("COMPRADOR(A)", {x: margin, y, font: boldFont, size: 10});
       y -= 30;
