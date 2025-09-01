@@ -233,7 +233,7 @@ export default function DashboardLayout({
                             <span>Perfil</span>
                         </Link>
                       </DropdownMenuItem>
-                      {(userRole === 'Super Usuário' || userRole === 'Admin') && (
+                      {userRole === 'Super Usuário' && (
                         <DropdownMenuSub>
                           <DropdownMenuSubTrigger>
                             <Eye className="mr-2 h-4 w-4" />
@@ -271,4 +271,3 @@ export default function DashboardLayout({
     </ProfileProvider>
   );
 }
-
