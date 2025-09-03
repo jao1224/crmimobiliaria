@@ -82,9 +82,9 @@ interface ReportData {
 export const createUser = onCall(async (request) => {
     // Verifica se o usuário que está chamando a função é um admin de imobiliária ou o Admin do sistema.
     const isAdmin = request.auth?.token.role === 'Admin';
-    const isImobiliariaAdmin = !!request.auth?.token.imobiliariaId && (request.auth?.token.role === 'Imobiliária' || isAdmin);
+    const isImobiliariaAdmin = !!request.auth?.token.imobiliariaId && request.auth?.token.role === 'Imobiliária';
 
-    if (!isImobiliariaAdmin && !isAdmin) {
+    if (!isAdmin && !isImobiliariaAdmin) {
         throw new HttpsError('permission-denied', 'Apenas administradores podem criar usuários.');
     }
 
@@ -375,4 +375,6 @@ export const generateContractPdf = onCall<ContractData, Promise<{pdfBase64: stri
   return {pdfBase64};
 });
     
+    
+
     
