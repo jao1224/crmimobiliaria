@@ -91,7 +91,7 @@ export default function FinancePage() {
     const visibleCommissions = commissions.filter(c => {
         if (hasPermission) return true;
         if (activeProfile === 'Corretor Autônomo' && (c.realtorName === 'Carlos Pereira' || c.salespersonName === 'Carlos Pereira')) return true; 
-        return false;
+        return true; // Mostra todas as comissões para todos os usuários
     });
     const totalCommission = visibleCommissions.reduce((sum, item) => sum + item.commissionValue, 0);
     const paidCommission = visibleCommissions.filter(c => c.status === 'Pago').reduce((sum, item) => sum + item.commissionValue, 0);
@@ -185,8 +185,8 @@ export default function FinancePage() {
     return (
         <div className="flex flex-col gap-6">
             <div>
-                <h1 className="text-2xl font-bold">Visão Geral Financeira</h1>
-                <p className="text-muted-foreground">Acompanhe comissões, pagamentos, despesas e o desempenho financeiro.</p>
+                <h1 className="text-2xl font-bold">Comissões</h1>
+                <p className="text-muted-foreground">Gestão completa de comissões e pagamentos.</p>
             </div>
 
             <Tabs defaultValue="commissions">
@@ -200,7 +200,10 @@ export default function FinancePage() {
                 <TabsContent value="commissions">
                     <div className="flex flex-col gap-4 mt-4">
                         <div className="flex items-center justify-between">
-                            <h2 className="text-xl font-semibold">Resumo de Comissões</h2>
+                            <div>
+                                <h2 className="text-xl font-semibold">Resumo de Comissões</h2>
+                                <p className="text-sm text-muted-foreground">Visão geral de todas as comissões registradas.</p>
+                            </div>
                              {hasPermission && (
                                 <Dialog open={isCommissionDialogOpen} onOpenChange={(isOpen) => {
                                     setCommissionDialogOpen(isOpen);
@@ -313,16 +316,16 @@ export default function FinancePage() {
                         <Card>
                             <CardHeader>
                                 <CardTitle>Detalhamento de Comissões</CardTitle>
-                                <CardDescription>{hasPermission ? "Visão completa de todas as comissões registradas." : "Visão geral das suas comissões a receber."}</CardDescription>
+                                <CardDescription>Visão completa de todas as comissões registradas.</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead>Cód. Processo</TableHead>
+                                            <TableHead>Imóvel</TableHead>
                                             <TableHead>Cliente</TableHead>
-                                            {hasPermission && <TableHead>Captador</TableHead>}
-                                            {hasPermission && <TableHead>Vendedor</TableHead>}
+                                            <TableHead>Captador</TableHead>
+                                            <TableHead>Vendedor</TableHead>
                                             <TableHead>Valor Comissão</TableHead>
                                             <TableHead>Status</TableHead>
                                             <TableHead>Data Pag.</TableHead>
@@ -333,16 +336,16 @@ export default function FinancePage() {
                                         {isLoading ? (
                                             Array.from({ length: 3 }).map((_, i) => (
                                                 <TableRow key={i}>
-                                                    <TableCell colSpan={hasPermission ? 8 : 5}><Skeleton className="h-8 w-full" /></TableCell>
+                                                    <TableCell colSpan={8}><Skeleton className="h-8 w-full" /></TableCell>
                                                 </TableRow>
                                             ))
                                         ) : visibleCommissions.length > 0 ? (
                                             visibleCommissions.map(commission => (
                                                 <TableRow key={commission.id} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
-                                                    <TableCell className="font-mono text-xs text-muted-foreground">{commission.negotiationId.toUpperCase()}</TableCell>
+                                                    <TableCell className="font-medium">{commission.negotiationId.toUpperCase()}</TableCell>
                                                     <TableCell className="font-medium">{commission.clientName}</TableCell>
-                                                    {hasPermission && <TableCell>{commission.realtorName}</TableCell>}
-                                                    {hasPermission && <TableCell>{commission.salespersonName}</TableCell>}
+                                                    <TableCell>{commission.realtorName}</TableCell>
+                                                    <TableCell>{commission.salespersonName}</TableCell>
                                                     <TableCell>{formatCurrency(commission.commissionValue)}</TableCell>
                                                     <TableCell><Badge variant={commission.status === 'Pago' ? 'success' : commission.status === 'Pendente' ? 'status-orange' : 'destructive'}>{commission.status}</Badge></TableCell>
                                                     <TableCell>{new Date(commission.paymentDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</TableCell>
@@ -361,7 +364,7 @@ export default function FinancePage() {
                                                     </TableCell>
                                                 </TableRow>
                                             ))
-                                        ) : <TableRow><TableCell colSpan={hasPermission ? 8 : 5} className="h-24 text-center">Nenhuma comissão encontrada.</TableCell></TableRow>}
+                                        ) : <TableRow><TableCell colSpan={8} className="h-24 text-center">Nenhuma comissão encontrada.</TableCell></TableRow>}
                                     </TableBody>
                                 </Table>
                             </CardContent>
