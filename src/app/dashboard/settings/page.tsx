@@ -631,7 +631,7 @@ export default function SettingsPage() {
                                                             <DropdownMenuContent>
                                                                 <DropdownMenuLabel>Ações</DropdownMenuLabel>
                                                                 <DropdownMenuSub>
-                                                                    <DropdownMenuSubTrigger>Alterar Função</DropdownMenuSubTrigger>
+                                                                    <DropdownMenuSubTrigger disabled={member.role === 'Admin'}>Alterar Função</DropdownMenuSubTrigger>
                                                                     <DropdownMenuSubContent>
                                                                         {creatableRoles.map(role => (
                                                                             <DropdownMenuItem 
@@ -644,7 +644,7 @@ export default function SettingsPage() {
                                                                         ))}
                                                                     </DropdownMenuSubContent>
                                                                 </DropdownMenuSub>
-                                                                <DropdownMenuItem className="text-destructive">Remover</DropdownMenuItem>
+                                                                <DropdownMenuItem className="text-destructive" disabled={member.role === 'Admin'}>Remover</DropdownMenuItem>
                                                             </DropdownMenuContent>
                                                         </DropdownMenu>
                                                     </TableCell>
