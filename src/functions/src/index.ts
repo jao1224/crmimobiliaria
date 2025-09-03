@@ -134,7 +134,8 @@ export const addRoleOnCreate = beforeUserCreated(async (event) => {
     try {
         // Verifica se já existe algum usuário. Se não, este é o primeiro e será Admin.
         const allUsers = await adminAuth.listUsers(1);
-        if (allUsers.users.length === 0) {
+        // Se a lista de usuários tiver 0 ou 1 (apenas o que está sendo criado), ele é o primeiro.
+        if (allUsers.users.length <= 1) {
              await adminAuth.setCustomUserClaims(user.uid, { role: 'Admin', imobiliariaId: null });
              // Também salva no documento do Firestore, pois o gatilho pode não ter essa info ainda
              await userDocRef.set({ role: 'Admin', imobiliariaId: null }, { merge: true });
