@@ -20,7 +20,7 @@ import {
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MoreHorizontal, Search, Archive, Trash2, Landmark, Upload, Eye, X, FileText, Link as LinkIcon, Send, GripVertical, Target, Handshake } from "lucide-react";
+import { MoreHorizontal, Search, Archive, Trash2, Landmark, Upload, Eye, X, FileText, Link as LinkIcon, Send, GripVertical, Target, Handshake, Building2, UserPlus } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -39,6 +39,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AddPropertyDialog } from "@/components/dashboard/add-property-dialog";
+import { AddClientDialog } from "@/components/dashboard/add-client-dialog";
 
 
 const formatCurrency = (value: number) => {
@@ -142,6 +144,11 @@ const RealtorKanban = ({ users }: { users: User[] }) => {
     const [isLoading, setIsLoading] = useState(false);
     const { toast } = useToast();
     
+    const brokerUsers = useMemo(() => {
+        const brokerRoles = ['Corretor Autônomo', 'Vendedor', 'Imobiliária', 'Admin'];
+        return users.filter(user => brokerRoles.includes(user.role));
+    }, [users]);
+    
     useEffect(() => {
         if (selectedRealtorId) {
             const fetchActivities = async () => {
@@ -219,7 +226,7 @@ const RealtorKanban = ({ users }: { users: User[] }) => {
                         <SelectValue placeholder="Selecione..." />
                     </SelectTrigger>
                     <SelectContent>
-                        {users.map(user => (
+                        {brokerUsers.map(user => (
                              <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
                         ))}
                     </SelectContent>
@@ -305,19 +312,23 @@ export default function NegotiationsPage() {
         return () => unsubscribe();
     }, []);
 
+    const fetchData = async () => {
+         const [props, clients, users, negs, procs] = await Promise.all([
+            getProperties(),
+            getClients(),
+            getUsers(),
+            getNegotiations(), 
+            getProcessos(),
+        ]);
+        setAvailableProperties(props.filter(p => p.status === 'Disponível'));
+        setAvailableClients(clients);
+        setAllUsers(users);
+        setAllNegotiations(negs);
+        setAllProcesses(procs);
+    };
+
     useEffect(() => {
         if (currentUser !== undefined) {
-             const fetchDropdownData = async () => {
-                 const [props, clients, users] = await Promise.all([
-                    getProperties(),
-                    getClients(),
-                    getUsers()
-                ]);
-                setAvailableProperties(props.filter(p => p.status === 'Disponível'));
-                setAvailableClients(clients);
-                setAllUsers(users); // Armazena todos os usuários
-            }
-            fetchDropdownData();
             refreshData();
         }
     }, [currentUser]);
@@ -325,11 +336,9 @@ export default function NegotiationsPage() {
     const refreshData = async () => {
         setIsLoading(true);
         try {
-            const [data, processes] = await Promise.all([getNegotiations(), getProcessos()]);
-            setAllNegotiations(data);
-            setAllProcesses(processes);
+            await fetchData();
         } catch (error) {
-            toast({ variant: 'destructive', title: "Erro ao buscar negociações" });
+            toast({ variant: 'destructive', title: "Erro ao buscar dados" });
         } finally {
             setIsLoading(false);
         }
@@ -717,29 +726,39 @@ export default function NegotiationsPage() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label>Imóvel</Label>
-                                        <Select value={propertyCode} onValueChange={setPropertyCode} required>
-                                            <SelectTrigger><SelectValue placeholder="Selecione um imóvel" /></SelectTrigger>
-                                            <SelectContent>
-                                                {availableProperties.map(prop => (
-                                                    <SelectItem key={prop.id} value={prop.id}>
-                                                        {prop.name} ({prop.displayCode})
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                        <div className="flex items-center gap-2">
+                                            <Select value={propertyCode} onValueChange={setPropertyCode} required>
+                                                <SelectTrigger><SelectValue placeholder="Selecione um imóvel" /></SelectTrigger>
+                                                <SelectContent>
+                                                    {availableProperties.map(prop => (
+                                                        <SelectItem key={prop.id} value={prop.id}>
+                                                            {prop.name} ({prop.displayCode})
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <AddPropertyDialog onPropertyAdded={refreshData}>
+                                                <Button type="button" variant="outline" size="icon"><Building2 className="h-4 w-4" /></Button>
+                                            </AddPropertyDialog>
+                                        </div>
                                     </div>
                                     <div className="space-y-2">
                                         <Label>Cliente</Label>
-                                        <Select value={clientCode} onValueChange={setClientCode} required>
-                                            <SelectTrigger><SelectValue placeholder="Selecione um cliente" /></SelectTrigger>
-                                            <SelectContent>
-                                                {availableClients.map(cli => (
-                                                    <SelectItem key={cli.id} value={cli.id}>
-                                                        {cli.name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                        <div className="flex items-center gap-2">
+                                            <Select value={clientCode} onValueChange={setClientCode} required>
+                                                <SelectTrigger><SelectValue placeholder="Selecione um cliente" /></SelectTrigger>
+                                                <SelectContent>
+                                                    {availableClients.map(cli => (
+                                                        <SelectItem key={cli.id} value={cli.id}>
+                                                            {cli.name}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <AddClientDialog onClientAdded={refreshData}>
+                                                 <Button type="button" variant="outline" size="icon"><UserPlus className="h-4 w-4" /></Button>
+                                            </AddClientDialog>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -1031,7 +1050,7 @@ export default function NegotiationsPage() {
                 <TabsContent value="kanban">
                     <div className="flex gap-4 overflow-x-auto pb-4">
                         {KANBAN_COLUMNS.map(stage => (
-                             <div key={stage} className={cn("flex-1 min-w-[300px] bg-muted/50 rounded-lg flex flex-col")} onDragOver={(e) => e.preventDefault()} onDrop={(e) => handleDrop(e, stage)}>
+                             <div key={stage} className="flex-1 min-w-[300px] bg-muted/50 rounded-lg flex flex-col" onDragOver={(e) => e.preventDefault()} onDrop={(e) => handleDrop(e, stage)}>
                                 <div className={cn("p-3 border-b-2", 
                                     stage === 'Proposta Enviada' ? 'border-status-blue' :
                                     stage === 'Em Negociação' ? 'border-status-orange' :
@@ -1280,5 +1299,3 @@ export default function NegotiationsPage() {
         </>
     );
 }
-
-    
