@@ -33,6 +33,7 @@ import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, type User } from "firebase/auth";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
 
 type CrmTab = "leads" | "clients";
 const formatCurrency = (amount: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount);
@@ -178,6 +179,7 @@ export default function CrmPage() {
             profession: formData.get("profession") as string,
             address: formData.get("address") as string,
             monthlyIncome: parseFloat(formData.get("monthlyIncome") as string),
+            bankInfo: formData.get("bankInfo") as string,
         };
         
         try {
@@ -271,7 +273,7 @@ export default function CrmPage() {
                                 <div className="space-y-6 py-4">
                                     <div className="space-y-4 rounded-lg border p-4"><h3 className="text-lg font-medium">Informações Pessoais</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="space-y-2"><Label htmlFor="name-client">Nome Completo</Label><Input id="name-client" name="name" required /></div><div className="space-y-2"><Label htmlFor="document-client">CPF / CNPJ</Label><Input id="document-client" name="document" /></div><div className="space-y-2"><Label htmlFor="birthDate-client">Data de Nascimento</Label><Input id="birthDate-client" name="birthDate" type="date" /></div><div className="space-y-2"><Label htmlFor="profession-client">Profissão</Label><Input id="profession-client" name="profession" /></div><div className="space-y-2"><Label htmlFor="civilStatus-client">Estado Civil</Label><Select name="civilStatus"><SelectTrigger id="civilStatus-client"><SelectValue placeholder="Selecione..." /></SelectTrigger><SelectContent><SelectItem value="Solteiro(a)">Solteiro(a)</SelectItem><SelectItem value="Casado(a)">Casado(a)</SelectItem><SelectItem value="Divorciado(a)">Divorciado(a)</SelectItem><SelectItem value="Viúvo(a)">Viúvo(a)</SelectItem><SelectItem value="União Estável">União Estável</SelectItem></SelectContent></Select></div></div></div>
                                     <div className="space-y-4 rounded-lg border p-4"><h3 className="text-lg font-medium">Contato e Endereço</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="space-y-2"><Label htmlFor="email-client">E-mail</Label><Input id="email-client" name="email" type="email" required/></div><div className="space-y-2"><Label htmlFor="phone-client">Telefone / WhatsApp</Label><Input id="phone-client" name="phone" required/></div></div><div className="space-y-2"><Label htmlFor="address-client">Endereço Completo</Label><Input id="address-client" name="address" placeholder="Rua, número, bairro, cidade, CEP" /></div></div>
-                                    <div className="space-y-4 rounded-lg border p-4"><h3 className="text-lg font-medium">Informações Financeiras</h3><div className="space-y-2"><Label htmlFor="monthlyIncome-client">Renda Mensal Comprovada (R$)</Label><Input id="monthlyIncome-client" name="monthlyIncome" type="number" step="0.01" placeholder="5000.00" /></div></div>
+                                    <div className="space-y-4 rounded-lg border p-4"><h3 className="text-lg font-medium">Informações Financeiras</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="space-y-2"><Label htmlFor="monthlyIncome-client">Renda Mensal (R$)</Label><Input id="monthlyIncome-client" name="monthlyIncome" type="number" step="0.01" placeholder="5000.00" /></div><div className="space-y-2"><Label htmlFor="bankInfo-client">Conta Bancária (PIX)</Label><Input id="bankInfo-client" name="bankInfo" placeholder="Chave PIX ou dados da conta"/></div></div></div>
                                 </div>
                                 <DialogFooter>
                                     <Button type="button" variant="outline" onClick={() => setClientDialogOpen(false)}>Cancelar</Button>
@@ -468,6 +470,10 @@ export default function CrmPage() {
                                     <div>
                                         <Label className="text-muted-foreground">Renda Mensal</Label>
                                         <p>{selectedClient.monthlyIncome ? formatCurrency(selectedClient.monthlyIncome) : "Não informado"}</p>
+                                    </div>
+                                    <div>
+                                        <Label className="text-muted-foreground">Conta Bancária (PIX)</Label>
+                                        <p>{selectedClient.bankInfo || "Não informado"}</p>
                                     </div>
                                 </div>
                             </div>
