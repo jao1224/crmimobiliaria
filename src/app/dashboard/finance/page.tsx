@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { auth } from "@/lib/firebase";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -204,7 +204,7 @@ const CommissionCalculator = () => {
 
 export default function FinancePage() {
     const { activeProfile } = useContext(ProfileContext);
-    const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
+    const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
 
     // Estados para Comissões
     const [commissions, setCommissions] = useState<Commission[]>([]);
