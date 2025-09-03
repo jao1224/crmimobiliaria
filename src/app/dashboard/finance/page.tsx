@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ProfileContext } from "@/contexts/ProfileContext";
-import type { UserProfile } from "../layout";
+import type { UserProfile } from "@/lib/permissions";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getCommissions, type Commission, addCommission, getPayments, addPayment, type PaymentCLT, getExpenses, addExpense, type Expense, getNegotiations, type Negotiation, updateCommission, getUsers, type User as AppUser, updatePayment, deletePayment, type CommissionSplit } from "@/lib/data";
 import { cn } from "@/lib/utils";
@@ -257,7 +257,7 @@ export default function FinancePage() {
                     getUsers(),
                 ]);
                 // Filtra para negociações que podem gerar comissão
-                setNegotiations(negs.filter(n => n.status === 'Finalizado' || n.stage === 'Venda Concluída'));
+                setNegotiations(negs.filter(n => n.stage === 'Venda Concluída'));
                 setAllUsers(usersData);
             };
             fetchAuxData();
@@ -298,7 +298,6 @@ export default function FinancePage() {
             return false;
         });
     }, [commissions, activeProfile, hasPermission, currentUser]);
-
     const totalCommission = visibleCommissions.reduce((sum, item) => sum + item.commissionValue, 0);
     const paidCommission = visibleCommissions.filter(c => c.status === 'Pago').reduce((sum, item) => sum + item.commissionValue, 0);
     const pendingCommission = totalCommission - paidCommission;
@@ -494,8 +493,8 @@ export default function FinancePage() {
     return (
         <div className="flex flex-col gap-6">
             <div>
-                <h1 className="text-2xl font-bold">Visão Geral Financeira</h1>
-                <p className="text-muted-foreground">Acompanhe comissões, pagamentos, despesas e o desempenho financeiro.</p>
+                <h1 className="text-2xl font-bold">Comissões</h1>
+                <p className="text-muted-foreground">Gestão completa de comissões e pagamentos.</p>
             </div>
 
             <Tabs defaultValue="commissions">
@@ -549,7 +548,7 @@ export default function FinancePage() {
                                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                                         <div className="space-y-2">
                                                             <Label>Valor do Imóvel</Label>
-                                                            <Input value={selectedNegotiation ? formatCurrency(selectedNegotiation.value) : ''} readOnly placeholder="Selecione um processo"/>
+                                                            <Input value={selectedNegotiation?.value ? formatCurrency(selectedNegotiation.value) : ''} readOnly placeholder="Selecione um processo"/>
                                                         </div>
                                                         <div className="space-y-2">
                                                             <Label htmlFor="clientSignal">Sinal do Cliente (R$)</Label>
@@ -572,11 +571,11 @@ export default function FinancePage() {
                                                     <div className="border-t pt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                                         <div className="space-y-2">
                                                             <Label htmlFor="commissionRate">Taxa de Comissão (%)</Label>
-                                                            <Input id="commissionRate" name="commissionRate" type="number" step="0.1" min="0" required defaultValue={selectedNegotiation ? 5 : ''}/>
+                                                            <Input id="commissionRate" name="commissionRate" type="number" step="0.1" min="0" required defaultValue={selectedNegotiation?.value ? 5 : ''}/>
                                                         </div>
                                                         <div className="space-y-2">
                                                             <Label htmlFor="commissionValue">Valor da Comissão (R$)</Label>
-                                                            <Input id="commissionValue" name="commissionValue" type="number" step="0.01" min="0.01" required defaultValue={selectedNegotiation ? (selectedNegotiation.value * 0.05).toFixed(2) : ''}/>
+                                                            <Input id="commissionValue" name="commissionValue" type="number" step="0.01" min="0.01" required defaultValue={selectedNegotiation?.value ? (selectedNegotiation.value * 0.05).toFixed(2) : ''}/>
                                                         </div>
                                                         <div className="space-y-2">
                                                             <Label htmlFor="paymentDate">Data de Pagamento</Label>
@@ -630,7 +629,7 @@ export default function FinancePage() {
                         <Card>
                             <CardHeader>
                                 <CardTitle>Detalhamento de Comissões</CardTitle>
-                                <CardDescription>{hasPermission ? "Visão completa de todas as comissões registradas." : "Visão geral das suas comissões a receber."}</CardDescription>
+                                <CardDescription>Visão completa de todas as comissões registradas.</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <Table>
@@ -638,8 +637,8 @@ export default function FinancePage() {
                                         <TableRow>
                                             <TableHead>Imóvel</TableHead>
                                             <TableHead>Cliente</TableHead>
-                                            {hasPermission && <TableHead>Captador</TableHead>}
-                                            {hasPermission && <TableHead>Vendedor</TableHead>}
+                                            <TableHead>Captador</TableHead>
+                                            <TableHead>Vendedor</TableHead>
                                             <TableHead>Valor Comissão</TableHead>
                                             <TableHead>Status</TableHead>
                                             <TableHead>Data Pag.</TableHead>
@@ -650,7 +649,7 @@ export default function FinancePage() {
                                         {isLoading ? (
                                             Array.from({ length: 3 }).map((_, i) => (
                                                 <TableRow key={i}>
-                                                    <TableCell colSpan={hasPermission ? 8 : 5}><Skeleton className="h-8 w-full" /></TableCell>
+                                                    <TableCell colSpan={8}><Skeleton className="h-8 w-full" /></TableCell>
                                                 </TableRow>
                                             ))
                                         ) : visibleCommissions.length > 0 ? (
@@ -661,8 +660,8 @@ export default function FinancePage() {
                                                         <div className="text-xs text-muted-foreground font-mono">{commission.propertyDisplayCode || commission.processoDisplayCode}</div>
                                                     </TableCell>
                                                     <TableCell className="font-medium">{commission.clientName}</TableCell>
-                                                    {hasPermission && <TableCell>{commission.realtorName}</TableCell>}
-                                                    {hasPermission && <TableCell>{commission.salespersonName}</TableCell>}
+                                                    <TableCell>{commission.realtorName}</TableCell>
+                                                    <TableCell>{commission.salespersonName}</TableCell>
                                                     <TableCell>{formatCurrency(commission.commissionValue)}</TableCell>
                                                     <TableCell><Badge variant={commission.status === 'Pago' ? 'success' : commission.status === 'Pendente' ? 'status-orange' : 'destructive'}>{commission.status}</Badge></TableCell>
                                                     <TableCell>{new Date(commission.paymentDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</TableCell>
@@ -683,7 +682,7 @@ export default function FinancePage() {
                                                     </TableCell>
                                                 </TableRow>
                                             ))
-                                        ) : <TableRow><TableCell colSpan={hasPermission ? 8 : 5} className="h-24 text-center">Nenhuma comissão encontrada.</TableCell></TableRow>}
+                                        ) : <TableRow><TableCell colSpan={8} className="h-24 text-center">Nenhuma comissão encontrada.</TableCell></TableRow>}
                                     </TableBody>
                                 </Table>
                             </CardContent>
