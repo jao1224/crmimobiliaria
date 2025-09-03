@@ -1,7 +1,8 @@
 
+
 "use client";
 
-import { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -11,16 +12,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { MoreHorizontal, UserPlus, Trash2 } from "lucide-react";
+import { MoreHorizontal, UserPlus, Trash2, Eye, EyeOff, Search, ChevronRight, Building2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import { cn } from "@/lib/utils";
-import { type UserProfile, userProfiles, menuConfig, allModules } from "@/lib/permissions";
-import { auth, db } from "@/lib/firebase";
-import { collection, getDocs, doc, setDoc, addDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc } from "firebase/firestore";
+import { type UserProfile, userProfiles, menuConfig, allModules, creatableRolesByImobiliaria, creatableRolesByAdmin } from "@/lib/permissions";
+import { auth, db, app } from "@/lib/firebase";
+import { collection, getDocs, doc, setDoc, addDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc, query, where, getDoc } from "firebase/firestore";
 import { EmailAuthProvider, onAuthStateChanged, reauthenticateWithCredential, updatePassword, updateProfile, type User } from "firebase/auth";
+import { getFunctions, httpsCallable } from "firebase/functions";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 
 type TeamMember = {
@@ -28,71 +35,122 @@ type TeamMember = {
     name: string;
     email: string;
     role: string;
+    imobiliariaId?: string;
+    imobiliariaName?: string;
 };
 
 type Team = {
     id: string;
     name: string;
     memberIds: string[];
+    imobiliariaId: string;
 };
 
 type PermissionsState = Record<UserProfile, string[]>;
 
-const roles = userProfiles.filter(p => ['Admin', 'Imobiliária', 'Financeiro', 'Corretor Autônomo', 'Investidor', 'Construtora'].includes(p));
-
 
 export default function SettingsPage() {
     const { activeProfile } = useContext(ProfileContext);
-    const hasPermission = activeProfile === 'Admin' || activeProfile === 'Imobiliária';
+    const isAdmin = activeProfile === 'Admin';
+    const hasPermissionForTeamTabs = isAdmin || activeProfile === 'Imobiliária';
 
-    // Estados da UI
+
     const [isSaving, setIsSaving] = useState(false);
     const { toast } = useToast();
 
-    // Estados do Perfil
     const [user, setUser] = useState<User | null>(null);
+    const [userData, setUserData] = useState<TeamMember | null>(null);
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
+    const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+    const [showNewPassword, setShowNewPassword] = useState(false);
 
-    // Estados das Equipes
     const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
     const [teams, setTeams] = useState<Team[]>([]);
     const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
     const [isTeamMemberDialogOpen, setTeamMemberDialogOpen] = useState(false);
     const [isTeamDialogOpen, setTeamDialogOpen] = useState(false);
     const [isManageMembersDialogOpen, setManageMembersDialogOpen] = useState(false);
+    
+    const [searchQuery, setSearchQuery] = useState("");
+    const [teamFilter, setTeamFilter] = useState("all");
+    const [openTeamId, setOpenTeamId] = useState<string | null>(null);
 
-    // Estado das Permissões
     const [permissions, setPermissions] = useState<PermissionsState>(menuConfig);
+    
+    const creatableRoles = isAdmin ? creatableRolesByAdmin : creatableRolesByImobiliaria;
+    
+    const imobiliarias = teamMembers.filter(m => m.role === 'Imobiliária');
+    const getMemberCountForImobiliaria = (imobiliariaId: string) => {
+        return teamMembers.filter(m => m.imobiliariaId === imobiliariaId).length;
+    };
+
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             if (currentUser) {
                 setUser(currentUser);
                 setName(currentUser.displayName || '');
                 setEmail(currentUser.email || '');
+
+                const userDocRef = doc(db, "users", currentUser.uid);
+                const userDocSnap = await getDoc(userDocRef);
+                if (userDocSnap.exists()) {
+                    setUserData(userDocSnap.data() as TeamMember);
+                }
+
+                if (hasPermissionForTeamTabs) {
+                    fetchTeamData(currentUser);
+                }
             } else {
                 setUser(null);
+                setUserData(null);
             }
         });
 
-        if (hasPermission) {
-            fetchTeamData();
-        }
-
         return () => unsubscribe();
-    }, [hasPermission]);
+    }, [hasPermissionForTeamTabs]);
 
-    const fetchTeamData = async () => {
-        if (hasPermission) {
-            const usersSnapshot = await getDocs(collection(db, "users"));
-            setTeamMembers(usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeamMember)));
+    const fetchTeamData = async (currentUser: User) => {
+        if (!currentUser) return;
+        
+        const userDocRef = doc(db, "users", currentUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        const currentUserData = userDocSnap.data();
+        
+        let usersQuery;
+        let teamsQuery;
 
-            const teamsSnapshot = await getDocs(collection(db, "teams"));
-            setTeams(teamsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team)));
+        if (isAdmin) {
+            usersQuery = query(collection(db, "users"));
+            teamsQuery = query(collection(db, "teams"));
+        } else {
+            const imobiliariaId = currentUserData?.imobiliariaId;
+            if (!imobiliariaId) return;
+            usersQuery = query(collection(db, "users"), where("imobiliariaId", "==", imobiliariaId));
+            teamsQuery = query(collection(db, "teams"), where("imobiliariaId", "==", imobiliariaId));
         }
+
+        const usersSnapshot = await getDocs(usersQuery);
+        const members = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeamMember));
+        
+        if (isAdmin) {
+             const imobiliariasSnapshot = await getDocs(query(collection(db, "users"), where("role", "==", "Imobiliária")));
+             const imobiliariasMap = new Map(imobiliariasSnapshot.docs.map(doc => [doc.id, doc.data().name]));
+
+             for (const member of members) {
+                 if (member.imobiliariaId) {
+                     member.imobiliariaName = imobiliariasMap.get(member.imobiliariaId) || 'N/A';
+                 }
+             }
+        }
+        
+        setTeamMembers(members);
+
+        const teamsSnapshot = await getDocs(teamsQuery);
+        setTeams(teamsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team)));
     };
 
 
@@ -107,14 +165,12 @@ export default function SettingsPage() {
         }
 
         try {
-            // 1. Atualizar nome (se mudou)
             if (currentUser.displayName !== name) {
                 await updateProfile(currentUser, { displayName: name });
-                await setDoc(doc(db, "users", currentUser.uid), { name }, { merge: true });
+                await updateDoc(doc(db, "users", currentUser.uid), { name });
                 toast({ title: 'Sucesso', description: 'Seu nome foi atualizado.' });
             }
 
-            // 2. Atualizar senha (se preenchido)
             if (currentPassword && newPassword) {
                 const credential = EmailAuthProvider.credential(currentUser.email, currentPassword);
                 await reauthenticateWithCredential(currentUser, credential);
@@ -127,7 +183,6 @@ export default function SettingsPage() {
             }
 
         } catch (error: any) {
-            console.error("Profile Update Error: ", error);
             let description = 'Ocorreu um erro ao atualizar seu perfil.';
             if (error.code === 'auth/wrong-password') {
                 description = 'A senha atual está incorreta.';
@@ -145,28 +200,76 @@ export default function SettingsPage() {
         setIsSaving(true);
 
         const formData = new FormData(event.currentTarget);
-        const memberName = formData.get("name") as string;
-        const memberEmail = formData.get("email") as string;
-        const memberRole = formData.get("role") as string;
+        const newMemberData = {
+            email: formData.get("email") as string,
+            password: formData.get("password") as string,
+            name: formData.get("name") as string,
+            role: formData.get("role") as string,
+        };
 
-        toast({ title: "Atenção", description: "A criação de usuários via app está desabilitada por segurança. Adicione usuários pelo console do Firebase."});
+        if (!newMemberData.password) {
+            toast({ variant: 'destructive', title: 'Erro', description: 'O campo de senha é obrigatório.' });
+            setIsSaving(false);
+            return;
+        }
 
-        setIsSaving(false);
-        setTeamMemberDialogOpen(false);
+        try {
+            const functions = getFunctions(app);
+            const createUser = httpsCallable(functions, 'createUser');
+            const result = await createUser(newMemberData) as any;
+
+            if (result.data.success) {
+                if (user) await fetchTeamData(user);
+                toast({ title: "Sucesso!", description: "Novo membro da equipe criado." });
+                setTeamMemberDialogOpen(false);
+            } else {
+                throw new Error(result.data.error || "A função de nuvem retornou um erro.");
+            }
+        } catch (error: any) {
+            let description = "Ocorreu um erro ao criar o usuário.";
+            if (error.message.includes('auth/email-already-exists') || (error.details && error.details.message.includes('EMAIL_EXISTS'))) {
+                description = 'Este e-mail já está em uso por outra conta.';
+            } else if (error.message.includes('permission-denied')) {
+                description = 'Você não tem permissão para executar esta ação.';
+            }
+            toast({ variant: "destructive", title: "Erro na Criação", description });
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const handleAddTeam = async (event: React.FormEvent<HTMLFormElement>) => {
        event.preventDefault();
+       
        setIsSaving(true);
        const formData = new FormData(event.currentTarget);
        const teamName = formData.get("team-name") as string;
        
+       let imobiliariaIdForTeam = userData?.imobiliariaId;
+
+       // Se o admin está criando, ele precisa selecionar para qual.
+       if (isAdmin) {
+           imobiliariaIdForTeam = formData.get("imobiliariaId") as string;
+           if (!imobiliariaIdForTeam) {
+               toast({ variant: "destructive", title: "Erro", description: "Selecione uma imobiliária para criar a equipe." });
+               setIsSaving(false);
+               return;
+           }
+       }
+
+       if (!imobiliariaIdForTeam) {
+            toast({ variant: "destructive", title: "Erro", description: "ID da imobiliária não encontrado para criar a equipe." });
+            setIsSaving(false);
+            return;
+       }
+       
        try {
             await addDoc(collection(db, "teams"), {
                 name: teamName,
-                memberIds: []
+                memberIds: [],
+                imobiliariaId: imobiliariaIdForTeam
             });
-            await fetchTeamData();
+            if(user) await fetchTeamData(user);
             toast({ title: "Sucesso!", description: `A equipe "${teamName}" foi criada.`});
             setTeamDialogOpen(false);
        } catch (error) {
@@ -191,15 +294,12 @@ export default function SettingsPage() {
         setIsSaving(true);
         try {
             const teamRef = doc(db, 'teams', selectedTeam.id);
-            await updateDoc(teamRef, {
-                memberIds: arrayUnion(memberId)
-            });
-            await fetchTeamData(); // Refresh all data
-            // Refresh selectedTeam state
-            const updatedTeams = await getDocs(collection(db, "teams"));
-            const updatedTeam = updatedTeams.docs.find(d => d.id === selectedTeam.id)?.data() as Team;
-            if(updatedTeam) {
-                 setSelectedTeam({ ...updatedTeam, id: selectedTeam.id });
+            await updateDoc(teamRef, { memberIds: arrayUnion(memberId) });
+            if (user) await fetchTeamData(user);
+            
+            const updatedTeamDoc = await getDoc(teamRef);
+            if (updatedTeamDoc.exists()) {
+                setSelectedTeam({ ...updatedTeamDoc.data(), id: updatedTeamDoc.id } as Team);
             }
            
             toast({ title: "Sucesso!", description: "Membro adicionado à equipe." });
@@ -216,18 +316,14 @@ export default function SettingsPage() {
         setIsSaving(true);
          try {
             const teamRef = doc(db, 'teams', selectedTeam.id);
-            await updateDoc(teamRef, {
-                memberIds: arrayRemove(memberId)
-            });
-            await fetchTeamData(); // Refresh all data
-            // Refresh selectedTeam state
-             const updatedTeams = await getDocs(collection(db, "teams"));
-             const updatedTeamDoc = updatedTeams.docs.find(d => d.id === selectedTeam.id);
-             if (updatedTeamDoc) {
-                 const updatedTeamData = updatedTeamDoc.data() as Omit<Team, 'id'>;
-                 setSelectedTeam({ ...updatedTeamData, id: selectedTeam.id });
+            await updateDoc(teamRef, { memberIds: arrayRemove(memberId) });
+            if (user) await fetchTeamData(user);
+            
+             const updatedTeamDoc = await getDoc(teamRef);
+             if (updatedTeamDoc.exists()) {
+                 setSelectedTeam({ ...updatedTeamDoc.data(), id: updatedTeamDoc.id } as Team);
              } else {
-                 setManageMembersDialogOpen(false); // Team was deleted, close modal
+                 setManageMembersDialogOpen(false);
              }
 
             toast({ title: "Sucesso!", description: "Membro removido da equipe." });
@@ -246,7 +342,7 @@ export default function SettingsPage() {
         if (window.confirm("Tem certeza que deseja excluir esta equipe? Esta ação não pode ser desfeita.")) {
             try {
                 await deleteDoc(doc(db, "teams", teamId));
-                await fetchTeamData();
+                if (user) await fetchTeamData(user);
                 toast({ title: "Sucesso", description: "Equipe excluída." });
             } catch (error) {
                 toast({ variant: "destructive", title: "Erro", description: "Não foi possível excluir a equipe." });
@@ -266,9 +362,6 @@ export default function SettingsPage() {
 
     const handleSavePermissions = () => {
         setIsSaving(true);
-        // Simulação de salvamento no Firestore.
-        // Em um projeto real, você faria um loop e salvaria `permissions`
-        // em um documento de configuração no Firestore.
         console.log("Salvando permissões:", permissions);
         setTimeout(() => {
             toast({ title: "Permissões Salvas", description: "As novas regras de permissão foram salvas com sucesso (simulado)." });
@@ -281,7 +374,7 @@ export default function SettingsPage() {
         try {
             const userRef = doc(db, 'users', memberId);
             await updateDoc(userRef, { role: newRole });
-            await fetchTeamData();
+            if (user) await fetchTeamData(user);
             toast({ title: "Sucesso", description: `Função do usuário alterada para ${newRole}.` });
         } catch (error) {
              toast({ variant: "destructive", title: "Erro", description: "Não foi possível alterar a função do usuário." });
@@ -289,6 +382,21 @@ export default function SettingsPage() {
             setIsSaving(false);
         }
     };
+
+    const findTeamForMember = (memberId: string) => {
+        const team = teams.find(t => t.memberIds.includes(memberId));
+        return team ? team.name : 'Sem Equipe';
+    };
+
+    const filteredMembers = teamMembers.filter(member => {
+        const searchLower = searchQuery.toLowerCase();
+        const nameMatch = member.name.toLowerCase().includes(searchLower);
+        const emailMatch = member.email.toLowerCase().includes(searchLower);
+        
+        const teamMatch = teamFilter === 'all' || findTeamForMember(member.id) === teamFilter;
+        
+        return (nameMatch || emailMatch) && teamMatch;
+    });
 
 
     return (
@@ -301,12 +409,13 @@ export default function SettingsPage() {
             <Tabs defaultValue="profile" className="w-full">
                 <TabsList>
                     <TabsTrigger value="profile">Perfil</TabsTrigger>
-                     {hasPermission && <TabsTrigger value="team">Membros da Equipe</TabsTrigger>}
-                     {hasPermission && <TabsTrigger value="teams">Equipes</TabsTrigger>}
-                     {hasPermission && <TabsTrigger value="permissions">Permissões</TabsTrigger>}
+                     {isAdmin && <TabsTrigger value="imobiliarias">Imobiliárias</TabsTrigger>}
+                     {hasPermissionForTeamTabs && <TabsTrigger value="team">Membros</TabsTrigger>}
+                     {hasPermissionForTeamTabs && <TabsTrigger value="teams">Equipes</TabsTrigger>}
+                     {hasPermissionForTeamTabs && <TabsTrigger value="permissions">Permissões</TabsTrigger>}
                 </TabsList>
                 <TabsContent value="profile" className="space-y-6">
-                    <Card className="transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
+                    <Card>
                         <CardHeader>
                             <CardTitle>Meu Perfil</CardTitle>
                             <CardDescription>Atualize suas informações pessoais e senha.</CardDescription>
@@ -322,11 +431,45 @@ export default function SettingsPage() {
                             </div>
                              <div className="space-y-2">
                                 <Label htmlFor="current-password">Senha Atual</Label>
-                                <Input id="current-password" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="Deixe em branco para não alterar"/>
+                                <div className="relative">
+                                    <Input 
+                                        id="current-password" 
+                                        type={showCurrentPassword ? "text" : "password"} 
+                                        value={currentPassword} 
+                                        onChange={(e) => setCurrentPassword(e.target.value)} 
+                                        placeholder="Deixe em branco para não alterar"
+                                    />
+                                    <Button 
+                                      type="button"
+                                      variant="ghost" 
+                                      size="icon" 
+                                      className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
+                                      onClick={() => setShowCurrentPassword(prev => !prev)}
+                                    >
+                                      {showCurrentPassword ? <EyeOff /> : <Eye />}
+                                    </Button>
+                                </div>
                             </div>
                              <div className="space-y-2">
                                 <Label htmlFor="new-password">Nova Senha</Label>
-                                <Input id="new-password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Deixe em branco para não alterar"/>
+                                <div className="relative">
+                                    <Input 
+                                        id="new-password" 
+                                        type={showNewPassword ? "text" : "password"} 
+                                        value={newPassword} 
+                                        onChange={(e) => setNewPassword(e.target.value)} 
+                                        placeholder="Deixe em branco para não alterar"
+                                    />
+                                    <Button 
+                                      type="button"
+                                      variant="ghost" 
+                                      size="icon" 
+                                      className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
+                                      onClick={() => setShowNewPassword(prev => !prev)}
+                                    >
+                                      {showNewPassword ? <EyeOff /> : <Eye />}
+                                    </Button>
+                                </div>
                             </div>
                         </CardContent>
                         <CardFooter>
@@ -335,229 +478,346 @@ export default function SettingsPage() {
                             </Button>
                         </CardFooter>
                     </Card>
-                    <Card className="transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
-                        <CardHeader>
-                            <CardTitle>Meu Plano</CardTitle>
-                            <CardDescription>Visualize e gerencie seu plano de assinatura.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="rounded-lg border bg-muted/30 p-4">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <h3 className="font-semibold">Plano Atual: <Badge variant="success">Anual</Badge></h3>
-                                        <p className="text-sm text-muted-foreground">Sua próxima cobrança de R$ 999,00 será em 15 de Julho de 2025.</p>
-                                    </div>
-                                    <Button variant="outline" disabled>Alterar Plano</Button>
+                </TabsContent>
+                {isAdmin && (
+                    <TabsContent value="imobiliarias">
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between">
+                                <div>
+                                    <CardTitle>Gestão de Imobiliárias</CardTitle>
+                                    <CardDescription>Gerencie as agências que têm acesso à plataforma. Novas imobiliárias devem se cadastrar pela tela de registro.</CardDescription>
                                 </div>
-                            </div>
-                        </CardContent>
-                        <CardFooter>
-                           <Button variant="secondary" disabled>Ver Histórico de Faturamento</Button>
-                        </CardFooter>
-                    </Card>
-                </TabsContent>
-                <TabsContent value="team">
-                    <Card>
-                         <CardHeader className="flex flex-row items-center justify-between">
-                            <div>
-                                <CardTitle>Membros da Equipe</CardTitle>
-                                <CardDescription>Gerencie sua equipe e suas funções.</CardDescription>
-                            </div>
-                             <Dialog open={isTeamMemberDialogOpen} onOpenChange={setTeamMemberDialogOpen}>
-                                <DialogTrigger asChild>
-                                    <Button>Adicionar Membro</Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader>
-                                        <DialogTitle>Adicionar Novo Membro</DialogTitle>
-                                        <DialogDescription>Preencha os detalhes para convidar um novo membro para a equipe.</DialogDescription>
-                                    </DialogHeader>
-                                    <form onSubmit={handleAddTeamMember}>
-                                        <div className="grid gap-4 py-4">
-                                            <div className="space-y-2">
-                                                <Label htmlFor="name-member">Nome</Label>
-                                                <Input id="name-member" name="name" placeholder="Nome completo" required />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="email-member">E-mail</Label>
-                                                <Input id="email-member" name="email" type="email" placeholder="email@example.com" required />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="role">Função</Label>
-                                                <Select name="role" required>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Selecione uma função" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {roles.map(role => <SelectItem key={role} value={role}>{role}</SelectItem>)}
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                        </div>
-                                        <DialogFooter>
-                                            <Button type="submit" disabled={isSaving}>{isSaving ? "Salvando...": "Adicionar Membro"}</Button>
-                                        </DialogFooter>
-                                    </form>
-                                </DialogContent>
-                            </Dialog>
-                        </CardHeader>
-                        <CardContent>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Nome</TableHead>
-                                        <TableHead>E-mail</TableHead>
-                                        <TableHead>Função</TableHead>
-                                        <TableHead className="text-right">Ações</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {teamMembers.length > 0 ? (
-                                        teamMembers.map((member) => (
-                                            <TableRow key={member.id} className="transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1">
-                                                <TableCell className="font-medium">{member.name}</TableCell>
-                                                <TableCell>{member.email}</TableCell>
-                                                <TableCell><Badge variant={member.role === 'Admin' || member.role === 'Imobiliária' ? 'default' : 'secondary'}>{member.role}</Badge></TableCell>
-                                                <TableCell className="text-right">
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button size="icon" variant="ghost"><MoreHorizontal /></Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent>
-                                                            <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                                                            <DropdownMenuSub>
-                                                                <DropdownMenuSubTrigger>Alterar Função</DropdownMenuSubTrigger>
-                                                                <DropdownMenuSubContent>
-                                                                    {userProfiles.map(role => (
-                                                                        <DropdownMenuItem 
-                                                                            key={role} 
-                                                                            onClick={() => handleChangeUserRole(member.id, role)}
-                                                                            disabled={isSaving}
-                                                                        >
-                                                                            {role}
-                                                                        </DropdownMenuItem>
-                                                                    ))}
-                                                                </DropdownMenuSubContent>
-                                                            </DropdownMenuSub>
-                                                            <DropdownMenuItem className="text-destructive">Remover</DropdownMenuItem>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))
-                                    ) : (
-                                        <TableRow><TableCell colSpan={4} className="text-center h-24">Nenhum membro encontrado.</TableCell></TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-                <TabsContent value="teams">
-                     <Card>
-                        <CardHeader className="flex flex-row items-center justify-between">
-                            <div>
-                                <CardTitle>Equipes</CardTitle>
-                                <CardDescription>Crie e gerencie as equipes de vendas da sua imobiliária.</CardDescription>
-                            </div>
-                            <Dialog open={isTeamDialogOpen} onOpenChange={setTeamDialogOpen}>
-                                <DialogTrigger asChild>
-                                    <Button>Criar Nova Equipe</Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader>
-                                        <DialogTitle>Criar Nova Equipe</DialogTitle>
-                                        <DialogDescription>Dê um nome para a sua nova equipe.</DialogDescription>
-                                    </DialogHeader>
-                                    <form onSubmit={handleAddTeam}>
-                                        <div className="grid gap-4 py-4">
-                                            <div className="space-y-2">
-                                                <Label htmlFor="team-name">Nome da Equipe</Label>
-                                                <Input id="team-name" name="team-name" placeholder="Ex: Equipe de Lançamentos" required />
-                                            </div>
-                                        </div>
-                                        <DialogFooter>
-                                            <Button type="submit" disabled={isSaving}>{isSaving ? "Salvando..." : "Salvar Equipe"}</Button>
-                                        </DialogFooter>
-                                    </form>
-                                </DialogContent>
-                            </Dialog>
-                        </CardHeader>
-                        <CardContent>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Nome da Equipe</TableHead>
-                                        <TableHead>Nº de Membros</TableHead>
-                                        <TableHead><span className="sr-only">Ações</span></TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {teams.length > 0 ? (
-                                        teams.map((team) => (
-                                            <TableRow key={team.id} className="transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1">
-                                                <TableCell className="font-medium">{team.name}</TableCell>
-                                                <TableCell>{team.memberIds.length}</TableCell>
-                                                <TableCell>
-                                                     <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button aria-haspopup="true" size="icon" variant="ghost"><MoreHorizontal className="h-4 w-4" /></Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                                                            <DropdownMenuItem onClick={() => handleManageMembers(team)}>Gerenciar Membros</DropdownMenuItem>
-                                                            <DropdownMenuItem disabled>Renomear</DropdownMenuItem>
-                                                            <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteTeam(team.id)}>Excluir</DropdownMenuItem>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))
-                                    ) : (
-                                        <TableRow><TableCell colSpan={3} className="text-center h-24">Nenhuma equipe encontrada.</TableCell></TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-                <TabsContent value="permissions">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Gerenciador de Permissões por Perfil</CardTitle>
-                            <CardDescription>
-                                Controle o acesso de cada perfil aos módulos do sistema. As alterações são salvas (simulado).
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            {Object.entries(permissions).map(([profile, profilePermissions]) => (
-                                <div key={profile}>
-                                    <h3 className="text-lg font-semibold mb-2">{profile}</h3>
-                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 rounded-md border p-4">
-                                        {allModules.map(module => (
-                                            <div key={module.id} className="flex items-center space-x-2">
-                                                <Checkbox
-                                                    id={`${profile}-${module.id}`}
-                                                    checked={profilePermissions.includes(module.id)}
-                                                    onCheckedChange={(checked) => handlePermissionChange(profile as UserProfile, module.id, !!checked)}
-                                                    disabled={profile === 'Admin'}
-                                                />
-                                                <Label htmlFor={`${profile}-${module.id}`} className={cn("font-normal", profile === 'Admin' && "text-muted-foreground")}>
-                                                    {module.label}
-                                                </Label>
-                                            </div>
-                                        ))}
-                                    </div>
+                            </CardHeader>
+                             <CardContent>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Nome da Imobiliária</TableHead>
+                                            <TableHead>E-mail do Admin</TableHead>
+                                            <TableHead>Membros</TableHead>
+                                            <TableHead className="text-right">Ações</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {imobiliarias.length > 0 ? (
+                                            imobiliarias.map((imob) => (
+                                                <TableRow key={imob.id}>
+                                                    <TableCell className="font-medium">{imob.name}</TableCell>
+                                                    <TableCell>{imob.email}</TableCell>
+                                                    <TableCell>{getMemberCountForImobiliaria(imob.id)}</TableCell>
+                                                    <TableCell className="text-right">
+                                                         <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <Button size="icon" variant="ghost"><MoreHorizontal /></Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent>
+                                                                <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                                                                <DropdownMenuItem>Ver Detalhes</DropdownMenuItem>
+                                                                <DropdownMenuItem className="text-destructive">Suspender</DropdownMenuItem>
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))
+                                        ) : (
+                                            <TableRow><TableCell colSpan={4} className="text-center h-24">Nenhuma imobiliária cadastrada.</TableCell></TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                )}
+                {hasPermissionForTeamTabs && (
+                    <TabsContent value="team">
+                        <Card>
+                             <CardHeader className="flex flex-row items-center justify-between">
+                                <div>
+                                    <CardTitle>Membros da Equipe</CardTitle>
+                                    <CardDescription>Gerencie sua equipe e suas funções. Novos membros devem ser cadastrados pela imobiliária.</CardDescription>
                                 </div>
-                            ))}
-                        </CardContent>
-                         <CardFooter>
-                            <Button onClick={handleSavePermissions} disabled={isSaving}>
-                                {isSaving ? "Salvando..." : "Salvar Permissões"}
-                            </Button>
-                         </CardFooter>
-                    </Card>
-                </TabsContent>
+                                 <Dialog open={isTeamMemberDialogOpen} onOpenChange={setTeamMemberDialogOpen}>
+                                    <DialogTrigger asChild>
+                                        <Button><UserPlus className="mr-2 h-4 w-4"/>Adicionar Membro</Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                        <DialogHeader>
+                                            <DialogTitle>Adicionar Novo Membro</DialogTitle>
+                                            <DialogDescription>Preencha os detalhes para convidar um novo membro para a equipe.</DialogDescription>
+                                        </DialogHeader>
+                                        <form onSubmit={handleAddTeamMember}>
+                                            <div className="grid gap-4 py-4">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="name-member">Nome</Label>
+                                                    <Input id="name-member" name="name" placeholder="Nome completo" required />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="email-member">E-mail</Label>
+                                                    <Input id="email-member" name="email" type="email" placeholder="email@example.com" required />
+                                                </div>
+                                                 <div className="space-y-2">
+                                                    <Label htmlFor="password-member">Senha</Label>
+                                                    <Input id="password-member" name="password" type="password" placeholder="••••••••" required />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="role">Função</Label>
+                                                    <Select name="role" required>
+                                                        <SelectTrigger>
+                                                            <SelectValue placeholder="Selecione uma função" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {creatableRoles.map(role => <SelectItem key={role} value={role}>{role}</SelectItem>)}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                            </div>
+                                            <DialogFooter>
+                                                <Button type="submit" disabled={isSaving}>{isSaving ? "Salvando...": "Adicionar Membro"}</Button>
+                                            </DialogFooter>
+                                        </form>
+                                    </DialogContent>
+                                </Dialog>
+                            </CardHeader>
+                            <CardContent>
+                                 <div className="mb-4 flex items-center gap-2">
+                                    <div className="relative w-full">
+                                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                        <Input
+                                            type="search"
+                                            placeholder="Buscar por nome ou e-mail..."
+                                            className="pl-8"
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                        />
+                                    </div>
+                                    <Select value={teamFilter} onValueChange={setTeamFilter}>
+                                        <SelectTrigger className="w-[180px]">
+                                            <SelectValue placeholder="Filtrar por equipe" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Todas as Equipes</SelectItem>
+                                            <SelectItem value="Sem Equipe">Sem Equipe</SelectItem>
+                                            {teams.map((team) => (
+                                                <SelectItem key={team.id} value={team.name}>{team.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Nome</TableHead>
+                                            <TableHead>E-mail</TableHead>
+                                            {isAdmin && <TableHead>Imobiliária</TableHead>}
+                                            <TableHead>Equipe</TableHead>
+                                            <TableHead>Função</TableHead>
+                                            <TableHead className="text-right">Ações</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {filteredMembers.length > 0 ? (
+                                            filteredMembers.map((member) => (
+                                                <TableRow key={member.id}>
+                                                    <TableCell className="font-medium">{member.name}</TableCell>
+                                                    <TableCell>{member.email}</TableCell>
+                                                    {isAdmin && <TableCell className="text-xs text-muted-foreground">{member.imobiliariaName || 'N/A'}</TableCell>}
+                                                    <TableCell>{findTeamForMember(member.id)}</TableCell>
+                                                    <TableCell><Badge variant={member.role === 'Imobiliária' || member.role === 'Admin' ? 'default' : 'secondary'}>{member.role}</Badge></TableCell>
+                                                    <TableCell className="text-right">
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <Button size="icon" variant="ghost"><MoreHorizontal /></Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent>
+                                                                <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                                                                <DropdownMenuSub>
+                                                                    <DropdownMenuSubTrigger>Alterar Função</DropdownMenuSubTrigger>
+                                                                    <DropdownMenuSubContent>
+                                                                        {creatableRoles.map(role => (
+                                                                            <DropdownMenuItem 
+                                                                                key={role} 
+                                                                                onClick={() => handleChangeUserRole(member.id, role as UserProfile)}
+                                                                                disabled={isSaving}
+                                                                            >
+                                                                                {role}
+                                                                            </DropdownMenuItem>
+                                                                        ))}
+                                                                    </DropdownMenuSubContent>
+                                                                </DropdownMenuSub>
+                                                                <DropdownMenuItem className="text-destructive">Remover</DropdownMenuItem>
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))
+                                        ) : (
+                                            <TableRow><TableCell colSpan={isAdmin ? 6 : 5} className="text-center h-24">Nenhum membro encontrado.</TableCell></TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                )}
+                {hasPermissionForTeamTabs && (
+                    <TabsContent value="teams">
+                         <Card>
+                            <CardHeader className="flex flex-row items-center justify-between">
+                                <div>
+                                    <CardTitle>Equipes</CardTitle>
+                                    <CardDescription>Crie e gerencie as equipes de vendas da sua imobiliária.</CardDescription>
+                                </div>
+                                <Dialog open={isTeamDialogOpen} onOpenChange={setTeamDialogOpen}>
+                                    <DialogTrigger asChild>
+                                        <Button>Criar Nova Equipe</Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                        <DialogHeader>
+                                            <DialogTitle>Criar Nova Equipe</DialogTitle>
+                                            <DialogDescription>Dê um nome para a sua nova equipe.</DialogDescription>
+                                        </DialogHeader>
+                                        <form onSubmit={handleAddTeam}>
+                                            <div className="grid gap-4 py-4">
+                                                 {isAdmin && (
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="imobiliariaId">Vincular à Imobiliária</Label>
+                                                        <Select name="imobiliariaId" required>
+                                                            <SelectTrigger>
+                                                                <SelectValue placeholder="Selecione uma imobiliária" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                {imobiliarias.map(imob => <SelectItem key={imob.id} value={imob.id}>{imob.name}</SelectItem>)}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+                                                )}
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="team-name">Nome da Equipe</Label>
+                                                    <Input id="team-name" name="team-name" placeholder="Ex: Equipe de Lançamentos" required />
+                                                </div>
+                                            </div>
+                                            <DialogFooter>
+                                                <Button type="submit" disabled={isSaving}>{isSaving ? "Salvando..." : "Salvar Equipe"}</Button>
+                                            </DialogFooter>
+                                        </form>
+                                    </DialogContent>
+                                </Dialog>
+                            </CardHeader>
+                            <CardContent>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Nome da Equipe</TableHead>
+                                            <TableHead>Nº de Membros</TableHead>
+                                            <TableHead><span className="sr-only">Ações</span></TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {teams.length > 0 ? (
+                                            teams.map((team) => (
+                                               <React.Fragment key={team.id}>
+                                                    <TableRow>
+                                                        <TableCell className="font-medium">
+                                                            <button className="flex items-center gap-2 w-full text-left" onClick={() => setOpenTeamId(openTeamId === team.id ? null : team.id)}>
+                                                                <ChevronRight className={cn("h-4 w-4 transition-transform duration-200", openTeamId === team.id && "rotate-90")} />
+                                                                {team.name}
+                                                            </button>
+                                                        </TableCell>
+                                                        <TableCell>{team.memberIds.length}</TableCell>
+                                                        <TableCell className="text-right">
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger asChild>
+                                                                    <Button aria-haspopup="true" size="icon" variant="ghost"><MoreHorizontal className="h-4 w-4" /></Button>
+                                                                </DropdownMenuTrigger>
+                                                                <DropdownMenuContent align="end">
+                                                                    <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                                                                    <DropdownMenuItem onClick={() => handleManageMembers(team)}>Gerenciar Membros</DropdownMenuItem>
+                                                                    <DropdownMenuItem disabled>Renomear</DropdownMenuItem>
+                                                                    <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteTeam(team.id)}>Excluir</DropdownMenuItem>
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                    {openTeamId === team.id && (
+                                                         <tr className="bg-muted/50">
+                                                            <td colSpan={3} className="p-0">
+                                                                <div className="p-4">
+                                                                    {getMembersForTeam(team).length > 0 ? (
+                                                                        <Table>
+                                                                            <TableHeader>
+                                                                                <TableRow>
+                                                                                    <TableHead>Nome</TableHead>
+                                                                                    <TableHead>E-mail</TableHead>
+                                                                                    <TableHead>Função</TableHead>
+                                                                                </TableRow>
+                                                                            </TableHeader>
+                                                                            <TableBody>
+                                                                                {getMembersForTeam(team).map(member => (
+                                                                                    <TableRow key={member.id}>
+                                                                                        <TableCell>{member.name}</TableCell>
+                                                                                        <TableCell>{member.email}</TableCell>
+                                                                                        <TableCell><Badge variant="secondary">{member.role}</Badge></TableCell>
+                                                                                    </TableRow>
+                                                                                ))}
+                                                                            </TableBody>
+                                                                        </Table>
+                                                                    ) : (
+                                                                        <p className="text-center text-sm text-muted-foreground py-4">Nenhum membro nesta equipe.</p>
+                                                                    )}
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                               </React.Fragment>
+                                            ))
+                                        ) : (
+                                            <TableRow><TableCell colSpan={3} className="text-center h-24">Nenhuma equipe encontrada.</TableCell></TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                )}
+                {hasPermissionForTeamTabs && (
+                    <TabsContent value="permissions">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Gerenciador de Permissões por Perfil</CardTitle>
+                                <CardDescription>
+                                    Controle o acesso de cada perfil aos módulos do sistema.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                {Object.entries(permissions).map(([profile, profilePermissions]) => (
+                                    <div key={profile}>
+                                        <h3 className="text-lg font-semibold mb-2">{profile}</h3>
+                                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 rounded-md border p-4">
+                                            {allModules.map(module => (
+                                                <div key={module.id} className="flex items-center space-x-2">
+                                                    <Checkbox
+                                                        id={`${profile}-${module.id}`}
+                                                        checked={profilePermissions.includes(module.id)}
+                                                        onCheckedChange={(checked) => handlePermissionChange(profile as UserProfile, module.id, !!checked)}
+                                                        disabled={profile === 'Admin'}
+                                                    />
+                                                    <Label htmlFor={`${profile}-${module.id}`} className={cn("font-normal", (profile === 'Admin') && "text-muted-foreground")}>
+                                                        {module.label}
+                                                    </Label>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </CardContent>
+                             <CardFooter>
+                                <Button onClick={handleSavePermissions} disabled={isSaving}>
+                                    {isSaving ? "Salvando..." : "Salvar Permissões"}
+                                </Button>
+                             </CardFooter>
+                        </Card>
+                    </TabsContent>
+                )}
             </Tabs>
             
             <Dialog open={isManageMembersDialogOpen} onOpenChange={(isOpen) => {

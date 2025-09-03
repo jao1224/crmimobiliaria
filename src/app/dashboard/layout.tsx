@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -6,6 +7,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
 import {
+  Activity,
   BarChart3,
   Building2,
   CircleDollarSign,
@@ -20,6 +22,7 @@ import {
   FileText,
   Landmark,
   FolderKanban,
+  Trash2,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -44,15 +47,25 @@ import {
   SidebarMenuButton,
   SidebarProvider,
   SidebarFooter,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/dashboard/header";
 import { useToast } from "@/hooks/use-toast";
 import { ProfileProvider } from "@/contexts/ProfileContext";
 import { type UserProfile, menuConfig, userProfiles } from "@/lib/permissions";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged, type User } from "firebase/auth";
 import { Skeleton } from "@/components/ui/skeleton";
+import { doc, getDoc } from "firebase/firestore";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
+import { cn } from "@/lib/utils";
 
 
 export default function DashboardLayout({
@@ -62,13 +75,33 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const { toast } = useToast();
-  const [activeProfile, setActiveProfile] = useState<UserProfile>('Admin');
+  const [activeProfile, setActiveProfile] = useState<UserProfile>('Imobiliária');
   const [user, setUser] = useState<User | null>(null);
+  const [userRole, setUserRole] = useState<UserProfile | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+        // Buscar o cargo do usuário no Firestore
+        const userDocRef = doc(db, "users", currentUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+          const userData = userDocSnap.data();
+          const role = userData.role as UserProfile;
+          setUserRole(role);
+          // Define o perfil ativo inicial com base no cargo real do usuário
+          setActiveProfile(role);
+        } else {
+          // Fallback se não encontrar o documento
+          setUserRole('Corretor Autônomo');
+          setActiveProfile('Corretor Autônomo');
+        }
+      } else {
+        setUser(null);
+        setUserRole(null);
+      }
       setIsLoadingUser(false);
     });
     return () => unsubscribe();
@@ -94,18 +127,31 @@ export default function DashboardLayout({
 
   const menuItems = [
       { href: "/dashboard", icon: LayoutDashboard, label: "Painel", tooltip: "Painel" },
+      { href: "/dashboard/activity-feed", icon: Activity, label: "Feed de Atividades", tooltip: "Feed de Atividades" },
       { href: "/dashboard/properties", icon: Building2, label: "Imóveis", tooltip: "Imóveis" },
       { href: "/dashboard/crm", icon: Users, label: "CRM", tooltip: "CRM" },
       { href: "/dashboard/negotiations", icon: Handshake, label: "Negociações", tooltip: "Negociações" },
       { href: "/dashboard/processes", icon: FileText, label: "Processos Admin", tooltip: "Processos Administrativos" },
       { href: "/dashboard/finance", icon: CircleDollarSign, label: "Financeiro", tooltip: "Financeiro" },
       { href: "/dashboard/agenda", icon: Calendar, label: "Agenda", tooltip: "Agenda" },
-      { href: "/dashboard/reporting", icon: BarChart3, label: "Relatórios", tooltip: "Relatórios" },
+      { href: "/dashboard/reporting", icon: BarChart3, label: "Relatórios & Metas", tooltip: "Relatórios & Metas" },
       { href: "/dashboard/correspondent", icon: Landmark, label: "Correspondente", tooltip: "Correspondente Bancário" },
       { href: "/dashboard/services", icon: FolderKanban, label: "Outros Serviços", tooltip: "Outros Serviços" },
   ];
   
-  const visibleMenuItems = menuItems.filter(item => menuConfig[activeProfile].includes(item.href));
+  const isNegotiationsActive = pathname.startsWith('/dashboard/negotiations');
+  
+  const checkPermission = (path: string) => {
+    if (!activeProfile || !menuConfig[activeProfile]) {
+        return false; // Não renderiza nada se o perfil ainda não está definido
+    }
+    return menuConfig[activeProfile].some(p => path.startsWith(p));
+  };
+  
+  const visibleMenuItems = menuItems.filter(item => {
+    if (item.href) return checkPermission(item.href);
+    return false;
+  });
 
 
   return (
@@ -118,32 +164,28 @@ export default function DashboardLayout({
             </div>
           </SidebarHeader>
           <SidebarContent>
-            <div
-              className="flex-grow rounded-lg shadow-inner"
-              style={{ backgroundColor: "var(--sidebar-accent)"}}
-            >
-              <SidebarMenu className="p-2">
-                {visibleMenuItems.map((item) => (
+            <SidebarMenu>
+               {visibleMenuItems.map((item) => (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton
                       href={item.href}
-                      isActive={pathname === item.href}
-                      tooltip={item.tooltip}
+                      isActive={item.href === '/dashboard/negotiations' ? isNegotiationsActive : pathname === item.href}
+                      tooltip={item.label}
                       asChild
                     >
-                      <Link href={item.href}>
+                      <Link href={item.href!}>
                         <item.icon />
                         <span>{item.label}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </div>
+                )
+              )}
+            </SidebarMenu>
           </SidebarContent>
           <SidebarFooter>
             <SidebarMenu>
-              {menuConfig[activeProfile].includes('/dashboard/settings') && (
+              {checkPermission('/dashboard/settings') && (
               <SidebarMenuItem>
                  <SidebarMenuButton
                   href="/dashboard/settings"
@@ -185,27 +227,27 @@ export default function DashboardLayout({
                     <DropdownMenuContent side="right" align="start" className="w-56">
                       <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem>
-                        <UserCircle className="mr-2 h-4 w-4" />
-                        <span>Perfil</span>
+                      <DropdownMenuItem asChild>
+                         <Link href="/dashboard/settings">
+                            <UserCircle className="mr-2 h-4 w-4" />
+                            <span>Perfil</span>
+                        </Link>
                       </DropdownMenuItem>
-                       <DropdownMenuSub>
-                        <DropdownMenuSubTrigger>
-                          <Eye className="mr-2 h-4 w-4" />
-                          <span>Visualizar como</span>
-                        </DropdownMenuSubTrigger>
-                        <DropdownMenuPortal>
-                          <DropdownMenuSubContent>
-                            {userProfiles.map(profile => (
-                                <DropdownMenuItem key={profile} onClick={() => handleProfileSwitch(profile)}>{profile}</DropdownMenuItem>
-                            ))}
-                          </DropdownMenuSubContent>
-                        </DropdownMenuPortal>
-                      </DropdownMenuSub>
-                      <DropdownMenuItem>
-                        <Settings className="mr-2 h-4 w-4" />
-                        <span>Configurações</span>
-                      </DropdownMenuItem>
+                      {userRole === 'Admin' && (
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger>
+                            <Eye className="mr-2 h-4 w-4" />
+                            <span>Visualizar como</span>
+                          </DropdownMenuSubTrigger>
+                          <DropdownMenuPortal>
+                            <DropdownMenuSubContent>
+                              {userProfiles.map(profile => (
+                                  <DropdownMenuItem key={profile} onClick={() => handleProfileSwitch(profile)}>{profile}</DropdownMenuItem>
+                              ))}
+                            </DropdownMenuSubContent>
+                          </DropdownMenuPortal>
+                        </DropdownMenuSub>
+                      )}
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
                         <Link href="/">

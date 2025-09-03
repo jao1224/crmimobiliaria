@@ -35,6 +35,8 @@ body {
     --warning-foreground: 24 9.8% 10%;
     --status-blue: 230 56% 31%; /* #222f7c */
     --status-blue-foreground: 0 0% 100%;
+    --status-orange: 25 95% 53%; /* orange-500 */
+    --status-orange-foreground: 0 0% 100%;
     --border: 230 29% 88%; /* Based on b1b8d6 */
     --input: 230 29% 91%;
     --ring: 231 49% 27%;
@@ -82,6 +84,8 @@ body {
     --warning-foreground: 24 9.8% 10%;
     --status-blue: 231 49% 37%; /* Lighter #232d68 */
     --status-blue-foreground: 0 0% 100%;
+    --status-orange: 25 95% 53%; /* orange-500 */
+    --status-orange-foreground: 0 0% 100%;
     --border: 232 35% 25%;
     --input: 232 35% 22%;
     --ring: 231 49% 37%;

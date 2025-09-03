@@ -10,6 +10,7 @@ import { Notifications } from "./notifications"
 
 const pathTranslations: { [key: string]: string } = {
     dashboard: 'Painel',
+    'activity-feed': 'Feed de Atividades',
     properties: 'Imóveis',
     crm: 'CRM',
     negotiations: 'Negociações',
@@ -20,6 +21,8 @@ const pathTranslations: { [key: string]: string } = {
     correspondent: 'Correspondente Bancário',
     services: 'Outros Serviços',
     contract: 'Contrato',
+    archived: 'Arquivadas',
+    deleted: 'Excluídas',
 };
 
 function translatePath(path: string) {
@@ -34,7 +37,7 @@ export function Header() {
     return (
         <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-card px-4 md:px-6">
             <div className="flex items-center gap-2">
-                <SidebarTrigger className="md:hidden" />
+                <SidebarTrigger className="flex md:hidden" />
                 <Breadcrumb className="hidden md:flex">
                     <BreadcrumbList>
                         <BreadcrumbItem>

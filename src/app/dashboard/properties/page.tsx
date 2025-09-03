@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import Image from "next/image";
@@ -21,7 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { PropertyMatcher } from "@/components/dashboard/property-matcher";
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useContext } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -40,13 +41,18 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
-import type { Property, PropertyType } from "@/lib/data";
-import { getProperties, addProperty, realtors, updateProperty, deleteProperty } from "@/lib/data";
+import { getProperties, deleteProperty, propertyTypes, type Property, type PropertyType, getUsers, type User, addProperty, updateProperty, uploadImage } from "@/lib/data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { auth } from "@/lib/firebase";
+import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
+import { ProfileContext } from "@/contexts/ProfileContext";
 
 
 export default function PropertiesPage() {
   const [properties, setProperties] = useState<Property[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const { activeProfile } = useContext(ProfileContext);
+  const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
@@ -59,9 +65,7 @@ export default function PropertiesPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const addPropertyFormRef = useRef<HTMLFormElement>(null);
-  const [authUser, setAuthUser] = useState<User | null>(null);
-  const [isAuthReady, setIsAuthReady] = useState(false);
-
+  
   // Estados controlados para Selects no formulário de edição
   const [editCapturedBy, setEditCapturedBy] = useState<string>("");
   const [editType, setEditType] = useState<PropertyType | "">("");
@@ -73,29 +77,30 @@ export default function PropertiesPage() {
   const [captadorFilter, setCaptadorFilter] = useState('all');
   const [sortOrder, setSortOrder] = useState('default'); // 'price-asc', 'price-desc'
 
-  // Aguarda autenticação antes de consultar o Firestore, evitando erros de permissão
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setAuthUser(user);
-      setIsAuthReady(true);
+        setCurrentUser(user);
     });
+
+    const loadUsers = async () => {
+        try {
+            const fetchedUsers = await getUsers();
+            setUsers(fetchedUsers);
+        } catch (error) {
+             console.error("Failed to fetch users:", error);
+        }
+    }
+    
+    loadUsers();
+    
     return () => unsubscribe();
   }, []);
 
   useEffect(() => {
-    if (!isAuthReady) return;
-    if (!authUser) {
-      setProperties([]);
-      setIsLoading(false);
-      return;
+    if (currentUser !== undefined) {
+        refreshProperties();
     }
-    setIsLoading(true);
-    const unsubscribe = subscribeToProperties((list) => {
-      setProperties(list);
-      setIsLoading(false);
-    });
-    return () => unsubscribe();
-  }, [isAuthReady, authUser]);
+  }, [currentUser]);
 
   const refreshProperties = async () => {
     setIsLoading(true);
@@ -107,30 +112,56 @@ export default function PropertiesPage() {
       toast({
         variant: "destructive",
         title: "Erro ao Carregar Imóveis",
-        description: "Não foi possível buscar os imóveis do banco de dados.",
+        description: "Não foi possível buscar os imóveis.",
       });
     } finally {
       setIsLoading(false);
     }
   };
-
+  
 
   const captadores = useMemo(() => {
-    if (!properties || properties.length === 0) return [];
-    const captadorSet = new Set(properties.map(p => p.capturedBy));
-    return ['all', ...Array.from(captadorSet)];
-  }, [properties]);
+    const captadorMap = new Map<string, { name: string; role: string }>();
+
+    properties.forEach(p => {
+        if (!p.capturedBy) return;
+        if (captadorMap.has(p.capturedBy)) return;
+        let userFound = users.find(u => u.name === p.capturedBy);
+        if (p.capturedBy === 'Admin' && !userFound) {
+            userFound = users.find(u => u.role === 'Admin');
+        }
+        if (userFound) {
+            captadorMap.set(userFound.name, { name: userFound.name, role: userFound.role });
+        } else {
+             captadorMap.set(p.capturedBy, { name: p.capturedBy, role: 'N/A' });
+        }
+    });
+
+    const captadorDetails = Array.from(captadorMap.values());
+    captadorDetails.sort((a, b) => a.name.localeCompare(b.name));
+    
+    return [{ name: 'Todos os Captadores', role: 'all' }, ...captadorDetails];
+}, [properties, users]);
+
 
   const filteredAndSortedProperties = useMemo(() => {
-    if (!properties) return [];
     let filtered = [...properties];
-
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(p => p.status === statusFilter);
+    
+    if (currentUser) {
+        if (activeProfile === 'Corretor Autônomo' || activeProfile === 'Construtora') {
+            filtered = filtered.filter(p => p.capturedById === currentUser.uid);
+        } else if (activeProfile === 'Investidor') {
+            filtered = filtered.filter(p => p.status === 'Disponível' || p.capturedById === currentUser.uid);
+        }
     }
-
-    if (captadorFilter !== 'all') {
-      filtered = filtered.filter(p => p.capturedBy === captadorFilter);
+    
+    if (activeProfile === 'Admin' || activeProfile === 'Imobiliária') {
+        if (statusFilter !== 'all') {
+          filtered = filtered.filter(p => p.status === statusFilter);
+        }
+        if (captadorFilter !== 'all' && captadorFilter !== 'Todos os Captadores') {
+          filtered = filtered.filter(p => p.capturedBy === captadorFilter);
+        }
     }
     
     if (sortOrder === 'price-asc') {
@@ -140,7 +171,7 @@ export default function PropertiesPage() {
     }
 
     return filtered;
-  }, [properties, statusFilter, captadorFilter, sortOrder]);
+  }, [properties, statusFilter, captadorFilter, sortOrder, activeProfile, currentUser]);
 
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -167,80 +198,117 @@ export default function PropertiesPage() {
 
   const handleAddProperty = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setIsSaving(true);
-
-    if (!authUser) {
-      toast({ variant: "destructive", title: "Acesso restrito", description: "Faça login para cadastrar imóveis." });
-      setIsSaving(false);
-      return;
+    if (!currentUser) {
+        toast({ variant: 'destructive', title: 'Erro', description: 'Você precisa estar logado para adicionar um imóvel.' });
+        return;
     }
-
-    const formData = new FormData(event.currentTarget);
-    const newPropertyData: Omit<Property, 'id'> = {
-      name: formData.get("name") as string,
-      address: formData.get("address") as string,
-      status: "Disponível",
-      price: Number(formData.get("price")),
-      commission: Number(formData.get("commission")),
-      imageUrl: "https://placehold.co/600x400.png",
-      imageHint: "novo imovel",
-      capturedBy: authUser.displayName || "Admin",
-      description: formData.get("description") as string,
-      ownerInfo: formData.get("owner") as string,
-      type: formData.get("type") as PropertyType,
-    };
-
+    
+    setIsSaving(true);
     try {
-      await addProperty(newPropertyData);
-      await refreshProperties();
-      toast({ title: "Sucesso!", description: "Imóvel adicionado com sucesso." });
-      setPropertyDialogOpen(false);
-    } catch (error) {
-      console.error("Error adding property:", error);
-      toast({ variant: "destructive", title: "Erro", description: "Não foi possível adicionar o imóvel." });
+        const formData = new FormData(event.currentTarget);
+        const timestamp = Date.now();
+        const displayCode = `ID-${String(timestamp).slice(-6)}`;
+        
+        const newPropertyData: Omit<Property, 'id'> = {
+            name: formData.get('name') as string,
+            address: formData.get('address') as string,
+            status: 'Disponível',
+            price: Number(formData.get('price')),
+            commission: Number(formData.get('commission')),
+            type: formData.get('type') as PropertyType,
+            description: formData.get('description') as string,
+            ownerInfo: formData.get('owner') as string,
+            imageUrl: 'https://placehold.co/600x400.png',
+            displayCode,
+            imageHint: 'novo imovel',
+            capturedById: currentUser.uid,
+            capturedBy: currentUser.displayName || 'N/A',
+        };
+
+        const propertyId = await addProperty(newPropertyData);
+
+        if (selectedFile) {
+            try {
+                const imageUrl = await uploadImage(selectedFile, propertyId);
+                await updateProperty(propertyId, { imageUrl });
+            } catch (uploadError) {
+                console.error("Upload error:", uploadError);
+                toast({ 
+                    variant: "warning", 
+                    title: "Imóvel salvo, mas imagem falhou", 
+                    description: "O imóvel foi cadastrado, mas houve um problema com a imagem. Você pode editá-lo para tentar novamente." 
+                });
+            }
+        }
+        
+        await refreshProperties();
+        toast({title: 'Sucesso!', description: 'Imóvel adicionado com sucesso.'});
+        setPropertyDialogOpen(false);
+
+    } catch (error: any) {
+      console.error('Error adding property:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao Salvar',
+        description: error.message || 'Não foi possível adicionar o imóvel. Verifique o console para mais detalhes.',
+      });
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleUpdateProperty = async (event: React.FormEvent<HTMLFormElement>) => {
+const handleUpdateProperty = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!editingProperty) return;
+    
+    if (!editingProperty) {
+        toast({ variant: 'destructive', title: 'Erro', description: 'Nenhum imóvel selecionado para edição.' });
+        return;
+    }
+    
     setIsSaving(true);
-
-    if (!authUser) {
-      toast({ variant: "destructive", title: "Acesso restrito", description: "Faça login para editar imóveis." });
-      setIsSaving(false);
-      return;
-    }
-
-    const formData = new FormData(event.currentTarget);
-    
-    const updatedPropertyData: Partial<Property> = {
-      name: formData.get("name") as string,
-      address: formData.get("address") as string,
-      price: Number(formData.get("price")),
-      commission: Number(formData.get("commission")),
-      imageUrl: imagePreview || editingProperty.imageUrl,
-      capturedBy: (editCapturedBy || editingProperty.capturedBy) as string,
-      description: formData.get("description") as string,
-      ownerInfo: formData.get("owner") as string,
-      type: (editType || editingProperty.type) as PropertyType,
-      status: (editStatus || editingProperty.status) as Property['status'],
-    };
-    
     try {
-      await updateProperty(editingProperty.id, updatedPropertyData);
-      await refreshProperties();
-      toast({ title: "Sucesso!", description: "Imóvel atualizado com sucesso." });
-      setEditDialogOpen(false);
-      setEditingProperty(null);
-    } catch (error) {
-      toast({ variant: "destructive", title: "Erro", description: "Não foi possível atualizar o imóvel." });
+        const formData = new FormData(event.currentTarget);
+        
+        const dataToUpdate: Partial<Property> = {
+            name: formData.get("name") as string,
+            address: formData.get("address") as string,
+            price: Number(formData.get("price")),
+            commission: Number(formData.get("commission")),
+            capturedById: formData.get("capturedBy") as string,
+            description: formData.get("description") as string,
+            ownerInfo: formData.get("owner") as string,
+            type: formData.get("type") as PropertyType,
+            status: formData.get("status") as Property['status'],
+        };
+        
+        // Obter o nome do captador
+        if (dataToUpdate.capturedById) {
+            const user = users.find(u => u.id === dataToUpdate.capturedById);
+            if (user) {
+                dataToUpdate.capturedBy = user.name;
+            }
+        }
+        
+        if (selectedFile) {
+            dataToUpdate.imageUrl = await uploadImage(selectedFile, editingProperty.id);
+        } else if (imagePreview) {
+            dataToUpdate.imageUrl = imagePreview;
+        }
+
+        await updateProperty(editingProperty.id, dataToUpdate);
+
+        await refreshProperties();
+        toast({ title: "Sucesso!", description: "Imóvel atualizado com sucesso." });
+        setEditDialogOpen(false);
+
+    } catch (error: any) {
+        console.error('Error updating property:', error);
+        toast({ variant: "destructive", title: "Erro ao Atualizar", description: error.message || "Não foi possível atualizar o imóvel. Verifique o console." });
     } finally {
-      setIsSaving(false);
+        setIsSaving(false);
     }
-  };
+};
+
 
   const handleCardClick = (property: Property) => {
     setSelectedProperty(property);
@@ -251,7 +319,7 @@ export default function PropertiesPage() {
     e.stopPropagation();
     setEditingProperty(property);
     setImagePreview(property.imageUrl);
-    setEditCapturedBy(property.capturedBy);
+    setEditCapturedBy(property.capturedById);
     setEditType(property.type);
     setEditStatus(property.status);
     setEditDialogOpen(true);
@@ -260,6 +328,8 @@ export default function PropertiesPage() {
   const handleRemoveImage = () => {
     setImagePreview("https://placehold.co/600x400.png");
     setSelectedFile(null);
+    const inputFile = document.getElementById('edit-image') as HTMLInputElement;
+    if (inputFile) inputFile.value = '';
     toast({ title: "Imagem Removida", description: "A imagem do imóvel foi redefinida para a padrão. Salve para confirmar." });
   };
 
@@ -297,6 +367,7 @@ export default function PropertiesPage() {
         setEditCapturedBy("");
         setEditType("");
         setEditStatus("");
+        setEditingProperty(null);
     }
   }, [isPropertyDialogOpen, isEditDialogOpen]);
 
@@ -308,6 +379,8 @@ export default function PropertiesPage() {
         return "destructive";
       case "Alugado":
         return "info";
+      case "Em Negociação":
+        return "warning";
       default:
         return "secondary";
     }
@@ -321,6 +394,13 @@ export default function PropertiesPage() {
             return "";
     }
   };
+
+  const getCaptadorWithRole = (property: Property) => {
+    if (!property) return "Não informado.";
+    const captadorUser = users.find(u => u.id === property.capturedById);
+    const role = captadorUser ? captadorUser.role : null;
+    return `${property.capturedBy}${role ? ` (${role})` : ''}`;
+  }
 
 
   return (
@@ -379,7 +459,7 @@ export default function PropertiesPage() {
                   {/* Coluna 2: Imagem e Textareas */}
                   <div className="space-y-4">
                      <div className="space-y-2">
-                        <Label htmlFor="image">Imagem do Imóvel</Label>
+                        <Label htmlFor="image-add">Imagem do Imóvel</Label>
                         <div className="flex items-center gap-4">
                             {imagePreview ? (
                                 <Image src={imagePreview} alt="Preview do imóvel" width={80} height={80} className="rounded-md object-cover aspect-square"/>
@@ -388,7 +468,7 @@ export default function PropertiesPage() {
                                     <Upload className="h-6 w-6"/>
                                 </div>
                             )}
-                            <Input id="image" name="image" type="file" onChange={handleFileChange} accept="image/png, image/jpeg, image/gif, image/webp" />
+                            <Input id="image-add" name="image" type="file" onChange={handleFileChange} accept="image/png, image/jpeg, image/gif, image/webp" />
                         </div>
                     </div>
                     <div className="space-y-2">
@@ -419,6 +499,7 @@ export default function PropertiesPage() {
              <CardDescription>
                 Uma lista de todos os imóveis em seu portfólio.
              </CardDescription>
+              {(activeProfile === 'Admin' || activeProfile === 'Imobiliária') && (
               <div className="flex flex-wrap items-center gap-2">
                  <Select value={statusFilter} onValueChange={setStatusFilter}>
                     <SelectTrigger className="w-full sm:w-auto min-w-[150px]">
@@ -429,14 +510,19 @@ export default function PropertiesPage() {
                         <SelectItem value="Disponível">Disponível</SelectItem>
                         <SelectItem value="Vendido">Vendido</SelectItem>
                         <SelectItem value="Alugado">Alugado</SelectItem>
+                        <SelectItem value="Em Negociação">Em Negociação</SelectItem>
                     </SelectContent>
                 </Select>
                  <Select value={captadorFilter} onValueChange={setCaptadorFilter}>
-                    <SelectTrigger className="w-full sm:w-auto min-w-[180px]">
+                    <SelectTrigger className="w-full sm:w-auto min-w-[220px]">
                         <SelectValue placeholder="Filtrar por Captador" />
                     </SelectTrigger>
                     <SelectContent>
-                        {captadores.map(c => <SelectItem key={c} value={c}>{c === 'all' ? 'Todos os Captadores' : c}</SelectItem>)}
+                        {captadores.map(c => 
+                            <SelectItem key={c.name} value={c.name === 'Todos os Captadores' ? 'all' : c.name}>
+                                {c.role === 'all' ? c.name : `${c.name} - ${c.role}`}
+                            </SelectItem>
+                        )}
                     </SelectContent>
                 </Select>
                  <Select value={sortOrder} onValueChange={setSortOrder}>
@@ -450,6 +536,7 @@ export default function PropertiesPage() {
                     </SelectContent>
                 </Select>
               </div>
+              )}
           </div>
         </CardHeader>
         <CardContent>
@@ -480,7 +567,7 @@ export default function PropertiesPage() {
                     onClick={() => handleCardClick(property)}
                     className={cn(
                     "overflow-hidden transition-all duration-200 flex flex-col",
-                    property.status === 'Disponível'
+                    property.status === 'Disponível' || property.status === 'Em Negociação'
                         ? 'cursor-pointer hover:shadow-xl hover:-translate-y-1'
                         : ''
                     )}
@@ -505,6 +592,13 @@ export default function PropertiesPage() {
                         <div className="absolute top-4 left-0 w-full">
                         <div className="bg-info text-info-foreground font-bold text-center py-1 px-4 shadow-lg">
                                 ALUGADO
+                            </div>
+                        </div>
+                    )}
+                    {property.status === "Em Negociação" && (
+                        <div className="absolute top-4 left-0 w-full">
+                        <div className="bg-yellow-500 text-accent-foreground font-bold text-center py-1 px-4 shadow-lg">
+                                EM NEGOCIAÇÃO
                             </div>
                         </div>
                     )}
@@ -533,18 +627,22 @@ export default function PropertiesPage() {
                         </DropdownMenu>
                     </div>
                     </div>
-                    <CardHeader>
+                    <CardHeader className="pb-2">
                         <CardTitle className="truncate text-lg">{property.name}</CardTitle>
                         <CardDescription className="truncate">{property.address}</CardDescription>
+                        <CardDescription className="font-mono text-xs pt-1">Cód: {property.displayCode}</CardDescription>
                     </CardHeader>
-                    <CardContent className="flex-grow">
-                    <div className="text-2xl font-bold">
+                    <CardContent className="flex-grow pt-2">
+                        <div className="text-2xl font-bold">
                             {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(property.price)}
-                    </div>
+                        </div>
+                        <p className="text-sm text-muted-foreground line-clamp-2 mt-2">
+                            {property.description}
+                        </p>
                     </CardContent>
                     <CardFooter className="flex justify-between items-center text-xs text-muted-foreground">
                         <span>Captador: {property.capturedBy}</span>
-                        <Badge variant={getStatusVariant(property.status)} className={cn((property.status === 'Vendido' || property.status === 'Alugado') && 'hidden', getStatusClass(property.status))}>
+                        <Badge variant={getStatusVariant(property.status)} className={cn((property.status === 'Vendido' || property.status === 'Alugado' || property.status === 'Em Negociação') && 'hidden', getStatusClass(property.status))}>
                         {property.status}
                         </Badge>
                     </CardFooter>
@@ -609,7 +707,7 @@ export default function PropertiesPage() {
                   </div>
                    <div>
                     <h3 className="font-semibold text-lg">Captado por</h3>
-                    <p className="text-sm text-muted-foreground mt-2">{selectedProperty.capturedBy || "Não informado."}</p>
+                    <p className="text-sm text-muted-foreground mt-2">{getCaptadorWithRole(selectedProperty)}</p>
                   </div>
                 </div>
               </div>
@@ -643,7 +741,7 @@ export default function PropertiesPage() {
                     )}
                     <div className="flex w-full gap-2 pt-2">
                       <Input id="edit-image" name="image" type="file" onChange={handleFileChange} className="w-full" accept="image/png, image/jpeg, image/gif, image/webp" />
-                      <Button type="button" variant="outline" size="icon" onClick={handleRemoveImage} disabled={!imagePreview || imagePreview.includes('placehold.co')}>
+                      <Button type="button" variant="outline" size="icon" onClick={handleRemoveImage}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -679,36 +777,34 @@ export default function PropertiesPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="edit-capturedBy">Captado por</Label>
-                       <Select value={editCapturedBy} onValueChange={setEditCapturedBy} required>
+                       <Select name="capturedBy" defaultValue={editingProperty.capturedById} required>
                           <SelectTrigger><SelectValue/></SelectTrigger>
                           <SelectContent>
-                              {realtors.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                              {users.map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
                           </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="type">Tipo de Imóvel</Label>
-                        <Select value={editType || editingProperty.type} onValueChange={(v) => setEditType(v as PropertyType)}>
+                        <Label htmlFor="edit-type">Tipo de Imóvel</Label>
+                        <Select value={editType || editingProperty.type} onValueChange={(v) => setEditType(v as PropertyType)} name="type">
                             <SelectTrigger><SelectValue /></SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="Lançamento">Lançamento</SelectItem>
-                                <SelectItem value="Revenda">Revenda</SelectItem>
-                                <SelectItem value="Terreno">Terreno</SelectItem>
-                                <SelectItem value="Casa">Casa</SelectItem>
-                                <SelectItem value="Apartamento">Apartamento</SelectItem>
+                                {propertyTypes.map(type => (
+                                  <SelectItem key={type} value={type}>{type}</SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
                     </div>
                   </div>
                   <div className="space-y-2">
                       <Label htmlFor="edit-status">Status</Label>
-                      <Select value={editStatus || editingProperty.status} onValueChange={setEditStatus}>
+                      <Select value={editStatus || editingProperty.status} onValueChange={setEditStatus} name="status">
                           <SelectTrigger><SelectValue /></SelectTrigger>
                           <SelectContent>
                               <SelectItem value="Disponível">Disponível</SelectItem>
                               <SelectItem value="Vendido">Vendido</SelectItem>
                               <SelectItem value="Alugado">Alugado</SelectItem>
-                              <SelectItem value="Reservado">Reservado</SelectItem>
+                              <SelectItem value="Em Negociação">Em Negociação</SelectItem>
                           </SelectContent>
                       </Select>
                   </div>
@@ -748,5 +844,3 @@ export default function PropertiesPage() {
     </div>
   );
 }
-
-    

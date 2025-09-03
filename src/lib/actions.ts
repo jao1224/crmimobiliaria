@@ -2,14 +2,29 @@
 'use server';
 
 import { matchProperties as matchPropertiesFlow, type MatchPropertiesInput } from '@/ai/flows/property-matching';
+import { getReportInsights as getReportInsightsFlow, type ReportInsightsInput, type ReportInsightsOutput } from '@/ai/flows/reporting-insights';
+import { addProperty as addPropertyToDb, updateProperty as updatePropertyToDb, getProperties } from './data';
 
-// Dados simulados para a função da IA. Em um cenário real, isso viria do Firestore.
-const propertyDetails = `
-1. Apartamento Vista Mar: Lindo apartamento com 3 quartos, vista para o mar, cozinha moderna e 2 vagas de garagem. Preço: R$ 950.000.
-2. Casa com Piscina: Espaçosa casa com 4 suítes, piscina, área gourmet e grande quintal. Ideal para famílias. Preço: R$ 1.200.000.
-3. Terreno Comercial: Terreno de esquina em avenida movimentada, perfeito para construção de lojas. Preço: R$ 2.500.000.
-4. Loft Moderno: Loft no centro da cidade, com design industrial, 1 quarto, perfeito para solteiros ou casais. Preço: R$ 450.000.
-`;
+
+export async function addProperty(formData: FormData) {
+    try {
+        await addPropertyToDb(formData);
+        return { success: true };
+    } catch (error: any) {
+        console.error('Erro na Server Action addProperty:', error);
+        return { success: false, error: error.message || 'Falha ao adicionar imóvel.' };
+    }
+}
+
+export async function updateProperty(formData: FormData) {
+    try {
+        await updatePropertyToDb(formData);
+        return { success: true };
+    } catch (error: any) {
+        console.error('Erro na Server Action updateProperty:', error);
+        return { success: false, error: error.message || 'Falha ao atualizar imóvel.' };
+    }
+}
 
 
 export async function findMatchingProperties(clientRequirements: string) {
@@ -18,7 +33,18 @@ export async function findMatchingProperties(clientRequirements: string) {
       return { success: false, error: 'Os requisitos do cliente não podem estar vazios.' };
     }
     
-    // Usa os detalhes dos imóveis simulados.
+    // Busca os imóveis do Firestore
+    const propertiesFromDb = await getProperties();
+
+    // Formata os detalhes dos imóveis para a IA
+    const propertyDetails = propertiesFromDb.map((prop, index) => 
+        `${index + 1}. ${prop.name} (Tipo: ${prop.type}, Status: ${prop.status}): ${prop.description || ''} Localizado em ${prop.address}. Preço: R$ ${prop.price}.`
+    ).join('\n');
+
+    if (!propertyDetails) {
+        return { success: true, data: "Nenhum imóvel encontrado no banco de dados para comparar." };
+    }
+
     const input: MatchPropertiesInput = {
       clientRequirements,
       propertyDetails,
@@ -30,4 +56,21 @@ export async function findMatchingProperties(clientRequirements: string) {
     console.error('Erro em findMatchingProperties:', error);
     return { success: false, error: 'Falha ao encontrar imóveis correspondentes devido a um erro no servidor.' };
   }
+}
+
+export async function getReportInsights(salesData: string, captureData: string, teamData: string): Promise<{ success: boolean, data?: ReportInsightsOutput, error?: string}> {
+    try {
+        if (!salesData && !captureData && !teamData) {
+            return { success: false, error: "Dados insuficientes para gerar uma análise."};
+        }
+
+        const input: ReportInsightsInput = { salesData, captureData, teamData };
+        const result = await getReportInsightsFlow(input);
+
+        return { success: true, data: result };
+
+    } catch (error) {
+        console.error('Erro em getReportInsights:', error);
+        return { success: false, error: 'Falha ao gerar análise de relatório devido a um erro no servidor.' };
+    }
 }

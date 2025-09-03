@@ -1,12 +1,23 @@
 
 "use client";
 
-import { useState, useContext, useEffect } from "react";
+import { useState, useContext, useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,7 +26,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, PlusCircle, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { getFinancingProcesses, getServiceRequests, realtors, addServiceRequest, type FinancingProcess, type ServiceRequest, type ServiceRequestType, type FinancingStatus, type EngineeringStatus, type GeneralProcessStatus, updateFinancingProcess } from "@/lib/data";
+import { getFinancingProcesses, getServiceRequests, getUsers, addServiceRequest, type FinancingProcess, type ServiceRequest, type ServiceRequestType, type FinancingStatus, type EngineeringStatus, type GeneralProcessStatus, updateFinancingProcess, type User, addFinancingProcess, updateServiceRequest, getNegotiations, type Negotiation } from "@/lib/data";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import type { UserProfile } from "../layout";
 import { cn } from "@/lib/utils";
@@ -25,13 +36,23 @@ const formatCurrency = (amount: number) => new Intl.NumberFormat('pt-BR', { styl
 
 const correspondentPermissions: UserProfile[] = ['Admin', 'Imobiliária'];
 
+const serviceRequestTypes: { id: ServiceRequestType, label: string }[] = [
+    { id: 'credit_approval', label: 'Aprovação de Crédito' },
+    { id: 'engineering_report', label: 'Laudo de Engenharia' },
+    { id: 'property_registration', label: 'Matrícula Atualizada' },
+    { id: 'account_opening', label: 'Abertura de Conta' }
+];
+
 export default function CorrespondentPage() {
     const [processes, setProcesses] = useState<FinancingProcess[]>([]);
     const [requests, setRequests] = useState<ServiceRequest[]>([]);
+    const [users, setUsers] = useState<User[]>([]);
+    const [negotiations, setNegotiations] = useState<Negotiation[]>([]); // Adicionado
     const [selectedProcess, setSelectedProcess] = useState<FinancingProcess | null>(null);
+    const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(null);
     const [isDetailModalOpen, setDetailModalOpen] = useState(false);
-    const [isRequestModalOpen, setRequestModalOpen] = useState(false);
-    const [requestType, setRequestType] = useState<ServiceRequestType>('credit_approval');
+    const [isAcceptRequestDialogOpen, setAcceptRequestDialogOpen] = useState(false);
+    const [requestTypeFilter, setRequestTypeFilter] = useState('all');
 
     const { toast } = useToast();
     
@@ -40,9 +61,25 @@ export default function CorrespondentPage() {
     }, []);
 
     const fetchData = async () => {
-        setProcesses(await getFinancingProcesses());
-        setRequests(await getServiceRequests());
+        const [processesData, requestsData, usersData, negsData] = await Promise.all([
+            getFinancingProcesses(),
+            getServiceRequests(),
+            getUsers(),
+            getNegotiations() // Adicionado
+        ]);
+        setProcesses(processesData);
+        setRequests(requestsData);
+        setUsers(usersData);
+        setNegotiations(negsData); // Adicionado
     }
+    
+    const filteredRequests = useMemo(() => {
+        if (requestTypeFilter === 'all') {
+            return requests;
+        }
+        return requests.filter(req => req.type === requestTypeFilter);
+    }, [requests, requestTypeFilter]);
+
 
     const handleRowClick = (process: FinancingProcess) => {
         setSelectedProcess(process);
@@ -63,25 +100,69 @@ export default function CorrespondentPage() {
         setDetailModalOpen(false);
     };
 
-    const handleNewRequest = async (event: React.FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        const formData = new FormData(event.currentTarget);
+    const handleRequestClick = (request: ServiceRequest) => {
+        if (request.status !== 'Pendente') return;
+        setSelectedRequest(request);
+        setAcceptRequestDialogOpen(true);
+    };
+    
+    const handleAcceptRequest = async () => {
+        if (!selectedRequest) return;
         
-        const newRequest: Omit<ServiceRequest, 'id'> = {
-            type: requestType,
-            realtorName: formData.get('realtorName') as string,
-            clientInfo: formData.get('clientInfo') as string,
-            propertyInfo: formData.get('propertyInfo') as string,
-            status: 'Pendente',
-            date: new Date().toISOString()
+        const clientNameFromRequest = selectedRequest.clientInfo.split('\n')[0].replace('Nome: ', '').trim();
+        const propertyNameFromRequest = selectedRequest.propertyInfo.split('\n')[0].replace('Imóvel: ', '').trim();
+
+        // Tenta encontrar uma negociação existente que corresponda à solicitação.
+        const matchingNegotiation = negotiations.find(
+            neg => neg.client.trim() === clientNameFromRequest && neg.property.trim() === propertyNameFromRequest
+        );
+        
+        if (!matchingNegotiation) {
+            toast({
+                variant: 'destructive',
+                title: "Negociação não encontrada",
+                description: `Não foi encontrada uma negociação para ${clientNameFromRequest} e o imóvel ${propertyNameFromRequest}. O processo de financiamento não pode ser criado sem uma negociação ativa.`,
+                duration: 7000
+            });
+            setAcceptRequestDialogOpen(false);
+            return;
+        }
+
+
+        // 1. Cria um novo processo de financiamento
+        const newFinancingProcess: Omit<any, 'id'> = {
+            negotiationId: matchingNegotiation.id, // Vincula o ID da negociação
+            clientName: clientNameFromRequest,
+            propertyName: propertyNameFromRequest,
+            realtorName: selectedRequest.realtorName,
+            clientStatus: 'Pendente',
+            clientStatusReason: 'Aguardando documentação inicial',
+            approvedValue: 0,
+            bacenInfo: '',
+            engineeringStatus: 'Não solicitado',
+            engineeringReason: '',
+            appraisalValue: 0,
+            appraisalDate: '',
+            docs: {
+                propertyRegistration: { updated: false, dueDate: '' },
+                paycheck: { updated: false, dueDate: '' },
+                addressProof: { updated: false, dueDate: '' },
+                clientApproval: { updated: false, dueDate: '' },
+                engineeringReport: { updated: false, dueDate: '' },
+            },
+            stages: { formSignature: false, compliance: false, financingResources: false, bankSignature: '', registryEntry: '', warranty: '' },
+            generalStatus: 'Ativo',
+            hasPendency: true,
         };
-        
-        await addServiceRequest(newRequest);
+        await addFinancingProcess(newFinancingProcess);
+
+        // 2. Atualiza o status da solicitação
+        await updateServiceRequest(selectedRequest.id, { status: 'Em Análise' });
+
         await fetchData();
-        
-        toast({ title: "Sucesso", description: "Nova solicitação enviada ao correspondente." });
-        setRequestModalOpen(false);
-        (event.currentTarget as HTMLFormElement).reset();
+        toast({ title: "Processo Iniciado!", description: "A solicitação foi aceita e um novo processo de financiamento foi criado." });
+        setAcceptRequestDialogOpen(false);
+        setSelectedRequest(null);
     };
 
 
@@ -137,85 +218,46 @@ export default function CorrespondentPage() {
                 </TabsContent>
                 <TabsContent value="requests">
                     <Card>
-                        <CardHeader className="flex-row items-center justify-between">
-                            <div>
-                                <CardTitle>Solicitações de Corretores</CardTitle>
-                                <CardDescription>Gerencie as solicitações de aprovação de crédito, laudos e outros serviços.</CardDescription>
+                        <CardHeader>
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <CardTitle>Solicitações de Corretores</CardTitle>
+                                    <CardDescription>Gerencie as solicitações de aprovação de crédito, laudos e outros serviços.</CardDescription>
+                                </div>
+                                 <div className="w-1/4">
+                                     <Select value={requestTypeFilter} onValueChange={setRequestTypeFilter}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Filtrar por tipo..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Todos os Tipos</SelectItem>
+                                            {serviceRequestTypes.map(type => (
+                                                <SelectItem key={type.id} value={type.id}>{type.label}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                 </div>
                             </div>
-                            <Dialog open={isRequestModalOpen} onOpenChange={setRequestModalOpen}>
-                                <DialogTrigger asChild><Button><PlusCircle className="mr-2 h-4 w-4"/>Nova Solicitação</Button></DialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader>
-                                        <DialogTitle>Criar Nova Solicitação</DialogTitle>
-                                        <DialogDescription>Preencha os dados para enviar uma solicitação ao correspondente.</DialogDescription>
-                                    </DialogHeader>
-                                     <form onSubmit={handleNewRequest}>
-                                         <div className="py-4 space-y-4">
-                                            <div className="space-y-2">
-                                                <Label>Tipo de Solicitação</Label>
-                                                <Select value={requestType} onValueChange={(v) => setRequestType(v as any)} required>
-                                                    <SelectTrigger><SelectValue/></SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="credit_approval">Aprovação de Crédito</SelectItem>
-                                                        <SelectItem value="engineering_report">Laudo de Engenharia</SelectItem>
-                                                        <SelectItem value="property_registration">Matrícula Atualizada</SelectItem>
-                                                        <SelectItem value="account_opening">Abertura de Conta</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label>Seu Nome (Corretor)</Label>
-                                                <Select name="realtorName" required>
-                                                    <SelectTrigger><SelectValue placeholder="Selecione seu nome"/></SelectTrigger>
-                                                    <SelectContent>
-                                                        {realtors.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                             {(requestType === 'credit_approval' || requestType === 'account_opening') && (
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="clientInfo">Informações do Cliente</Label>
-                                                    <Textarea id="clientInfo" name="clientInfo" placeholder="Nome completo, CPF, Renda, etc." required/>
-                                                </div>
-                                             )}
-                                             {(requestType === 'engineering_report' || requestType === 'property_registration') && (
-                                                 <div className="space-y-2">
-                                                    <Label htmlFor="propertyInfo">Informações do Imóvel</Label>
-                                                    <Textarea id="propertyInfo" name="propertyInfo" placeholder="Endereço completo, matrícula, área, etc." required/>
-                                                </div>
-                                             )}
-                                         </div>
-                                        <DialogFooter>
-                                            <Button type="submit"><Send className="mr-2 h-4 w-4"/>Enviar Solicitação</Button>
-                                        </DialogFooter>
-                                     </form>
-                                </DialogContent>
-                            </Dialog>
                         </CardHeader>
                         <CardContent>
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>Data</TableHead>
+                                        <TableHead>Data/Hora da Solicitação</TableHead>
                                         <TableHead>Tipo</TableHead>
                                         <TableHead>Solicitante</TableHead>
                                         <TableHead>Status</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {requests.map(req => (
-                                        <TableRow key={req.id} className="transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1">
-                                            <TableCell>{new Date(req.date).toLocaleDateString()}</TableCell>
-                                            <TableCell className="font-medium">{
-                                                {
-                                                    'credit_approval': 'Aprovação de Crédito',
-                                                    'engineering_report': 'Laudo de Engenharia',
-                                                    'property_registration': 'Matrícula Atualizada',
-                                                    'account_opening': 'Abertura de Conta'
-                                                }[req.type]
-                                            }</TableCell>
+                                    {filteredRequests.map(req => (
+                                        <TableRow key={req.id} onClick={() => handleRequestClick(req)} className={cn("transition-all duration-200", req.status === 'Pendente' && "cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
+                                            <TableCell>{new Date(req.date).toLocaleString('pt-BR')}</TableCell>
+                                            <TableCell className="font-medium">
+                                                {serviceRequestTypes.find(t => t.id === req.type)?.label || req.type}
+                                            </TableCell>
                                             <TableCell>{req.realtorName}</TableCell>
-                                            <TableCell><Badge variant={req.status === 'Concluído' ? 'success' : 'secondary'}>{req.status}</Badge></TableCell>
+                                            <TableCell><Badge variant={req.status === 'Concluído' ? 'success' : req.status === 'Em Análise' ? 'warning' : 'secondary'}>{req.status}</Badge></TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
@@ -231,6 +273,29 @@ export default function CorrespondentPage() {
                     {selectedProcess && <ProcessDetailForm process={selectedProcess} onSave={handleSaveChanges} onCancel={() => setDetailModalOpen(false)} />}
                 </DialogContent>
             </Dialog>
+            
+             {/* Modal de Confirmação de Aceite de Solicitação */}
+            <AlertDialog open={isAcceptRequestDialogOpen} onOpenChange={setAcceptRequestDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Aceitar Solicitação e Iniciar Processo?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Esta ação criará um novo processo de financiamento na aba "Meus Processos" com base nos dados desta solicitação e mudará o status da solicitação para "Em Análise".
+                        </AlertDialogDescription>
+                        <div className="pt-4 text-sm text-foreground space-y-1 text-left">
+                            <span className="block"><strong>Tipo:</strong> {serviceRequestTypes.find(t => t.id === selectedRequest?.type)?.label || selectedRequest?.type}</span>
+                            <span className="block"><strong>Solicitante:</strong> {selectedRequest?.realtorName}</span>
+                            <span className="block"><strong>Cliente:</strong> {selectedRequest?.clientInfo.split('\n')[0].replace('Nome: ', '').trim()}</span>
+                        </div>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleAcceptRequest} className={cn(buttonVariants({ variant: "default" }))}>
+                            Aceitar e Iniciar
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }
@@ -273,7 +338,7 @@ function ProcessDetailForm({ process, onSave, onCancel }: { process: FinancingPr
         <form onSubmit={handleSubmit}>
             <DialogHeader>
                 <DialogTitle>Detalhes do Processo de Financiamento</DialogTitle>
-                <DialogDescription>Negociação ID: {formData.negotiationId} - {formData.propertyName}</DialogDescription>
+                <DialogDescription>Negociação ID: ({formData.negotiationId}) - {formData.propertyName}</DialogDescription>
             </DialogHeader>
             <div className="py-4 grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Coluna 1 */}
@@ -391,3 +456,7 @@ function ProcessDetailForm({ process, onSave, onCancel }: { process: FinancingPr
         </form>
     );
 }
+
+
+    
+    

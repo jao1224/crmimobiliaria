@@ -7,16 +7,29 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, Trash2 } from "lucide-react";
 import { ptBR } from "date-fns/locale";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import type { UserProfile } from "../layout";
-import { addEvent, getEvents, type Event } from "@/lib/data";
+import { addEvent, getEvents, updateEvent, deleteEvent, type Event } from "@/lib/data";
 import { Skeleton } from "@/components/ui/skeleton";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { Separator } from "@/components/ui/separator";
 
 
 type EventType = 'personal' | 'company' | 'team_visit';
@@ -27,39 +40,40 @@ const agendaTabs: { id: EventType, label: string }[] = [
     { id: 'team_visit', label: 'Visitas da Equipe' }
 ];
 
+// Permissões de VISUALIZAÇÃO
 const agendaPermissions: Record<EventType, UserProfile[]> = {
-    'personal': ['Admin', 'Imobiliária', 'Corretor Autônomo', 'Investidor', 'Construtora', 'Financeiro'], // Todos têm agenda pessoal
-    'company': ['Admin', 'Imobiliária'], // Apenas Admin/Imobiliária podem editar, mas todos podem ver
-    'team_visit': ['Admin', 'Imobiliária', 'Corretor Autônomo', 'Construtora'] // Perfis que participam de visitas
+    'personal': ['Admin', 'Imobiliária', 'Corretor Autônomo', 'Investidor', 'Construtora', 'Financeiro', 'Vendedor'], // Todos podem ter agenda pessoal
+    'company': ['Admin', 'Imobiliária', 'Corretor Autônomo', 'Investidor', 'Construtora', 'Financeiro', 'Vendedor'],  // Todos podem ver
+    'team_visit': ['Admin', 'Imobiliária', 'Construtora', 'Vendedor', 'Corretor Autônomo'] // Apenas perfis de gestão de equipe
 };
 
+// Permissões de EDIÇÃO
 const editPermissions: Record<EventType, UserProfile[]> = {
-    'personal': ['Admin', 'Imobiliária', 'Corretor Autônomo', 'Investidor', 'Construtora', 'Financeiro'], // Cada um edita a sua
+    'personal': ['Admin', 'Imobiliária', 'Corretor Autônomo', 'Investidor', 'Construtora', 'Financeiro', 'Vendedor'], // Cada um edita a sua
     'company': ['Admin', 'Imobiliária'], // Apenas Admin/Imobiliária editam a agenda geral
-    'team_visit': ['Admin', 'Imobiliária', 'Corretor Autônomo'] // Corretores e Admins podem marcar visitas
+    'team_visit': ['Admin', 'Imobiliária', 'Construtora', 'Vendedor', 'Corretor Autônomo'] // Admins e Construtoras podem marcar visitas de suas equipes
 };
 
 
 export default function AgendaPage() {
     const { activeProfile } = useContext(ProfileContext);
 
+    // Ajusta as abas visíveis com base no perfil ativo
     const visibleTabs = useMemo(() => {
-        return agendaTabs.filter(tab => {
-            // Todos podem ver a agenda da imobiliária
-            if (tab.id === 'company') return true;
-            // Para outras agendas, verificar permissão
-            return agendaPermissions[tab.id].includes(activeProfile);
-        });
+        return agendaTabs.filter(tab => agendaPermissions[tab.id].includes(activeProfile));
     }, [activeProfile]);
     
     const [events, setEvents] = useState<Event[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
     const [activeTab, setActiveTab] = useState<EventType>(visibleTabs.length > 0 ? visibleTabs[0].id : 'personal');
-    const [isEventDialogOpen, setEventDialogOpen] = useState(false);
+    const [isAddDialogOpen, setAddDialogOpen] = useState(false);
+    const [isEditDialogOpen, setEditDialogOpen] = useState(false);
+    const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
     const { toast } = useToast();
 
-    // Carrega os eventos iniciais e atualiza quando a aba muda
+    // Carrega os eventos iniciais
     useEffect(() => {
         refreshEvents();
     }, []);
@@ -83,7 +97,8 @@ export default function AgendaPage() {
             setActiveTab(visibleTabs[0]?.id || 'personal');
         }
     }, [visibleTabs, activeTab]);
-
+    
+    // Determina se o perfil ativo pode editar a aba atual
     const canEditCurrentTab = useMemo(() => {
         return editPermissions[activeTab].includes(activeProfile);
     }, [activeTab, activeProfile]);
@@ -105,22 +120,40 @@ export default function AgendaPage() {
                    eventMonth === selectedMonth &&
                    eventYear === selectedYear &&
                    event.type === activeTab;
-        });
+        }).sort((a,b) => a.time.localeCompare(b.time));
     }, [selectedDate, events, activeTab]);
     
     const handleAddEvent = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        const formData = new FormData(event.currentTarget);
+        const form = event.currentTarget;
+        const formData = new FormData(form);
         const dateStr = formData.get("date") as string;
-        
-        const date = new Date(dateStr);
-        const userTimezoneOffset = date.getTimezoneOffset() * 60000;
-        const correctDate = new Date(date.getTime() + userTimezoneOffset);
+        const timeStr = formData.get("time") as string;
+
+        // Validação de Conflito de forma mais robusta
+        const hasConflict = events.some(e => {
+            // Compara a data como string 'YYYY-MM-DD' e o horário
+            const eventDate = new Date(e.date as any);
+            const eventDateStr = `${eventDate.getUTCFullYear()}-${String(eventDate.getUTCMonth() + 1).padStart(2, '0')}-${String(eventDate.getUTCDate()).padStart(2, '0')}`;
+            return e.type === activeTab && eventDateStr === dateStr && e.time === timeStr;
+        });
+
+        if (hasConflict) {
+            toast({
+                variant: 'destructive',
+                title: "Conflito de Horário",
+                description: `Já existe um evento na agenda de "${getEventTypeLabel(activeTab).label}" neste dia e horário.`,
+            });
+            return;
+        }
+
+        const [year, month, day] = dateStr.split('-').map(Number);
+        const correctDate = new Date(Date.UTC(year, month - 1, day));
 
         const newEventData: Omit<Event, 'id'> = {
             date: correctDate,
             title: formData.get("title") as string,
-            time: formData.get("time") as string,
+            time: timeStr,
             description: formData.get("description") as string,
             type: activeTab,
         };
@@ -129,12 +162,56 @@ export default function AgendaPage() {
             await addEvent(newEventData);
             await refreshEvents();
             toast({ title: "Sucesso!", description: "Evento adicionado com sucesso." });
-            setEventDialogOpen(false);
-            (event.currentTarget as HTMLFormElement).reset();
+            setAddDialogOpen(false);
+            form.reset();
         } catch (error) {
+            console.error("Erro ao salvar evento: ", error);
             toast({ variant: 'destructive', title: "Erro", description: "Não foi possível salvar o evento." });
         }
     };
+    
+     const handleUpdateEvent = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        if (!selectedEvent) return;
+
+        const formData = new FormData(event.currentTarget);
+        const updatedData: Partial<Event> = {
+            title: formData.get("title") as string,
+            time: formData.get("time") as string,
+            description: formData.get("description") as string,
+        };
+
+        try {
+            await updateEvent(selectedEvent.id, updatedData);
+            await refreshEvents();
+            toast({ title: "Sucesso!", description: "Evento atualizado com sucesso." });
+            setEditDialogOpen(false);
+            setSelectedEvent(null);
+        } catch (error) {
+            toast({ variant: 'destructive', title: "Erro", description: "Não foi possível atualizar o evento." });
+        }
+    };
+
+    const handleDeleteEvent = async () => {
+        if (!selectedEvent) return;
+
+        try {
+            await deleteEvent(selectedEvent.id);
+            await refreshEvents();
+            toast({ title: "Sucesso!", description: "Evento excluído com sucesso." });
+            setDeleteDialogOpen(false);
+            setEditDialogOpen(false); // Fecha o modal de edição também
+            setSelectedEvent(null);
+        } catch (error) {
+            toast({ variant: 'destructive', title: "Erro", description: "Não foi possível excluir o evento." });
+        }
+    };
+
+    const handleOpenEditDialog = (event: Event) => {
+        setSelectedEvent(event);
+        setEditDialogOpen(true);
+    };
+
 
     const getEventTypeLabel = (type: Event['type']) => {
         switch (type) {
@@ -152,7 +229,7 @@ export default function AgendaPage() {
                     <h1 className="text-2xl font-bold">Agenda</h1>
                     <p className="text-muted-foreground">Gerencie seus compromissos, visitas e eventos.</p>
                 </div>
-                 <Dialog open={isEventDialogOpen} onOpenChange={setEventDialogOpen}>
+                 <Dialog open={isAddDialogOpen} onOpenChange={setAddDialogOpen}>
                     <DialogTrigger asChild>
                         {canEditCurrentTab && (
                             <Button><PlusCircle className="mr-2 h-4 w-4"/>Adicionar Evento</Button>
@@ -191,68 +268,127 @@ export default function AgendaPage() {
             </div>
             
             <Card>
-                <CardContent className="p-0">
-                    <div className="flex flex-col md:flex-row">
-                        <div className="flex-1 p-4 md:p-6">
-                            <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as EventType)}>
-                                <TabsList className="mb-4">
-                                   {visibleTabs.map(tab => (
-                                        <TabsTrigger key={tab.id} value={tab.id}>{tab.label}</TabsTrigger>
-                                   ))}
-                                </TabsList>
-                                
+                <CardContent className="p-4 md:p-6">
+                    <div className="flex flex-col gap-6">
+                         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as EventType)}>
+                            <TabsList>
+                               {visibleTabs.map(tab => (
+                                    <TabsTrigger key={tab.id} value={tab.id}>{tab.label}</TabsTrigger>
+                               ))}
+                            </TabsList>
+                        </Tabs>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="flex justify-center">
                                 {isLoading ? (
-                                    <div className="flex justify-center items-center h-full">
-                                        <Skeleton className="w-full h-[300px]" />
-                                    </div>
-                                ) : visibleTabs.map(tab => (
-                                     <TabsContent key={tab.id} value={tab.id} forceMount>
-                                         <Calendar
-                                            mode="single"
-                                            selected={selectedDate}
-                                            onSelect={setSelectedDate}
-                                            className="rounded-md"
-                                            locale={ptBR}
-                                            modifiers={{
-                                                events: events.filter(e => e.type === tab.id).map(e => new Date(e.date as any))
-                                            }}
-                                            modifiersStyles={{
-                                               events: {
-                                                    color: 'white',
-                                                    backgroundColor: getEventTypeLabel(tab.id).className
-                                                }
-                                            }}
-                                        />
-                                    </TabsContent>
-                                ))}
-
-                            </Tabs>
-
-                        </div>
-                        <aside className="w-full md:w-1/3 border-l bg-muted/20 p-4 md:p-6">
-                            <h2 className="text-lg font-semibold mb-4">
-                                {selectedDate ? `Compromissos para ${selectedDate.toLocaleDateString('pt-BR', { timeZone: 'UTC' })}` : 'Selecione uma data'}
-                            </h2>
-                            <div className="space-y-4">
-                                {selectedDayEvents.length > 0 ? (
-                                    selectedDayEvents.map(event => (
-                                        <div key={event.id} className="p-3 rounded-lg border bg-card shadow-sm transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
-                                            <div className="flex items-center justify-between mb-1">
-                                                <h3 className="font-semibold">{event.title}</h3>
-                                                <Badge style={{ backgroundColor: getEventTypeLabel(event.type).className }} className="text-white">{getEventTypeLabel(event.type).label}</Badge>
-                                            </div>
-                                            <p className="text-sm text-muted-foreground">{event.time}</p>
-                                            <p className="text-sm mt-2">{event.description}</p>
-                                        </div>
-                                    ))
+                                    <Skeleton className="w-full h-[300px]" />
                                 ) : (
-                                    <p className="text-sm text-muted-foreground text-center py-8">Nenhum evento para esta data nesta agenda.</p>
+                                    <Calendar
+                                        mode="single"
+                                        selected={selectedDate}
+                                        onSelect={setSelectedDate}
+                                        className="rounded-md w-full border"
+                                        locale={ptBR}
+                                        modifiers={{
+                                            events: events.filter(e => e.type === activeTab).map(e => new Date(e.date as any))
+                                        }}
+                                        modifiersStyles={{
+                                        events: {
+                                                color: 'white',
+                                                backgroundColor: getEventTypeLabel(activeTab).className,
+                                            }
+                                        }}
+                                    />
                                 )}
                             </div>
-                        </aside>
+                            <div>
+                                <h2 className="text-lg font-semibold mb-4">
+                                    {selectedDate ? `Compromissos para ${selectedDate.toLocaleDateString('pt-BR', { timeZone: 'UTC' })}` : 'Selecione uma data'}
+                                </h2>
+                                <div className="space-y-4 max-h-[300px] overflow-y-auto pr-4">
+                                    {selectedDayEvents.length > 0 ? (
+                                        selectedDayEvents.map(event => (
+                                            <div 
+                                                key={event.id}
+                                                onClick={() => handleOpenEditDialog(event)}
+                                                className="p-3 rounded-lg border bg-card shadow-sm transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg cursor-pointer"
+                                            >
+                                                <div className="flex items-center justify-between mb-1">
+                                                    <h3 className="font-semibold">{event.title}</h3>
+                                                    <Badge style={{ backgroundColor: getEventTypeLabel(event.type).className }} className="text-white">{getEventTypeLabel(event.type).label}</Badge>
+                                                </div>
+                                                <p className="text-sm text-muted-foreground">{event.time}</p>
+                                                <p className="text-sm mt-2 truncate">{event.description}</p>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="flex flex-col items-center justify-center h-full text-sm text-muted-foreground text-center py-8">
+                                            <p>Nenhum evento para esta data nesta agenda.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </CardContent>
             </Card>
+            
+            {/* Modal de Edição/Visualização */}
+            <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Editar Evento</DialogTitle>
+                        <DialogDescription>
+                            Altere os detalhes do seu compromisso.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {selectedEvent && (
+                        <form onSubmit={handleUpdateEvent}>
+                            <div className="grid gap-4 py-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit-title">Título</Label>
+                                    <Input id="edit-title" name="title" defaultValue={selectedEvent.title} required />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit-time">Hora</Label>
+                                    <Input id="edit-time" name="time" type="time" defaultValue={selectedEvent.time} required />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit-description">Descrição</Label>
+                                    <Input id="edit-description" name="description" defaultValue={selectedEvent.description} />
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <div className="flex items-center gap-2">
+                                    <Button type="submit">Salvar Alterações</Button>
+                                    <Button type="button" variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
+                                        <Trash2 className="mr-2 h-4 w-4" /> Excluir
+                                    </Button>
+                                    <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>Cancelar</Button>
+                                </div>
+                            </DialogFooter>
+                        </form>
+                    )}
+                </DialogContent>
+            </Dialog>
+
+            {/* Modal de Confirmação de Exclusão */}
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Esta ação não pode ser desfeita. Isso excluirá permanentemente o evento da sua agenda.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteEvent} className={cn(buttonVariants({ variant: "destructive" }))}>
+                            Excluir
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

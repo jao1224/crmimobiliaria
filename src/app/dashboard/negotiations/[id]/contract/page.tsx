@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useContext } from "react";
@@ -6,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useRouter, useParams } from "next/navigation";
-import { Printer, Save, Upload, FileText, Link as LinkIcon, ArrowLeft } from "lucide-react";
+import { Printer, Save, Upload, FileText, Link as LinkIcon, ArrowLeft, Download } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,31 +16,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import type { UserProfile } from "@/app/dashboard/layout";
-import { getNegotiations, getProperties, type Property, type Negotiation } from "@/lib/data";
+import { getNegotiations, getProperties, type Property, type Negotiation, type ContractDetails, type Contrato, createOrUpdateContrato, getContrato } from "@/lib/data";
 import { getClients, type Client } from "@/lib/crm-data";
 import { doc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db, app } from "@/lib/firebase";
+import { getFunctions, httpsCallable } from "firebase/functions";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
-
-// Tipos para os dados simulados
-type ContractFile = { content: ArrayBuffer; type: string; name: string; };
-type ExtendedNegotiation = Negotiation & { contractFile?: ContractFile | null };
-
-
-type ContractDetails = {
-    sellerName: string;
-    sellerDoc: string;
-    sellerAddress: string;
-    propertyArea: string;
-    propertyRegistration: string;
-    propertyRegistryOffice: string;
-    paymentTerms: string;
-    commissionClause: string;
-    generalClauses: string;
-    additionalClauses: string;
-    city: string;
-    date: string;
-};
 
 const contractEditPermissions: UserProfile[] = ['Admin', 'Imobiliária'];
 
@@ -53,20 +36,20 @@ export default function ContractPage() {
     const { activeProfile } = useContext(ProfileContext);
     const canEdit = contractEditPermissions.includes(activeProfile);
 
-    const [negotiation, setNegotiation] = useState<ExtendedNegotiation | null>(null);
+    const [negotiation, setNegotiation] = useState<Negotiation | null>(null);
     const [property, setProperty] = useState<Property | null>(null);
     const [client, setClient] = useState<Client | null>(null);
     const [realtor, setRealtor] = useState<{name: string, creci: string} | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
+    const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
-    const [contractUrl, setContractUrl] = useState<string | null>(null);
-
+    
+    const [contrato, setContrato] = useState<Contrato | null>(null);
     const [contractData, setContractData] = useState<ContractDetails>({
-        sellerName: "Ana Vendedora",
-        sellerDoc: "987.654.321-00",
-        sellerAddress: "Rua dos Vendedores, 1010, Centro, Fortaleza",
+        sellers: [{ name: "Ana Vendedora", doc: "987.654.321-00", address: "Rua dos Vendedores, 1010, Centro, Fortaleza" }],
+        buyers: [{ name: "", doc: "", address: "" }],
         propertyArea: "150",
         propertyRegistration: "Matrícula 98765 do 2º CRI",
         propertyRegistryOffice: "2º Cartório de Registro de Imóveis de Fortaleza",
@@ -78,14 +61,14 @@ export default function ContractPage() {
         date: new Date().toISOString().split('T')[0],
     });
     
-    // Carrega os dados da negociação, imóvel e cliente com base no ID da URL
+    // Carrega os dados da negociação e do contrato associado
     useEffect(() => {
         const fetchData = async () => {
             if (!negotiationId) return;
             setIsLoading(true);
 
             try {
-                const negDocRef = doc(db, 'negotiations', negotiationId);
+                const negDocRef = doc(db, 'negociacoes', negotiationId);
                 const negDocSnap = await getDoc(negDocRef);
 
                 if (negDocSnap.exists()) {
@@ -93,8 +76,8 @@ export default function ContractPage() {
                     setNegotiation(foundNegotiation);
 
                     // Buscar imóvel, cliente e corretor
-                    const propDocRef = doc(db, 'properties', foundNegotiation.propertyId);
-                    const clientDocRef = doc(db, 'clients', foundNegotiation.clientId);
+                    const propDocRef = doc(db, 'imoveis', foundNegotiation.propertyId);
+                    const clientDocRef = doc(db, 'clientes', foundNegotiation.clientId);
                     
                     const [propDocSnap, clientDocSnap] = await Promise.all([
                         getDoc(propDocRef),
@@ -108,16 +91,41 @@ export default function ContractPage() {
                     setClient(foundClient);
                     setRealtor({ name: foundNegotiation.realtor, creci: "N/A" }); // Simulado
 
-                    if (foundProperty) {
+                    // Pré-preencher os dados dos compradores e vendedores
+                    const buyers = foundClient ? [{ name: foundClient.name, doc: foundClient.document || 'N/A', address: foundClient.address || 'N/A' }] : [];
+                    const sellers = foundProperty?.ownerInfo?.split('\n').map(line => {
+                        const [name, doc, ...addressParts] = line.split(',');
+                        return { name: name?.trim() || '', doc: doc?.trim() || '', address: addressParts.join(',').trim() || '' };
+                    }).filter(s => s.name) || [{ name: 'Proprietário não informado', doc: '', address: '' }];
+
+
+                    // Buscar ou inicializar o contrato
+                    if (foundNegotiation.contratoId) {
+                        const existingContrato = await getContrato(foundNegotiation.contratoId);
+                        if (existingContrato) {
+                            setContrato(existingContrato);
+                            setContractData(existingContrato.details);
+                        } else {
+                            // Se não houver contrato salvo, mas houver dados, pré-preenche
+                             setContractData(prev => ({...prev, buyers, sellers}));
+                        }
+                    } else {
+                        setContractData(prev => ({...prev, buyers, sellers}));
+                    }
+                    
+                    if (foundProperty && !foundNegotiation.contratoId) { // Só preenche se for um contrato novo
                         const commissionRate = foundProperty.commission || 5;
                         const commissionValue = foundNegotiation.value * (commissionRate / 100);
                         const defaultCommissionClause = `Os honorários devidos pela intermediação desta negociação, no montante de ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(commissionValue)}, correspondentes a ${commissionRate}% do valor da venda, são de responsabilidade do VENDEDOR(ES), a serem pagos à INTERVENIENTE ANUENTE na data da compensação do sinal.`;
                         setContractData(prev => ({...prev, commissionClause: defaultCommissionClause}));
                     }
+
+
                 } else {
                     toast({ variant: 'destructive', title: "Erro", description: "Negociação não encontrada." });
                 }
             } catch (error) {
+                console.error(error);
                 toast({ variant: 'destructive', title: "Erro", description: "Não foi possível carregar os dados do contrato." });
             } finally {
                 setIsLoading(false);
@@ -128,22 +136,33 @@ export default function ContractPage() {
     }, [negotiationId, toast]);
     
     
-    useEffect(() => {
-        if (negotiation?.contractFile?.content) {
-            const blob = new Blob([negotiation.contractFile.content], { type: negotiation.contractFile.type });
-            const url = URL.createObjectURL(blob);
-            setContractUrl(url);
-
-            return () => {
-                URL.revokeObjectURL(url);
-            };
-        }
-    }, [negotiation?.contractFile]);
-    
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { id, value } = e.target;
         setContractData(prev => ({ ...prev, [id]: value }));
     };
+    
+    const handlePartyChange = (partyType: 'buyers' | 'sellers', index: number, field: 'name' | 'doc' | 'address', value: string) => {
+        setContractData(prev => {
+            const updatedParties = [...(prev[partyType] || [])];
+            updatedParties[index] = { ...updatedParties[index], [field]: value };
+            return { ...prev, [partyType]: updatedParties };
+        });
+    };
+
+    const addParty = (partyType: 'buyers' | 'sellers') => {
+        setContractData(prev => ({
+            ...prev,
+            [partyType]: [...(prev[partyType] || []), { name: '', doc: '', address: '' }]
+        }));
+    };
+
+    const removeParty = (partyType: 'buyers' | 'sellers', index: number) => {
+        setContractData(prev => ({
+            ...prev,
+            [partyType]: (prev[partyType] || []).filter((_, i) => i !== index)
+        }));
+    };
+
 
     if (isLoading) {
         return (
@@ -175,7 +194,7 @@ export default function ContractPage() {
         );
     }
     
-    if (!negotiation || !property || !client || !realtor) {
+    if (!negotiation) {
         return (
              <div className="flex flex-col items-center justify-center h-full text-center">
                 <h2 className="text-xl font-semibold">Negociação não encontrada</h2>
@@ -185,17 +204,79 @@ export default function ContractPage() {
         );
     }
     
-    const handlePrint = () => {
-        window.print();
+    // Fallback para dados caso imóvel ou cliente sejam excluídos
+    const finalProperty = property || { name: "Imóvel Excluído", displayCode: "N/A", address: "N/A", value: negotiation.value, commission: 0, imageUrl: "https://placehold.co/600x400.png" };
+    const finalRealtor = realtor || { name: negotiation.realtor, creci: "N/A" };
+    const finalClient = client || { name: negotiation.client, document: "N/A", address: "N/A" };
+
+
+    const handleDownloadPdf = async () => {
+        if (!negotiation) return;
+        
+        setIsGeneratingPdf(true);
+        try {
+            const functions = getFunctions(app);
+            const generateContractPdf = httpsCallable(functions, 'generateContractPdf');
+            
+            const fullContractData = {
+                buyers: contractData.buyers,
+                sellers: contractData.sellers,
+                realtorName: finalRealtor.name,
+                realtorCreci: finalRealtor.creci,
+                propertyName: finalProperty.name,
+                propertyCode: finalProperty.displayCode,
+                propertyAddress: finalProperty.address,
+                propertyArea: contractData.propertyArea,
+                propertyRegistration: contractData.propertyRegistration,
+                propertyRegistryOffice: contractData.propertyRegistryOffice,
+                negotiationValue: new Intl.NumberFormat('pt-BR').format(negotiation.value),
+                paymentTerms: contractData.paymentTerms,
+                commissionClause: contractData.commissionClause,
+                generalClauses: contractData.generalClauses,
+                additionalClauses: contractData.additionalClauses,
+                city: contractData.city,
+                date: new Date(contractData.date).toLocaleDateString('pt-BR'),
+            };
+
+            const result = await generateContractPdf(fullContractData) as any;
+            const pdfBase64 = result.data.pdfBase64;
+
+            const byteCharacters = atob(pdfBase64);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            const blob = new Blob([byteArray], { type: 'application/pdf' });
+
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `Contrato-${finalProperty.displayCode}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+
+            toast({ title: "PDF Gerado!", description: "O download do contrato foi iniciado." });
+
+        } catch (error) {
+            console.error("Erro ao gerar PDF: ", error);
+            toast({ variant: 'destructive', title: "Erro", description: "Não foi possível gerar o PDF. Verifique o console para mais detalhes." });
+        } finally {
+            setIsGeneratingPdf(false);
+        }
     };
     
     const handleSave = async () => {
         setIsSaving(true);
-        // Simula salvamento
-        setTimeout(() => {
-             toast({ title: "Contrato Salvo!", description: "As informações do editor foram salvas com sucesso (simulado)."});
+        try {
+            await createOrUpdateContrato(negotiationId, { details: contractData });
+            toast({ title: "Contrato Salvo!", description: "As informações do editor foram salvas com sucesso."});
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível salvar o contrato.' });
+        } finally {
              setIsSaving(false);
-        }, 1000);
+        }
     }
     
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -224,27 +305,31 @@ export default function ContractPage() {
         }
         setIsUploading(true);
         
-        const reader = new FileReader();
-        reader.onload = (loadEvent) => {
-            const buffer = loadEvent.target?.result as ArrayBuffer;
-            if (buffer) {
-                 setNegotiation(prev => prev ? { ...prev, contractFile: { content: buffer, type: selectedFile.type, name: selectedFile.name } } : null);
-                 toast({ title: "Sucesso!", description: "Arquivo do contrato enviado." });
-            } else {
-                 toast({ variant: "destructive", title: "Erro", description: "Não foi possível ler o arquivo." });
-            }
+        try {
+            const storage = getStorage(app);
+            const storageRef = ref(storage, `contracts/${negotiationId}/${selectedFile.name}`);
+            await uploadBytes(storageRef, selectedFile);
+            const downloadUrl = await getDownloadURL(storageRef);
+
+            const contratoId = await createOrUpdateContrato(negotiationId, {
+                fileUrl: downloadUrl,
+                fileName: selectedFile.name,
+                fileType: selectedFile.type,
+            });
+
+            const updatedContrato = await getContrato(contratoId);
+            setContrato(updatedContrato);
+
+            toast({ title: "Sucesso!", description: "Arquivo do contrato enviado." });
+
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Erro de Upload', description: 'Não foi possível enviar o arquivo.' });
+        } finally {
             setIsUploading(false);
             setSelectedFile(null); 
-            // Reset the input field
             const inputFile = document.getElementById('contract-file') as HTMLInputElement;
             if(inputFile) inputFile.value = "";
-        };
-        reader.onerror = () => {
-             toast({ variant: "destructive", title: "Erro", description: "Falha ao ler o arquivo." });
-             setIsUploading(false);
         }
-        
-        reader.readAsArrayBuffer(selectedFile);
     };
 
 
@@ -258,17 +343,19 @@ export default function ContractPage() {
                     </Button>
                     <div>
                         <h1 className="text-2xl font-bold">Gestão de Contratos</h1>
-                        <p className="text-muted-foreground">Negociação ID: {negotiationId}</p>
+                        <p className="text-muted-foreground">
+                          ID da Negociação: {negotiationId} | Cód. Imóvel: {negotiation.propertyDisplayCode}
+                        </p>
                     </div>
                 </div>
                 <div className="flex gap-2">
-                    <Button onClick={handleSave} variant="default" disabled={isSaving || !canEdit}>
+                    <Button onClick={handleSave} variant="outline" disabled={isSaving || !canEdit}>
                         <Save className="mr-2 h-4 w-4" />
                         {isSaving ? "Salvando..." : "Salvar Editor"}
                     </Button>
-                    <Button onClick={handlePrint} variant="outline">
-                        <Printer className="mr-2 h-4 w-4" />
-                        Imprimir / Gerar PDF
+                    <Button onClick={handleDownloadPdf} variant="default" disabled={isGeneratingPdf}>
+                        <Download className="mr-2 h-4 w-4" />
+                        {isGeneratingPdf ? "Gerando PDF..." : "Baixar PDF"}
                     </Button>
                 </div>
             </div>
@@ -291,12 +378,12 @@ export default function ContractPage() {
                             {isUploading ? "Enviando..." : "Enviar"}
                         </Button>
                     </div>
-                     {contractUrl && (
+                     {contrato?.fileUrl && (
                         <div className="mt-4 flex items-center gap-2 text-sm text-emerald-600 border border-emerald-200 bg-emerald-50 rounded-md p-3">
                             <FileText className="h-5 w-5" />
                             <span className="font-medium">Contrato Anexado:</span>
-                             <a href={contractUrl} target="_blank" rel="noopener noreferrer" className="underline hover:text-emerald-800">
-                                {negotiation?.contractFile?.name || 'Visualizar Contrato'} <LinkIcon className="h-4 w-4 inline-block ml-1" />
+                             <a href={contrato.fileUrl} target="_blank" rel="noopener noreferrer" className="underline hover:text-emerald-800">
+                                {contrato.fileName || 'Visualizar Contrato'} <LinkIcon className="h-4 w-4 inline-block ml-1" />
                             </a>
                         </div>
                     )}
@@ -323,33 +410,64 @@ export default function ContractPage() {
                             {/* Parties */}
                             <div className="space-y-4">
                                 <div>
-                                    <h3 className="font-semibold mb-2">VENDEDOR(ES):</h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border p-4 rounded-md">
-                                        <div className="space-y-1">
-                                            <Label htmlFor="sellerName">Nome</Label>
-                                            <Input id="sellerName" placeholder="Nome do Proprietário" value={contractData.sellerName} onChange={handleInputChange} disabled={!canEdit} />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <Label htmlFor="sellerDoc">CPF/CNPJ</Label>
-                                            <Input id="sellerDoc" placeholder="Documento do Proprietário" value={contractData.sellerDoc} onChange={handleInputChange} disabled={!canEdit} />
-                                        </div>
-                                        <div className="col-span-1 md:col-span-2 space-y-1">
-                                            <Label htmlFor="sellerAddress">Endereço</Label>
-                                            <Input id="sellerAddress" placeholder="Endereço Completo do Proprietário" value={contractData.sellerAddress} onChange={handleInputChange} disabled={!canEdit} />
-                                        </div>
+                                    <div className="flex justify-between items-center mb-2">
+                                        <h3 className="font-semibold">VENDEDOR(ES):</h3>
+                                        <Button type="button" size="sm" variant="outline" onClick={() => addParty('sellers')} disabled={!canEdit}>Adicionar Vendedor</Button>
+                                    </div>
+                                    <div className="space-y-4">
+                                        {contractData.sellers?.map((seller, index) => (
+                                            <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 border p-4 rounded-md relative">
+                                                <div className="space-y-1">
+                                                    <Label htmlFor={`sellerName-${index}`}>Nome</Label>
+                                                    <Input id={`sellerName-${index}`} placeholder="Nome do Proprietário" value={seller.name} onChange={(e) => handlePartyChange('sellers', index, 'name', e.target.value)} disabled={!canEdit} />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <Label htmlFor={`sellerDoc-${index}`}>CPF/CNPJ</Label>
+                                                    <Input id={`sellerDoc-${index}`} placeholder="Documento do Proprietário" value={seller.doc} onChange={(e) => handlePartyChange('sellers', index, 'doc', e.target.value)} disabled={!canEdit} />
+                                                </div>
+                                                <div className="col-span-1 md:col-span-2 space-y-1">
+                                                    <Label htmlFor={`sellerAddress-${index}`}>Endereço</Label>
+                                                    <Input id={`sellerAddress-${index}`} placeholder="Endereço Completo do Proprietário" value={seller.address} onChange={(e) => handlePartyChange('sellers', index, 'address', e.target.value)} disabled={!canEdit} />
+                                                </div>
+                                                {contractData.sellers.length > 1 && canEdit && (
+                                                    <Button type="button" size="sm" variant="destructive" className="absolute top-2 right-2" onClick={() => removeParty('sellers', index)}>Remover</Button>
+                                                )}
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
                                 <div>
-                                    <h3 className="font-semibold mb-2">COMPRADOR(A):</h3>
-                                    <p className="border p-4 rounded-md bg-muted/50">
-                                        <strong>Nome:</strong> {client.name}, <strong>CPF/CNPJ:</strong> {client.document || 'N/A'}, residente e domiciliado em {client.address || 'N/A'}.
-                                    </p>
+                                    <div className="flex justify-between items-center mb-2">
+                                        <h3 className="font-semibold">COMPRADOR(A/ES):</h3>
+                                        <Button type="button" size="sm" variant="outline" onClick={() => addParty('buyers')} disabled={!canEdit}>Adicionar Comprador</Button>
+                                    </div>
+                                    <div className="space-y-4">
+                                        {contractData.buyers?.map((buyer, index) => (
+                                            <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 border p-4 rounded-md relative">
+                                                <div className="space-y-1">
+                                                    <Label htmlFor={`buyerName-${index}`}>Nome</Label>
+                                                    <Input id={`buyerName-${index}`} placeholder="Nome do Comprador" value={buyer.name} onChange={(e) => handlePartyChange('buyers', index, 'name', e.target.value)} disabled={!canEdit} />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <Label htmlFor={`buyerDoc-${index}`}>CPF/CNPJ</Label>
+                                                    <Input id={`buyerDoc-${index}`} placeholder="Documento do Comprador" value={buyer.doc} onChange={(e) => handlePartyChange('buyers', index, 'doc', e.target.value)} disabled={!canEdit} />
+                                                </div>
+                                                <div className="col-span-1 md:col-span-2 space-y-1">
+                                                    <Label htmlFor={`buyerAddress-${index}`}>Endereço</Label>
+                                                    <Input id={`buyerAddress-${index}`} placeholder="Endereço Completo do Comprador" value={buyer.address} onChange={(e) => handlePartyChange('buyers', index, 'address', e.target.value)} disabled={!canEdit} />
+                                                </div>
+                                                {contractData.buyers.length > 1 && canEdit && (
+                                                    <Button type="button" size="sm" variant="destructive" className="absolute top-2 right-2" onClick={() => removeParty('buyers', index)}>Remover</Button>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
                                 <div>
                                     <h3 className="font-semibold mb-2">INTERVENIENTE ANUENTE (IMOBILIÁRIA):</h3>
                                     <p className="border p-4 rounded-md bg-muted/50">
                                         <strong>Razão Social:</strong> Ideal Imóveis Ltda., <strong>CNPJ:</strong> 00.123.456/0001-00, com sede em [Endereço da Imobiliária], representada por seu corretor responsável.<br/>
-                                        <strong>Corretor Responsável:</strong> {realtor.name}, <strong>CRECI:</strong> {realtor.creci}.
+                                        <strong>Corretor Responsável:</strong> {finalRealtor.name}, <strong>CRECI:</strong> {finalRealtor.creci}.
                                     </p>
                                 </div>
                             </div>
@@ -360,7 +478,7 @@ export default function ContractPage() {
                             <div className="space-y-2">
                                 <h3 className="font-semibold">CLÁUSULA PRIMEIRA - DO OBJETO</h3>
                                 <p className="text-justify text-sm">
-                                    O presente contrato tem por objeto a promessa de compra e venda do imóvel a seguir descrito: <strong>{property.name}</strong>, localizado na <strong>{property.address}</strong>.
+                                    O presente contrato tem por objeto a promessa de compra e venda do imóvel a seguir descrito: <strong>{finalProperty.name} (Cód. {finalProperty.displayCode})</strong>, localizado na <strong>{finalProperty.address}</strong>.
                                 </p>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div className="space-y-1">
@@ -411,10 +529,20 @@ export default function ContractPage() {
                             <Separator />
 
                             {/* Signatures */}
-                            <div className="pt-8 text-center space-y-8">
-                                <div>_________________________<br/><strong>{client.name}</strong><br/>COMPRADOR(A)</div>
-                                <div>_________________________<br/><strong className="uppercase">{contractData.sellerName || '[NOME DO PROPRIETÁRIO]'}</strong><br/>VENDEDOR(ES)</div>
-                                <div>_________________________<br/><strong>{realtor.name} (CRECI: {realtor.creci})</strong><br/>INTERVENIENTE ANUENTE</div>
+                             <div className="pt-8 text-center space-y-8">
+                                {(contractData.buyers || []).map((buyer, index) => (
+                                    <div key={`buyer-sig-${index}`}>
+                                        _________________________<br/><strong>{buyer.name || finalClient.name}</strong><br/>COMPRADOR(A)
+                                    </div>
+                                ))}
+                                {(contractData.sellers || []).map((seller, index) => (
+                                     <div key={`seller-sig-${index}`}>
+                                        _________________________<br/><strong className="uppercase">{seller.name}</strong><br/>VENDEDOR(A)
+                                    </div>
+                                ))}
+                                <div>
+                                    _________________________<br/><strong>{finalRealtor.name} (CRECI: {finalRealtor.creci})</strong><br/>INTERVENIENTE ANUENTE
+                                </div>
                             </div>
 
                             <div className="text-center text-sm text-muted-foreground pt-8">
