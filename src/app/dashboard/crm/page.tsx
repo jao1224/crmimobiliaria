@@ -52,10 +52,12 @@ export default function CrmPage() {
     
     const [activeTab, setActiveTab] = useState<CrmTab>("leads");
 
-    // Estados para os Modais de Detalhes e Histórico
+    // Estados para os Modais
     const [isHistoryOpen, setHistoryOpen] = useState(false);
     const [isDetailOpen, setDetailOpen] = useState(false);
+    const [isConvertLeadOpen, setConvertLeadOpen] = useState(false);
     const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+    const [leadToConvert, setLeadToConvert] = useState<Lead | null>(null);
     const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
     const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [clientHistory, setClientHistory] = useState<{ negotiations: Negotiation[], financings: FinancingProcess[] }>({ negotiations: [], financings: [] });
@@ -193,15 +195,41 @@ export default function CrmPage() {
         }
     };
     
-    // Simula a conversão de lead em cliente
-    const handleConvertLeadToClient = async (lead: Lead) => {
+    const handleOpenConvertDialog = (lead: Lead) => {
+        setLeadToConvert(lead);
+        setConvertLeadOpen(true);
+    };
+
+    const handleConfirmConvertLead = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        if (!leadToConvert) return;
+        
+        const form = event.currentTarget;
+        const formData = new FormData(form);
+        
+        const clientData: Omit<Client, 'id'> = {
+            name: formData.get("name") as string,
+            email: formData.get("email") as string,
+            phone: formData.get("phone") as string,
+            source: leadToConvert.source,
+            assignedTo: leadToConvert.assignedTo,
+            document: formData.get("document") as string,
+            civilStatus: formData.get("civilStatus") as Client['civilStatus'],
+            birthDate: formData.get("birthDate") as string,
+            profession: formData.get("profession") as string,
+            address: formData.get("address") as string,
+            monthlyIncome: parseFloat(formData.get("monthlyIncome") as string),
+            bankInfo: formData.get("bankInfo") as string,
+        };
+
         try {
-            await convertLeadToClient(lead);
+            await convertLeadToClient(leadToConvert.id, clientData);
             await refreshData();
             toast({
                 title: "Conversão Realizada!",
-                description: `"${lead.name}" agora é um cliente.`
+                description: `"${leadToConvert.name}" agora é um cliente.`
             });
+            setConvertLeadOpen(false);
         } catch (error) {
              toast({
                 variant: "destructive",
@@ -210,6 +238,7 @@ export default function CrmPage() {
             });
         }
     };
+
 
     const handleOpenDeleteDialog = (client: Client) => {
         setClientToDelete(client);
@@ -348,7 +377,7 @@ export default function CrmPage() {
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                                                            <DropdownMenuItem onClick={() => handleConvertLeadToClient(lead)}>Converter em Cliente</DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => handleOpenConvertDialog(lead)}>Converter em Cliente</DropdownMenuItem>
                                                             <DropdownMenuItem onClick={() => toast({ description: `Status de "${lead.name}" atualizado.` })}>Atualizar Status</DropdownMenuItem>
                                                         </DropdownMenuContent>
                                                     </DropdownMenu>
@@ -575,6 +604,51 @@ export default function CrmPage() {
                 </DialogFooter>
             </DialogContent>
         </Dialog>
+        
+        {/* Modal de Conversão de Lead */}
+        {leadToConvert && (
+            <Dialog open={isConvertLeadOpen} onOpenChange={setConvertLeadOpen}>
+                <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Converter Lead em Cliente</DialogTitle>
+                        <DialogDescription>Complete as informações de "{leadToConvert.name}" para convertê-lo em um cliente.</DialogDescription>
+                    </DialogHeader>
+                    <form id="convertLeadForm" onSubmit={handleConfirmConvertLead}>
+                        <div className="space-y-6 py-4">
+                            <div className="space-y-4 rounded-lg border p-4">
+                                <h3 className="text-lg font-medium">Informações Pessoais</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2"><Label htmlFor="name-convert">Nome Completo</Label><Input id="name-convert" name="name" required defaultValue={leadToConvert.name} /></div>
+                                    <div className="space-y-2"><Label htmlFor="document-convert">CPF / CNPJ</Label><Input id="document-convert" name="document" /></div>
+                                    <div className="space-y-2"><Label htmlFor="birthDate-convert">Data de Nascimento</Label><Input id="birthDate-convert" name="birthDate" type="date" /></div>
+                                    <div className="space-y-2"><Label htmlFor="profession-convert">Profissão</Label><Input id="profession-convert" name="profession" /></div>
+                                    <div className="space-y-2"><Label htmlFor="civilStatus-convert">Estado Civil</Label><Select name="civilStatus"><SelectTrigger id="civilStatus-convert"><SelectValue placeholder="Selecione..." /></SelectTrigger><SelectContent><SelectItem value="Solteiro(a)">Solteiro(a)</SelectItem><SelectItem value="Casado(a)">Casado(a)</SelectItem><SelectItem value="Divorciado(a)">Divorciado(a)</SelectItem><SelectItem value="Viúvo(a)">Viúvo(a)</SelectItem><SelectItem value="União Estável">União Estável</SelectItem></SelectContent></Select></div>
+                                </div>
+                            </div>
+                            <div className="space-y-4 rounded-lg border p-4">
+                                <h3 className="text-lg font-medium">Contato e Endereço</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2"><Label htmlFor="email-convert">E-mail</Label><Input id="email-convert" name="email" type="email" required defaultValue={leadToConvert.email} /></div>
+                                    <div className="space-y-2"><Label htmlFor="phone-convert">Telefone / WhatsApp</Label><Input id="phone-convert" name="phone" required defaultValue={leadToConvert.phone}/></div>
+                                </div>
+                                <div className="space-y-2"><Label htmlFor="address-convert">Endereço Completo</Label><Input id="address-convert" name="address" placeholder="Rua, número, bairro, cidade, CEP" /></div>
+                            </div>
+                            <div className="space-y-4 rounded-lg border p-4">
+                                <h3 className="text-lg font-medium">Informações Financeiras</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2"><Label htmlFor="monthlyIncome-convert">Renda Mensal (R$)</Label><Input id="monthlyIncome-convert" name="monthlyIncome" type="number" step="0.01" placeholder="5000.00" /></div>
+                                    <div className="space-y-2"><Label htmlFor="bankInfo-convert">Conta Bancária (PIX)</Label><Input id="bankInfo-convert" name="bankInfo" placeholder="Chave PIX ou dados da conta"/></div>
+                                </div>
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <Button type="button" variant="outline" onClick={() => setConvertLeadOpen(false)}>Cancelar</Button>
+                            <Button type="submit" form="convertLeadForm">Confirmar Conversão</Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+        )}
         
          <AlertDialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
             <AlertDialogContent>

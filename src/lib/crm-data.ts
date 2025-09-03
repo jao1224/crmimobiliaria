@@ -63,28 +63,21 @@ export const addClient = async (newClient: Omit<Client, 'id'>): Promise<string> 
     return docRef.id;
 };
 
-export const convertLeadToClient = async (lead: Lead): Promise<void> => {
+export const convertLeadToClient = async (leadId: string, clientData: Omit<Client, 'id'>): Promise<void> => {
     const batch = writeBatch(db);
 
-    // 1. Cria um novo documento de cliente
-    const newClientData: Omit<Client, 'id'> = {
-        name: lead.name,
-        email: lead.email,
-        phone: lead.phone,
-        source: lead.source,
-        assignedTo: lead.assignedTo,
-    };
+    // 1. Cria um novo documento de cliente com os dados do formulário
     const newClientRef = doc(collection(db, 'clients')); // Cria uma referência com ID automático
-    batch.set(newClientRef, newClientData);
+    batch.set(newClientRef, clientData);
 
-    // 2. Remove o documento do lead
-    const leadRef = doc(db, 'leads', lead.id);
+    // 2. Remove o documento do lead original
+    const leadRef = doc(db, 'leads', leadId);
     batch.delete(leadRef);
 
     // 3. Adiciona notificação
      await addNotification({
         title: "Lead Convertido!",
-        description: `O lead ${lead.name} foi convertido em cliente.`,
+        description: `O lead ${clientData.name} foi convertido em cliente.`,
     });
 
     // 4. Executa as operações em lote
