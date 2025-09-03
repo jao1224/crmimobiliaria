@@ -508,115 +508,124 @@ export default function FinancePage() {
                 {/* Aba de Comissões */}
                 <TabsContent value="commissions">
                     <div className="flex flex-col gap-4 mt-4">
-                        <div className="flex items-center justify-between">
-                            <h2 className="text-xl font-semibold">Resumo de Comissões</h2>
-                             {hasPermission && (
-                                <Dialog open={isCommissionDialogOpen} onOpenChange={(isOpen) => {
-                                    setCommissionDialogOpen(isOpen);
-                                    if (!isOpen) setSelectedNegotiation(null);
-                                }}>
-                                    <DialogTrigger asChild>
-                                        <Button><PlusCircle className="mr-2 h-4 w-4" />Lançar Comissão</Button>
-                                    </DialogTrigger>
-                                    <DialogContent className="sm:max-w-3xl">
-                                        <DialogHeader>
-                                            <DialogTitle>Lançar Nova Comissão</DialogTitle>
-                                            <DialogDescription>Preencha os detalhes para registrar uma nova comissão de um negócio concluído.</DialogDescription>
-                                        </DialogHeader>
-                                        <form onSubmit={handleAddCommission} key={selectedNegotiation?.id}>
-                                            <div className="space-y-4 py-4">
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="negotiationId">Cód. do Processo</Label>
-                                                    <Select name="negotiationId" required onValueChange={handleNegotiationSelect}>
-                                                        <SelectTrigger><SelectValue placeholder="Selecione um processo concluído"/></SelectTrigger>
-                                                        <SelectContent>
-                                                            {negotiations.map(n => (
-                                                                <SelectItem key={n.id} value={n.id}>
-                                                                    {n.property} ({n.id.toUpperCase().substring(0,6)})
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-                                                
-                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                                     <div className="space-y-2">
-                                                        <Label>Valor do Imóvel</Label>
-                                                        <Input value={selectedNegotiation ? formatCurrency(selectedNegotiation.value) : ''} readOnly placeholder="Selecione um processo"/>
-                                                    </div>
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between">
+                                <div>
+                                    <CardTitle>Resumo de Comissões</CardTitle>
+                                    <CardDescription>
+                                        Visão geral de todas as comissões registradas.
+                                    </CardDescription>
+                                </div>
+                                {hasPermission && (
+                                    <Dialog open={isCommissionDialogOpen} onOpenChange={(isOpen) => {
+                                        setCommissionDialogOpen(isOpen);
+                                        if (!isOpen) setSelectedNegotiation(null);
+                                    }}>
+                                        <DialogTrigger asChild>
+                                            <Button><PlusCircle className="mr-2 h-4 w-4" />Lançar Comissão</Button>
+                                        </DialogTrigger>
+                                        <DialogContent className="sm:max-w-3xl">
+                                            <DialogHeader>
+                                                <DialogTitle>Lançar Nova Comissão</DialogTitle>
+                                                <DialogDescription>Preencha os detalhes para registrar uma nova comissão de um negócio concluído.</DialogDescription>
+                                            </DialogHeader>
+                                            <form onSubmit={handleAddCommission} key={selectedNegotiation?.id}>
+                                                <div className="space-y-4 py-4">
                                                     <div className="space-y-2">
-                                                        <Label htmlFor="clientSignal">Sinal do Cliente (R$)</Label>
-                                                        <Input id="clientSignal" name="clientSignal" type="number" step="0.01" min="0" placeholder="Opcional" />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="managerName">Gerente</Label>
-                                                        <Input id="managerName" name="managerName" placeholder="Nome do gerente (opcional)" />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label>Captador</Label>
-                                                        <Input value={selectedNegotiation?.realtor || ''} readOnly placeholder="Selecione um processo" />
-                                                    </div>
-                                                     <div className="space-y-2">
-                                                        <Label>Vendedor</Label>
-                                                        <Input value={selectedNegotiation?.salesperson || ''} readOnly placeholder="Selecione um processo" />
-                                                    </div>
-                                                </div>
-                                                
-                                                <div className="border-t pt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                                     <div className="space-y-2">
-                                                        <Label htmlFor="commissionRate">Taxa de Comissão (%)</Label>
-                                                        <Input id="commissionRate" name="commissionRate" type="number" step="0.1" min="0" required defaultValue={selectedNegotiation ? 5 : ''}/>
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="commissionValue">Valor da Comissão (R$)</Label>
-                                                        <Input id="commissionValue" name="commissionValue" type="number" step="0.01" min="0.01" required defaultValue={selectedNegotiation ? (selectedNegotiation.value * 0.05).toFixed(2) : ''}/>
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="paymentDate">Data de Pagamento</Label>
-                                                        <Input id="paymentDate" name="paymentDate" type="date" required />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="status">Status</Label>
-                                                        <Select name="status" defaultValue="Pendente" required>
-                                                            <SelectTrigger><SelectValue/></SelectTrigger>
+                                                        <Label htmlFor="negotiationId">Cód. do Processo</Label>
+                                                        <Select name="negotiationId" required onValueChange={handleNegotiationSelect}>
+                                                            <SelectTrigger><SelectValue placeholder="Selecione um processo concluído"/></SelectTrigger>
                                                             <SelectContent>
-                                                                <SelectItem value="Pendente">Pendente</SelectItem>
-                                                                <SelectItem value="Pago">Pago</SelectItem>
-                                                                <SelectItem value="Vencido">Vencido</SelectItem>
+                                                                {negotiations.map(n => (
+                                                                    <SelectItem key={n.id} value={n.id}>
+                                                                        {n.property} ({n.id.toUpperCase().substring(0,6)})
+                                                                    </SelectItem>
+                                                                ))}
                                                             </SelectContent>
                                                         </Select>
                                                     </div>
-                                                </div>
+                                                    
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                        <div className="space-y-2">
+                                                            <Label>Valor do Imóvel</Label>
+                                                            <Input value={selectedNegotiation ? formatCurrency(selectedNegotiation.value) : ''} readOnly placeholder="Selecione um processo"/>
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="clientSignal">Sinal do Cliente (R$)</Label>
+                                                            <Input id="clientSignal" name="clientSignal" type="number" step="0.01" min="0" placeholder="Opcional" />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="managerName">Gerente</Label>
+                                                            <Input id="managerName" name="managerName" placeholder="Nome do gerente (opcional)" />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label>Captador</Label>
+                                                            <Input value={selectedNegotiation?.realtor || ''} readOnly placeholder="Selecione um processo" />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label>Vendedor</Label>
+                                                            <Input value={selectedNegotiation?.salesperson || ''} readOnly placeholder="Selecione um processo" />
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div className="border-t pt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="commissionRate">Taxa de Comissão (%)</Label>
+                                                            <Input id="commissionRate" name="commissionRate" type="number" step="0.1" min="0" required defaultValue={selectedNegotiation ? 5 : ''}/>
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="commissionValue">Valor da Comissão (R$)</Label>
+                                                            <Input id="commissionValue" name="commissionValue" type="number" step="0.01" min="0.01" required defaultValue={selectedNegotiation ? (selectedNegotiation.value * 0.05).toFixed(2) : ''}/>
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="paymentDate">Data de Pagamento</Label>
+                                                            <Input id="paymentDate" name="paymentDate" type="date" required />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="status">Status</Label>
+                                                            <Select name="status" defaultValue="Pendente" required>
+                                                                <SelectTrigger><SelectValue/></SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem value="Pendente">Pendente</SelectItem>
+                                                                    <SelectItem value="Pago">Pago</SelectItem>
+                                                                    <SelectItem value="Vencido">Vencido</SelectItem>
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
+                                                    </div>
 
-                                                 <div className="space-y-2">
-                                                    <Label htmlFor="notes">Observações</Label>
-                                                    <Textarea id="notes" name="notes" placeholder="Detalhes sobre a divisão, adiantamentos, etc." />
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="notes">Observações</Label>
+                                                        <Textarea id="notes" name="notes" placeholder="Detalhes sobre a divisão, adiantamentos, etc." />
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            <DialogFooter>
-                                                <Button type="button" variant="outline" onClick={() => setCommissionDialogOpen(false)}>Cancelar</Button>
-                                                <Button type="submit">Salvar Comissão</Button>
-                                            </DialogFooter>
-                                        </form>
-                                    </DialogContent>
-                                </Dialog>
-                            )}
-                        </div>
-
-                        <div className="grid gap-4 md:grid-cols-3">
-                            <Card className="transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
-                                <CardHeader><CardTitle>Comissão Total</CardTitle></CardHeader>
-                                <CardContent>{isLoading ? <Skeleton className="h-8 w-3/4" /> : <p className="text-2xl font-bold">{formatCurrency(totalCommission)}</p>}</CardContent>
-                            </Card>
-                            <Card className="transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
-                                <CardHeader><CardTitle>Total Pago</CardTitle></CardHeader>
-                                <CardContent>{isLoading ? <Skeleton className="h-8 w-3/4" /> : <p className="text-2xl font-bold">{formatCurrency(paidCommission)}</p>}</CardContent>
-                            </Card>
-                            <Card className="transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
-                                <CardHeader><CardTitle>Pendente & Vencido</CardTitle></CardHeader>
-                                <CardContent>{isLoading ? <Skeleton className="h-8 w-3/4" /> : <p className="text-2xl font-bold">{formatCurrency(pendingCommission)}</p>}</CardContent>
-                            </Card>
-                        </div>
+                                                <DialogFooter>
+                                                    <Button type="button" variant="outline" onClick={() => setCommissionDialogOpen(false)}>Cancelar</Button>
+                                                    <Button type="submit">Salvar Comissão</Button>
+                                                </DialogFooter>
+                                            </form>
+                                        </DialogContent>
+                                    </Dialog>
+                                )}
+                            </CardHeader>
+                            <CardContent>
+                                <div className="grid gap-4 md:grid-cols-3">
+                                    <Card className="transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
+                                        <CardHeader><CardTitle>Comissão Total</CardTitle></CardHeader>
+                                        <CardContent>{isLoading ? <Skeleton className="h-8 w-3/4" /> : <p className="text-2xl font-bold">{formatCurrency(totalCommission)}</p>}</CardContent>
+                                    </Card>
+                                    <Card className="transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
+                                        <CardHeader><CardTitle>Total Pago</CardTitle></CardHeader>
+                                        <CardContent>{isLoading ? <Skeleton className="h-8 w-3/4" /> : <p className="text-2xl font-bold">{formatCurrency(paidCommission)}</p>}</CardContent>
+                                    </Card>
+                                    <Card className="transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
+                                        <CardHeader><CardTitle>Pendente & Vencido</CardTitle></CardHeader>
+                                        <CardContent>{isLoading ? <Skeleton className="h-8 w-3/4" /> : <p className="text-2xl font-bold">{formatCurrency(pendingCommission)}</p>}</CardContent>
+                                    </Card>
+                                </div>
+                            </CardContent>
+                        </Card>
+                        
                         <Card>
                             <CardHeader>
                                 <CardTitle>Detalhamento de Comissões</CardTitle>
