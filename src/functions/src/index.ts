@@ -135,9 +135,9 @@ export const addRoleOnCreate = beforeUserCreated(async (event) => {
         // Verifica se já existe algum usuário. Se não, este é o primeiro e será Admin.
         const allUsers = await adminAuth.listUsers(1);
         if (allUsers.users.length === 0) {
-             await adminAuth.setCustomUserClaims(user.uid, { role: 'Admin' });
+             await adminAuth.setCustomUserClaims(user.uid, { role: 'Admin', imobiliariaId: null });
              // Também salva no documento do Firestore, pois o gatilho pode não ter essa info ainda
-             await userDocRef.set({ role: 'Admin' }, { merge: true });
+             await userDocRef.set({ role: 'Admin', imobiliariaId: null }, { merge: true });
              return;
         }
 
@@ -373,5 +373,5 @@ export const generateContractPdf = onCall<ContractData, Promise<{pdfBase64: stri
 
   return {pdfBase64};
 });
-
+    
     
