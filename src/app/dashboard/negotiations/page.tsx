@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useMemo, useContext } from "react";
@@ -323,12 +324,6 @@ export default function NegotiationsPage() {
         setAllProcesses(procs);
     };
 
-    useEffect(() => {
-        if (currentUser !== undefined) {
-            refreshData();
-        }
-    }, [currentUser]);
-    
     const refreshData = async () => {
         setIsLoading(true);
         try {
@@ -339,6 +334,12 @@ export default function NegotiationsPage() {
             setIsLoading(false);
         }
     };
+
+    useEffect(() => {
+        if (currentUser !== undefined) {
+            refreshData();
+        }
+    }, [currentUser]);
     
     const filteredNegotiations = useMemo(() => {
         let negotiations = allNegotiations.filter(neg => !neg.isArchived && !neg.isDeleted);
@@ -728,7 +729,7 @@ export default function NegotiationsPage() {
                     <DialogTrigger asChild>
                         <Button>Iniciar Nova Negociação</Button>
                     </DialogTrigger>
-                     <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col">
+                     <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col">
                         <DialogHeader>
                             <DialogTitle>Iniciar Nova Negociação</DialogTitle>
                             <DialogDescription>
@@ -774,6 +775,35 @@ export default function NegotiationsPage() {
                                             </AddClientDialog>
                                         </div>
                                     </div>
+                                </div>
+                                
+                                {isSearching && <Skeleton className="w-full h-24" />}
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {foundProperty && (
+                                        <Card>
+                                            <CardHeader>
+                                                <CardTitle className="text-base">{foundProperty.name}</CardTitle>
+                                                <CardDescription>{foundProperty.address}</CardDescription>
+                                            </CardHeader>
+                                            <CardContent className="text-sm">
+                                                <p><strong>Valor:</strong> {formatCurrency(foundProperty.price)}</p>
+                                                <p><strong>Captador:</strong> {foundProperty.capturedBy}</p>
+                                            </CardContent>
+                                        </Card>
+                                    )}
+                                    {foundClient && (
+                                         <Card>
+                                            <CardHeader>
+                                                <CardTitle className="text-base">{foundClient.name}</CardTitle>
+                                                <CardDescription>{foundClient.email}</CardDescription>
+                                            </CardHeader>
+                                            <CardContent className="text-sm">
+                                                <p><strong>Telefone:</strong> {foundClient.phone}</p>
+                                                <p><strong>Responsável:</strong> {foundClient.assignedTo}</p>
+                                            </CardContent>
+                                        </Card>
+                                    )}
                                 </div>
 
                                 {foundClient && (
