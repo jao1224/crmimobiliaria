@@ -1,12 +1,12 @@
 
 "use client";
 
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext, useMemo } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { MoreHorizontal, History, Briefcase, Landmark, Trash2, PlusCircle, UserPlus, Handshake, Link as LinkIcon, FileText, Building } from "lucide-react";
+import { MoreHorizontal, History, Briefcase, Landmark, Trash2, PlusCircle, UserPlus, Handshake, Link as LinkIcon, FileText, Building, Search, User, UserRound, Building2 as ConstrutoraIcon } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
@@ -30,7 +30,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import { auth } from "@/lib/firebase";
-import { onAuthStateChanged, type User } from "firebase/auth";
+import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
@@ -38,10 +38,15 @@ import { Textarea } from "@/components/ui/textarea";
 type CrmTab = "leads" | "clients" | "construtoras";
 const formatCurrency = (amount: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount);
 
+type SearchResult = {
+    id: string;
+    name: string;
+    type: CrmTab;
+};
 
 export default function CrmPage() {
     const { activeProfile } = useContext(ProfileContext);
-    const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
 
     const [leads, setLeads] = useState<Lead[]>([]);
     const [clients, setClients] = useState<Client[]>([]);
@@ -64,6 +69,12 @@ export default function CrmPage() {
     const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [clientHistory, setClientHistory] = useState<{ negotiations: Negotiation[], financings: FinancingProcess[] }>({ negotiations: [], financings: [] });
     const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+    
+    // Estados para a busca
+    const [searchQuery, setSearchQuery] = useState("");
+    const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+    const [highlightedRow, setHighlightedRow] = useState<string | null>(null);
+
     
      useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -115,6 +126,45 @@ export default function CrmPage() {
         }
     };
     
+    // Efeito para a busca
+    useEffect(() => {
+        if (searchQuery.length < 2) {
+            setSearchResults([]);
+            return;
+        }
+
+        const lowerCaseQuery = searchQuery.toLowerCase();
+
+        const filteredLeads = leads.filter(l => l.name.toLowerCase().includes(lowerCaseQuery)).map(l => ({ id: l.id, name: l.name, type: 'leads' as CrmTab }));
+        const filteredClients = clients.filter(c => c.name.toLowerCase().includes(lowerCaseQuery)).map(c => ({ id: c.id, name: c.name, type: 'clients' as CrmTab }));
+        const filteredConstrutoras = construtoras.filter(c => c.name.toLowerCase().includes(lowerCaseQuery)).map(c => ({ id: c.id, name: c.name, type: 'construtoras' as CrmTab }));
+
+        setSearchResults([...filteredLeads, ...filteredClients, ...filteredConstrutoras]);
+    }, [searchQuery, leads, clients, construtoras]);
+
+    const handleSearchResultClick = (result: SearchResult) => {
+        setActiveTab(result.type);
+        setHighlightedRow(result.id);
+        setSearchQuery(""); // Limpa a busca
+        setSearchResults([]); // Limpa os resultados
+
+        // Scroll para a linha após a renderização
+        setTimeout(() => {
+            const row = document.getElementById(`row-${result.id}`);
+            if (row) {
+                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }, 100);
+    };
+
+    useEffect(() => {
+        if (highlightedRow) {
+            const timer = setTimeout(() => setHighlightedRow(null), 2500); // Remove o destaque após 2.5s
+            return () => clearTimeout(timer);
+        }
+    }, [highlightedRow]);
+
+
     const handleShowDetails = (client: Client) => {
         setSelectedClient(client);
         setDetailOpen(true);
@@ -141,7 +191,6 @@ export default function CrmPage() {
         }
     };
 
-    // Simula a adição de um novo lead
     const handleAddLead = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         if (!currentUser) return;
@@ -154,7 +203,7 @@ export default function CrmPage() {
             phone: formData.get("phone") as string,
             source: formData.get("source") as string,
             status: "Novo",
-            assignedTo: currentUser.displayName || 'N/A', // Atribui ao usuário logado
+            assignedTo: currentUser.displayName || 'N/A', 
         };
         
         try {
@@ -377,16 +426,49 @@ export default function CrmPage() {
     return (
         <>
         <div className="flex flex-col gap-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold">Gestão de Clientes e Leads</h1>
                     <p className="text-muted-foreground">Supervisione seus leads, negócios e relacionamentos com clientes.</p>
                 </div>
-                <div className="flex gap-2">
-                    {renderAddButton()}
+                <div className="flex items-center gap-2">
+                    <div className="relative w-full md:w-64">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            type="search"
+                            placeholder="Buscar por nome..."
+                            className="pl-8"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                        {searchResults.length > 0 && (
+                            <div className="absolute top-full mt-2 w-full rounded-md border bg-popover text-popover-foreground shadow-md z-10">
+                                <ScrollArea className="max-h-60">
+                                    <div className="p-2">
+                                        {searchResults.map(result => (
+                                            <div
+                                                key={`${result.type}-${result.id}`}
+                                                className="flex items-center gap-3 p-2 rounded-md cursor-pointer hover:bg-accent hover:text-accent-foreground"
+                                                onClick={() => handleSearchResultClick(result)}
+                                            >
+                                                {result.type === 'leads' && <UserRound className="h-4 w-4 text-muted-foreground" />}
+                                                {result.type === 'clients' && <User className="h-4 w-4 text-muted-foreground" />}
+                                                {result.type === 'construtoras' && <ConstrutoraIcon className="h-4 w-4 text-muted-foreground" />}
+                                                <span className="flex-grow">{result.name}</span>
+                                                <Badge variant="secondary" className="capitalize text-xs">{result.type === 'construtoras' ? 'Construtora' : result.type.slice(0, -1)}</Badge>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </ScrollArea>
+                            </div>
+                        )}
+                    </div>
+                     <div className="flex gap-2">
+                        {renderAddButton()}
+                    </div>
                 </div>
             </div>
-            <Tabs defaultValue="leads" onValueChange={(value) => setActiveTab(value as CrmTab)}>
+            <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as CrmTab)}>
                 <TabsList>
                     <TabsTrigger value="leads">Leads</TabsTrigger>
                     <TabsTrigger value="clients">Clientes</TabsTrigger>
@@ -420,7 +502,11 @@ export default function CrmPage() {
                                         ))
                                     ) : leads.length > 0 ? (
                                         leads.map(lead => (
-                                            <TableRow key={lead.id} className={cn("transition-all duration-200 hover:bg-secondary")}>
+                                            <TableRow 
+                                                key={lead.id}
+                                                id={`row-${lead.id}`}
+                                                className={cn("transition-all duration-300", highlightedRow === lead.id && "bg-primary/10")}
+                                            >
                                                 <TableCell className="font-medium">{lead.name}</TableCell>
                                                 <TableCell className="hidden md:table-cell">{lead.email}</TableCell>
                                                 <TableCell className="hidden md:table-cell">{lead.phone}</TableCell>
@@ -477,7 +563,12 @@ export default function CrmPage() {
                                         ))
                                     ) : clients.length > 0 ? (
                                         clients.map(client => (
-                                            <TableRow key={client.id} onClick={() => handleShowDetails(client)} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary")}>
+                                            <TableRow 
+                                                key={client.id} 
+                                                id={`row-${client.id}`}
+                                                onClick={() => handleShowDetails(client)} 
+                                                className={cn("transition-all duration-300 cursor-pointer hover:bg-secondary", highlightedRow === client.id && "bg-primary/10")}
+                                            >
                                                 <TableCell className="font-medium">{client.name}</TableCell>
                                                 <TableCell className="hidden sm:table-cell">{client.email}</TableCell>
                                                 <TableCell className="hidden md:table-cell">{client.phone}</TableCell>
@@ -540,7 +631,11 @@ export default function CrmPage() {
                                         ))
                                     ) : construtoras.length > 0 ? (
                                         construtoras.map(c => (
-                                            <TableRow key={c.id}>
+                                            <TableRow 
+                                                key={c.id}
+                                                id={`row-${c.id}`}
+                                                className={cn("transition-all duration-300", highlightedRow === c.id && "bg-primary/10")}
+                                            >
                                                 <TableCell className="font-medium">{c.name}</TableCell>
                                                 <TableCell>{c.cnpj}</TableCell>
                                                 <TableCell className="hidden sm:table-cell">{c.email}</TableCell>
