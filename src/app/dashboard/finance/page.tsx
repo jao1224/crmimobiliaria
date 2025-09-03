@@ -876,7 +876,7 @@ export default function FinancePage() {
                         <CardContent>
                              <Table>
                                 <TableHeader>
-                                    <TableRow><TableHead>Descrição</TableHead><TableHead>Categoria</TableHead><TableHead>Valor</TableHead><TableHead>Vencimento</TableHead><TableHead>Status</TableHead></TableRow>
+                                    <TableRow><TableHead>Descrição</TableHead><TableHead>Categoria</TableHead><TableHead>Vencimento</TableHead><TableHead>Status</TableHead></TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {isLoading ? (
@@ -889,7 +889,6 @@ export default function FinancePage() {
                                         <TableRow key={e.id} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
                                             <TableCell className="font-medium">{e.description}</TableCell>
                                             <TableCell>{e.category}</TableCell>
-                                            <TableCell>{formatCurrency(e.amount)}</TableCell>
                                             <TableCell>{new Date(e.dueDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</TableCell>
                                             <TableCell>
                                                 <Badge variant={e.status === 'Pago' ? 'success' : isExpenseOverdue(e) ? 'destructive' : 'status-orange'}>
