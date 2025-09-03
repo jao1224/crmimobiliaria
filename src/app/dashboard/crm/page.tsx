@@ -353,7 +353,7 @@ export default function CrmPage() {
                             </DialogHeader>
                             <form onSubmit={handleAddConstrutora}>
                                 <div className="grid gap-4 py-4">
-                                    <div className="space-y-2"><Label htmlFor="name-construtora">Razão Social</Label><Input id="name-construtora" name="name" required /></div>
+                                    <div className="space-y-2"><Label htmlFor="name-construtora">Nome da Construtora</Label><Input id="name-construtora" name="name" required /></div>
                                     <div className="space-y-2"><Label htmlFor="cnpj-construtora">CNPJ</Label><Input id="cnpj-construtora" name="cnpj" required /></div>
                                     <div className="space-y-2"><Label htmlFor="email-construtora">E-mail</Label><Input id="email-construtora" name="email" type="email" required /></div>
                                     <div className="space-y-2"><Label htmlFor="phone-construtora">Telefone</Label><Input id="phone-construtora" name="phone" required /></div>
@@ -420,7 +420,7 @@ export default function CrmPage() {
                                         ))
                                     ) : leads.length > 0 ? (
                                         leads.map(lead => (
-                                            <TableRow key={lead.id} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
+                                            <TableRow key={lead.id} className={cn("transition-all duration-200 hover:bg-secondary")}>
                                                 <TableCell className="font-medium">{lead.name}</TableCell>
                                                 <TableCell className="hidden md:table-cell">{lead.email}</TableCell>
                                                 <TableCell className="hidden md:table-cell">{lead.phone}</TableCell>
@@ -477,7 +477,7 @@ export default function CrmPage() {
                                         ))
                                     ) : clients.length > 0 ? (
                                         clients.map(client => (
-                                            <TableRow key={client.id} onClick={() => handleShowDetails(client)} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary hover:shadow-md hover:-translate-y-1")}>
+                                            <TableRow key={client.id} onClick={() => handleShowDetails(client)} className={cn("transition-all duration-200 cursor-pointer hover:bg-secondary")}>
                                                 <TableCell className="font-medium">{client.name}</TableCell>
                                                 <TableCell className="hidden sm:table-cell">{client.email}</TableCell>
                                                 <TableCell className="hidden md:table-cell">{client.phone}</TableCell>
@@ -523,7 +523,7 @@ export default function CrmPage() {
                              <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>Razão Social</TableHead>
+                                        <TableHead>Nome da Construtora</TableHead>
                                         <TableHead>CNPJ</TableHead>
                                         <TableHead className="hidden sm:table-cell">E-mail</TableHead>
                                         <TableHead className="hidden md:table-cell">Telefone</TableHead>
