@@ -736,8 +736,8 @@ export default function NegotiationsPage() {
                                 Selecione um imóvel e um cliente da lista para buscar os dados.
                             </DialogDescription>
                         </DialogHeader>
-                        <ScrollArea className="-mx-6 px-6">
-                            <form id="new-negotiation-form" onSubmit={handleAddNegotiation} className="space-y-4 py-4">
+                        <ScrollArea className="-mx-6 flex-grow">
+                            <form id="new-negotiation-form" onSubmit={handleAddNegotiation} className="space-y-4 px-6 py-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label>Imóvel</Label>
