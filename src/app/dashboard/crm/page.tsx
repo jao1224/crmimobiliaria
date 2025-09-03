@@ -6,7 +6,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { MoreHorizontal, History, Briefcase, Landmark, Trash2, PlusCircle, UserPlus, Handshake, Link as LinkIcon, FileText, Building, Search, User, UserRound, Building2 as ConstrutoraIcon } from "lucide-react";
+import { MoreHorizontal, History, Briefcase, Landmark, Trash2, PlusCircle, UserPlus, Handshake, Link as LinkIcon, FileText, Building, Search, User, UserRound, Building2 as ConstrutoraIcon, Users } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
@@ -23,7 +23,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { addClient, addLead, getClients, getLeads, convertLeadToClient, deleteClient, type Client, type Lead, getConstrutoras, addConstrutora, type Construtora } from "@/lib/crm-data";
+import { addClient, addLead, getClients, getLeads, convertLeadToClient, deleteClient, type Client, type Lead, getConstrutoras, addConstrutora, type Construtora, addParticipantToClient, type Participant } from "@/lib/crm-data";
 import { getFinancingProcesses, getNegotiations, type FinancingProcess, type Negotiation } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -67,6 +67,7 @@ export default function CrmPage() {
     const [leadToConvert, setLeadToConvert] = useState<Lead | null>(null);
     const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
     const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [isAddParticipantOpen, setAddParticipantOpen] = useState(false);
     const [clientHistory, setClientHistory] = useState<{ negotiations: Negotiation[], financings: FinancingProcess[] }>({ negotiations: [], financings: [] });
     const [isHistoryLoading, setIsHistoryLoading] = useState(false);
     
@@ -165,7 +166,7 @@ export default function CrmPage() {
     }, [highlightedRow]);
 
 
-    const handleShowDetails = (client: Client) => {
+    const handleShowDetails = async (client: Client) => {
         setSelectedClient(client);
         setDetailOpen(true);
     };
@@ -333,6 +334,37 @@ export default function CrmPage() {
         } finally {
             setDeleteDialogOpen(false);
             setClientToDelete(null);
+        }
+    };
+
+    const handleAddParticipant = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        if (!selectedClient) return;
+        
+        const form = event.currentTarget;
+        const formData = new FormData(form);
+
+        const participantData: Omit<Participant, 'id'> = {
+            name: formData.get("participant-name") as string,
+            document: formData.get("participant-document") as string,
+        };
+
+        try {
+            await addParticipantToClient(selectedClient.id, participantData);
+            toast({ title: "Sucesso!", description: "Participante adicionado." });
+
+            // Atualiza o estado local para refletir a mudança instantaneamente
+            const updatedClient: Client = {
+                ...selectedClient,
+                participants: [...(selectedClient.participants || []), { id: Date.now().toString(), ...participantData }],
+            };
+            setSelectedClient(updatedClient);
+            setClients(clients.map(c => c.id === selectedClient.id ? updatedClient : c));
+
+            setAddParticipantOpen(false);
+            form.reset();
+        } catch(error) {
+            toast({ variant: 'destructive', title: "Erro", description: "Não foi possível adicionar o participante." });
         }
     };
     
@@ -670,7 +702,7 @@ export default function CrmPage() {
         
         {/* Modal de Detalhes do Cliente */}
          <Dialog open={isDetailOpen} onOpenChange={setDetailOpen}>
-            <DialogContent className="sm:max-w-2xl max-h-[90vh]">
+            <DialogContent className="sm:max-w-3xl max-h-[90vh]">
                 {selectedClient && (
                     <>
                     <DialogHeader>
@@ -736,6 +768,27 @@ export default function CrmPage() {
                                   )}
                                 </div>
                             </div>
+                            <div className="space-y-4 rounded-lg border p-4">
+                                <div className="flex justify-between items-center">
+                                    <h3 className="font-semibold text-lg">Participantes</h3>
+                                    <Button variant="outline" size="sm" onClick={() => setAddParticipantOpen(true)}><UserPlus className="mr-2 h-4 w-4"/>Adicionar</Button>
+                                </div>
+                                <div className="text-sm text-muted-foreground space-y-2">
+                                  {(selectedClient.participants && selectedClient.participants.length > 0) ? (
+                                    selectedClient.participants.map((p) => (
+                                        <div key={p.id} className="flex items-center justify-between p-2 rounded-md bg-muted">
+                                            <div className="flex flex-col">
+                                                <p className="font-medium text-foreground">{p.name}</p>
+                                                <p className="text-xs">CPF/CNPJ: {p.document}</p>
+                                            </div>
+                                            {/*<Button variant="ghost" size="icon" className="h-7 w-7 text-destructive"><Trash2 className="h-4 w-4" /></Button>*/}
+                                        </div>
+                                    ))
+                                  ) : (
+                                    <p>Nenhum participante adicional cadastrado para este cliente.</p>
+                                  )}
+                                </div>
+                            </div>
                         </div>
                     </ScrollArea>
                     <DialogFooter>
@@ -746,6 +799,32 @@ export default function CrmPage() {
                     </DialogFooter>
                     </>
                 )}
+            </DialogContent>
+        </Dialog>
+        
+        {/* Modal Adicionar Participante */}
+         <Dialog open={isAddParticipantOpen} onOpenChange={setAddParticipantOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Adicionar Participante</DialogTitle>
+                    <DialogDescription>Adicione um novo participante ao cliente {selectedClient?.name}.</DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleAddParticipant}>
+                    <div className="py-4 space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="participant-name">Nome Completo</Label>
+                            <Input id="participant-name" name="participant-name" required />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="participant-document">CPF / CNPJ</Label>
+                            <Input id="participant-document" name="participant-document" required />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button type="button" variant="outline" onClick={() => setAddParticipantOpen(false)}>Cancelar</Button>
+                        <Button type="submit">Adicionar</Button>
+                    </DialogFooter>
+                </form>
             </DialogContent>
         </Dialog>
 

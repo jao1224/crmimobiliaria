@@ -28,7 +28,7 @@ import type { VariantProps } from "class-variance-authority";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { getNegotiations, addNegotiation, type Negotiation, addFinancingProcess, completeSaleAndGenerateCommission, getProperties, type Property, updateNegotiation, getUsers, type User, archiveNegotiation, addServiceRequest, markAsDeleted, getProcessos, type Processo, ServiceRequestType, type NegotiationStage, getActivitiesForRealtor, updateActivityStatus, Activity, ActivityStatus } from "@/lib/data";
-import { getClients, type Client } from "@/lib/crm-data";
+import { getClients, type Client, type Participant } from "@/lib/crm-data";
 import { cn } from "@/lib/utils";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import { auth } from "@/lib/firebase";
@@ -289,6 +289,7 @@ export default function NegotiationsPage() {
     const [availableProperties, setAvailableProperties] = useState<Property[]>([]);
     const [availableClients, setAvailableClients] = useState<Client[]>([]);
     const [selectedDocs, setSelectedDocs] = useState<File[]>([]);
+    const [selectedParticipants, setSelectedParticipants] = useState<Record<string, boolean>>({});
 
     // Estados para os diálogos
     const [isAssignDialogOpen, setAssignDialogOpen] = useState(false);
@@ -412,6 +413,7 @@ export default function NegotiationsPage() {
         setProposalDate("");
         setIsFinanced(false);
         setSelectedDocs([]);
+        setSelectedParticipants({});
     };
     
     const handleFileSelection = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -455,8 +457,10 @@ export default function NegotiationsPage() {
         if (clientCode) {
             const cli = availableClients.find(c => c.id === clientCode);
             setFoundClient(cli || null);
+            setSelectedParticipants({ [cli?.id || '']: true }); // Auto-seleciona o cliente principal
         } else {
             setFoundClient(null);
+            setSelectedParticipants({});
         }
     }, [clientCode, availableClients]);
 
@@ -469,6 +473,20 @@ export default function NegotiationsPage() {
             return;
         }
         
+        const allPossibleParticipants = [
+            { id: foundClient.id, name: foundClient.name, document: foundClient.document || '' },
+            ...(foundClient.participants || [])
+        ];
+        
+        const participantsInNegotiation = allPossibleParticipants
+            .filter(p => selectedParticipants[p.id])
+            .map(({ name, document }) => ({ name, document }));
+
+        if (participantsInNegotiation.length === 0) {
+            toast({ variant: 'destructive', title: "Erro", description: "Selecione pelo menos um participante para a negociação." });
+            return;
+        }
+
         const formData = new FormData(event.currentTarget);
         const responsibleSalespersonId = formData.get('salespersonId') as string || currentUser.uid;
         const responsibleSalesperson = allUsers.find(u => u.id === responsibleSalespersonId);
@@ -478,8 +496,9 @@ export default function NegotiationsPage() {
             propertyId: foundProperty.id,
             propertyDisplayCode: foundProperty.displayCode,
             propertyType: foundProperty.type,
-            client: foundClient.name,
+            client: foundClient.name, // Nome do cliente principal
             clientId: foundClient.id,
+            participants: participantsInNegotiation,
             stage: "Proposta Enviada",
             type: 'Venda',
             contractStatus: "Não Gerado",
@@ -709,14 +728,14 @@ export default function NegotiationsPage() {
                     <DialogTrigger asChild>
                         <Button>Iniciar Nova Negociação</Button>
                     </DialogTrigger>
-                     <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
+                     <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col">
                         <DialogHeader>
                             <DialogTitle>Iniciar Nova Negociação</DialogTitle>
                             <DialogDescription>
                                 Selecione um imóvel e um cliente da lista para buscar os dados.
                             </DialogDescription>
                         </DialogHeader>
-                        <div className="flex-grow overflow-y-auto -mx-6 px-6">
+                        <ScrollArea className="-mx-6 px-6">
                             <form id="new-negotiation-form" onSubmit={handleAddNegotiation} className="space-y-4 py-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
@@ -757,34 +776,23 @@ export default function NegotiationsPage() {
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 rounded-lg border p-4">
-                                    <div className="space-y-2">
-                                        <h4 className="font-semibold text-sm">Imóvel Selecionado</h4>
-                                        {foundProperty ? (
-                                            <div className="text-sm text-muted-foreground space-y-1">
-                                                <p className="font-medium text-foreground">{foundProperty.name}</p>
-                                                <p><strong>Cód:</strong> {foundProperty.displayCode}</p>
-                                                <p><strong>End:</strong> {foundProperty.address}</p>
-                                                <p><strong>Preço:</strong> {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(foundProperty.price)}</p>
-                                                <p className="line-clamp-2"><strong>Desc:</strong> {foundProperty.description || 'N/A'}</p>
+                                {foundClient && (
+                                    <div className="space-y-2 rounded-lg border p-4">
+                                        <h4 className="font-semibold text-sm">Participantes na Negociação</h4>
+                                        <div className="space-y-2">
+                                            <div className="flex items-center space-x-3">
+                                                <Checkbox id={`participant-${foundClient.id}`} checked={selectedParticipants[foundClient.id] || false} onCheckedChange={(checked) => setSelectedParticipants(prev => ({...prev, [foundClient.id]: !!checked}))}/>
+                                                <Label htmlFor={`participant-${foundClient.id}`} className="font-medium">{foundClient.name} (Cliente Principal)</Label>
                                             </div>
-                                        ) : <p className="text-sm text-destructive">Nenhum imóvel selecionado.</p>}
+                                            {foundClient.participants?.map(p => (
+                                                <div key={p.id} className="flex items-center space-x-3">
+                                                    <Checkbox id={`participant-${p.id}`} checked={selectedParticipants[p.id] || false} onCheckedChange={(checked) => setSelectedParticipants(prev => ({...prev, [p.id]: !!checked}))}/>
+                                                    <Label htmlFor={`participant-${p.id}`} className="font-normal">{p.name}</Label>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
-                                    <div className="space-y-2">
-                                        <h4 className="font-semibold text-sm">Cliente Selecionado</h4>
-                                        {foundClient ? (
-                                            <div className="text-sm text-muted-foreground space-y-1">
-                                                <p className="font-medium text-foreground">{foundClient.name}</p>
-                                                <p><strong>Doc:</strong> {foundClient.document || 'N/A'}</p>
-                                                <p><strong>Email:</strong> {foundClient.email}</p>
-                                                <p><strong>Tel:</strong> {foundClient.phone}</p>
-                                                <p><strong>End:</strong> {foundClient.address || 'N/A'}</p>
-                                                <p><strong>Renda:</strong> {foundClient.monthlyIncome ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(foundClient.monthlyIncome) : 'N/A'}</p>
-                                                <p><strong>Responsável:</strong> {foundClient.assignedTo}</p>
-                                            </div>
-                                        ) : <p className="text-sm text-destructive">Nenhum cliente selecionado.</p>}
-                                    </div>
-                                </div>
+                                )}
 
                                 <div className="border-t pt-4 space-y-4">
                                     <div className="grid grid-cols-2 gap-4">
@@ -844,7 +852,7 @@ export default function NegotiationsPage() {
                                     </div>
                                 </div>
                             </form>
-                        </div>
+                        </ScrollArea>
                         <DialogFooter className="mt-auto pt-4 border-t -mx-6 px-6 bg-background">
                             <Button type="button" variant="outline" onClick={() => setNewNegotiationOpen(false)}>Cancelar</Button>
                             <Button type="submit" form="new-negotiation-form" disabled={!foundProperty || !foundClient || !proposalValue || !proposalDate}>Criar Negociação</Button>
@@ -1045,15 +1053,14 @@ export default function NegotiationsPage() {
                 <TabsContent value="kanban">
                     <div className="flex gap-4 overflow-x-auto pb-4">
                         {KANBAN_COLUMNS.map(stage => (
-                             <div key={stage} className="flex-1 min-w-[300px] bg-muted/50 rounded-lg flex flex-col" onDragOver={(e) => e.preventDefault()} onDrop={(e) => handleDrop(e, stage)}>
-                                <div className={cn("p-3 border-b-2", 
-                                    stage === 'Proposta Enviada' ? 'border-status-blue' :
-                                    stage === 'Em Negociação' ? 'border-status-orange' :
-                                    stage === 'Contrato Gerado' ? 'border-success' :
-                                    stage === 'Venda Concluída' ? 'border-success' :
-                                    stage === 'Aluguel Ativo' ? 'border-success' :
-                                    'border-border'
-                                )}>
+                             <div key={stage} className={cn("flex-1 min-w-[300px] bg-muted/50 rounded-lg flex flex-col border-b-2",
+                                getStageVariant(stage) === 'status-blue' ? 'border-status-blue' :
+                                getStageVariant(stage) === 'status-orange' ? 'border-status-orange' :
+                                getStageVariant(stage) === 'success' ? 'border-success' :
+                                'border-border'
+                             )} 
+                             onDragOver={(e) => e.preventDefault()} onDrop={(e) => handleDrop(e, stage)}>
+                                <div className="p-3">
                                     <h3 className="font-semibold text-sm flex justify-between">
                                         <span>{stage}</span>
                                         <span>({(negotiationsByStage[stage] || []).length})</span>
@@ -1150,7 +1157,7 @@ export default function NegotiationsPage() {
                                             <span className="font-medium text-right">{selectedNegotiation.property} ({selectedNegotiation.propertyDisplayCode})</span>
                                         </div>
                                         <div className="flex justify-between">
-                                            <span className="text-muted-foreground">Cliente:</span>
+                                            <span className="text-muted-foreground">Cliente Principal:</span>
                                             <span className="font-medium text-right">{selectedNegotiation.client}</span>
                                         </div>
                                         <div className="flex justify-between">
@@ -1193,6 +1200,24 @@ export default function NegotiationsPage() {
                             </div>
 
                             <Separator />
+                            
+                             <div className="space-y-4">
+                                <h4 className="font-semibold text-lg">Participantes Envolvidos</h4>
+                                <div className="text-sm space-y-2">
+                                     {(selectedNegotiation.participants && selectedNegotiation.participants.length > 0) ? (
+                                        selectedNegotiation.participants.map((p, index) => (
+                                            <div key={index} className="flex justify-between p-2 rounded-md bg-muted">
+                                                <span className="font-medium">{p.name}</span>
+                                                <span className="text-muted-foreground">CPF/CNPJ: {p.document}</span>
+                                            </div>
+                                        ))
+                                     ) : (
+                                        <p className="text-muted-foreground">Apenas o cliente principal está envolvido.</p>
+                                     )}
+                                </div>
+                             </div>
+
+                             <Separator />
 
                              <div className="space-y-4">
                                 <h4 className="font-semibold text-lg">Responsáveis</h4>

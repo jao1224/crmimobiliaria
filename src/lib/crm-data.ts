@@ -15,6 +15,12 @@ export type Lead = {
     assignedTo: string;
 };
 
+export type Participant = {
+    id: string;
+    name: string;
+    document: string;
+};
+
 export type Client = {
     id: string;
     name: string;
@@ -30,6 +36,7 @@ export type Client = {
     profession?: string;
     bankInfo?: string;
     documentUrls?: { url: string, name: string }[];
+    participants?: Participant[];
 };
 
 export type Construtora = {
@@ -150,4 +157,18 @@ export const deleteClient = async (clientId: string): Promise<void> => {
     
     // 4. Executar o batch
     await batch.commit();
+};
+
+export const addParticipantToClient = async (clientId: string, participantData: Omit<Participant, 'id'>): Promise<void> => {
+    if (!clientId || !participantData) {
+        throw new Error("ID do cliente e dados do participante são necessários.");
+    }
+    const clientRef = doc(db, 'clients', clientId);
+    const newParticipant = {
+        id: new Date().getTime().toString(), // Simple unique ID
+        ...participantData,
+    };
+    await updateDoc(clientRef, {
+        participants: arrayUnion(newParticipant)
+    });
 };

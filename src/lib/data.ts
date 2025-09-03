@@ -55,6 +55,7 @@ export type Negotiation = {
     propertyType: PropertyType;
     client: string;
     clientId: string;
+    participants: { name: string; document: string }[];
     stage: NegotiationStage;
     type: NegotiationType;
     value: number;
