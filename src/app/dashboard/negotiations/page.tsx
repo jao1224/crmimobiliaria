@@ -777,34 +777,42 @@ export default function NegotiationsPage() {
                                     </div>
                                 </div>
                                 
-                                {isSearching && <Skeleton className="w-full h-24" />}
+                                {isSearching ? ( 
+                                    <Skeleton className="w-full h-36 rounded-md" /> 
+                                ) : (foundProperty || foundClient) && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 p-4 rounded-lg bg-muted/50 border">
+                                        {/* Coluna Imóvel */}
+                                        <div className="space-y-1 text-sm">
+                                            <h3 className="font-semibold text-base mb-2">Imóvel Selecionado</h3>
+                                            {foundProperty ? (
+                                                <>
+                                                    <p className="font-bold text-foreground">{foundProperty.name}</p>
+                                                    <p><span className="font-semibold text-primary">Cód:</span> {foundProperty.displayCode}</p>
+                                                    <p><span className="font-semibold text-primary">End:</span> {foundProperty.address}</p>
+                                                    <p><span className="font-semibold text-primary">Preço:</span> {formatCurrency(foundProperty.price)}</p>
+                                                    <p><span className="font-semibold text-primary">Tipo:</span> {foundProperty.type || 'N/A'}</p>
+                                                </>
+                                            ) : <p className="text-muted-foreground">Nenhum imóvel selecionado.</p>}
+                                        </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {foundProperty && (
-                                        <Card>
-                                            <CardHeader>
-                                                <CardTitle className="text-base">{foundProperty.name}</CardTitle>
-                                                <CardDescription>{foundProperty.address}</CardDescription>
-                                            </CardHeader>
-                                            <CardContent className="text-sm">
-                                                <p><strong>Valor:</strong> {formatCurrency(foundProperty.price)}</p>
-                                                <p><strong>Captador:</strong> {foundProperty.capturedBy}</p>
-                                            </CardContent>
-                                        </Card>
-                                    )}
-                                    {foundClient && (
-                                         <Card>
-                                            <CardHeader>
-                                                <CardTitle className="text-base">{foundClient.name}</CardTitle>
-                                                <CardDescription>{foundClient.email}</CardDescription>
-                                            </CardHeader>
-                                            <CardContent className="text-sm">
-                                                <p><strong>Telefone:</strong> {foundClient.phone}</p>
-                                                <p><strong>Responsável:</strong> {foundClient.assignedTo}</p>
-                                            </CardContent>
-                                        </Card>
-                                    )}
-                                </div>
+                                        {/* Coluna Cliente */}
+                                        <div className="space-y-1 text-sm">
+                                            <h3 className="font-semibold text-base mb-2">Cliente Selecionado</h3>
+                                            {foundClient ? (
+                                                <>
+                                                     <p className="font-bold text-foreground">{foundClient.name}</p>
+                                                     <p><span className="font-semibold text-primary">Doc:</span> {foundClient.document || 'N/A'}</p>
+                                                     <p><span className="font-semibold text-primary">Email:</span> {foundClient.email}</p>
+                                                     <p><span className="font-semibold text-primary">Tel:</span> {foundClient.phone}</p>
+                                                     <p><span className="font-semibold text-primary">End:</span> {foundClient.address || 'N/A'}</p>
+                                                     <p><span className="font-semibold text-primary">Renda:</span> {foundClient.monthlyIncome ? formatCurrency(foundClient.monthlyIncome) : 'N/A'}</p>
+                                                     <p><span className="font-semibold text-primary">Responsável:</span> {foundClient.assignedTo}</p>
+                                                </>
+                                            ) : <p className="text-muted-foreground">Nenhum cliente selecionado.</p>}
+                                        </div>
+                                    </div>
+                                )}
+                                
 
                                 {foundClient && (
                                     <div className="space-y-2 rounded-lg border p-4">
