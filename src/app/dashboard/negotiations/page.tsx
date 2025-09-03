@@ -144,11 +144,6 @@ const RealtorKanban = ({ users }: { users: User[] }) => {
     const [isLoading, setIsLoading] = useState(false);
     const { toast } = useToast();
     
-    const brokerUsers = useMemo(() => {
-        const brokerRoles = ['Corretor Autônomo', 'Vendedor', 'Imobiliária', 'Admin'];
-        return users.filter(user => brokerRoles.includes(user.role));
-    }, [users]);
-    
     useEffect(() => {
         if (selectedRealtorId) {
             const fetchActivities = async () => {
@@ -226,7 +221,7 @@ const RealtorKanban = ({ users }: { users: User[] }) => {
                         <SelectValue placeholder="Selecione..." />
                     </SelectTrigger>
                     <SelectContent>
-                        {brokerUsers.map(user => (
+                        {users.map(user => (
                              <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
                         ))}
                     </SelectContent>
@@ -859,7 +854,7 @@ export default function NegotiationsPage() {
             </div>
 
             <Tabs defaultValue="list" className="w-full">
-                 <TabsList className="inline-flex h-10 items-center justify-start rounded-md bg-muted p-1 text-muted-foreground">
+                 <TabsList>
                     <TabsTrigger value="list">Lista</TabsTrigger>
                     <TabsTrigger value="kanban">Kanban Negócios</TabsTrigger>
                     <TabsTrigger value="kanban_corretor">Kanban Corretor</TabsTrigger>
