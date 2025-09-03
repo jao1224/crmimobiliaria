@@ -27,6 +27,7 @@ export type Client = {
     birthDate?: string;
     address?: string;
     monthlyIncome?: number;
+    profession?: string;
     documentUrls?: { url: string, name: string }[];
 };
 
