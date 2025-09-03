@@ -100,10 +100,6 @@ export default function SettingsPage() {
                 if (userDocSnap.exists()) {
                     setUserData(userDocSnap.data() as TeamMember);
                 }
-
-                if (hasPermissionForTeamTabs) {
-                    fetchTeamData(currentUser);
-                }
             } else {
                 setUser(null);
                 setUserData(null);
@@ -111,7 +107,13 @@ export default function SettingsPage() {
         });
 
         return () => unsubscribe();
-    }, [hasPermissionForTeamTabs]);
+    }, []);
+
+    useEffect(() => {
+        if (hasPermissionForTeamTabs && user) {
+            fetchTeamData(user);
+        }
+    }, [hasPermissionForTeamTabs, user]);
 
     const fetchTeamData = async (currentUser: User) => {
         if (!currentUser) return;
@@ -123,7 +125,7 @@ export default function SettingsPage() {
         let usersQuery;
         let teamsQuery;
 
-        if (isAdmin) {
+        if (activeProfile === 'Admin') {
             usersQuery = query(collection(db, "users"));
             teamsQuery = query(collection(db, "teams"));
         } else {
@@ -136,7 +138,7 @@ export default function SettingsPage() {
         const usersSnapshot = await getDocs(usersQuery);
         const members = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeamMember));
         
-        if (isAdmin) {
+        if (activeProfile === 'Admin') {
              const imobiliariasSnapshot = await getDocs(query(collection(db, "users"), where("role", "==", "Imobiliária")));
              const imobiliariasMap = new Map(imobiliariasSnapshot.docs.map(doc => [doc.id, doc.data().name]));
 
