@@ -32,6 +32,16 @@ export type Client = {
     documentUrls?: { url: string, name: string }[];
 };
 
+export type Construtora = {
+    id: string;
+    name: string;
+    cnpj: string;
+    email: string;
+    phone: string;
+    address: string;
+    responsible: string;
+};
+
 
 // --- FUNÇÕES DE ACESSO E MANIPULAÇÃO (FIRESTORE) ---
 
@@ -47,6 +57,12 @@ export const getClients = async (): Promise<Client[]> => {
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Client));
 };
 
+export const getConstrutoras = async (): Promise<Construtora[]> => {
+    const construtorasCollection = collection(db, 'construtoras');
+    const snapshot = await getDocs(construtorasCollection);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Construtora));
+};
+
 export const addLead = async (newLead: Omit<Lead, 'id'>): Promise<string> => {
     const docRef = await addDoc(collection(db, 'leads'), newLead);
     
@@ -60,6 +76,11 @@ export const addLead = async (newLead: Omit<Lead, 'id'>): Promise<string> => {
 
 export const addClient = async (newClient: Omit<Client, 'id'>): Promise<string> => {
     const docRef = await addDoc(collection(db, 'clients'), newClient);
+    return docRef.id;
+};
+
+export const addConstrutora = async (newConstrutora: Omit<Construtora, 'id'>): Promise<string> => {
+    const docRef = await addDoc(collection(db, 'construtoras'), newConstrutora);
     return docRef.id;
 };
 

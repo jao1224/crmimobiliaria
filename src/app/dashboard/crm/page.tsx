@@ -6,7 +6,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { MoreHorizontal, History, Briefcase, Landmark, Trash2, PlusCircle, UserPlus, Handshake, Link as LinkIcon, FileText } from "lucide-react";
+import { MoreHorizontal, History, Briefcase, Landmark, Trash2, PlusCircle, UserPlus, Handshake, Link as LinkIcon, FileText, Building } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
@@ -23,7 +23,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { addClient, addLead, getClients, getLeads, convertLeadToClient, deleteClient, type Client, type Lead } from "@/lib/crm-data";
+import { addClient, addLead, getClients, getLeads, convertLeadToClient, deleteClient, type Client, type Lead, getConstrutoras, addConstrutora, type Construtora } from "@/lib/crm-data";
 import { getFinancingProcesses, getNegotiations, type FinancingProcess, type Negotiation } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -35,7 +35,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 
-type CrmTab = "leads" | "clients";
+type CrmTab = "leads" | "clients" | "construtoras";
 const formatCurrency = (amount: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount);
 
 
@@ -45,9 +45,11 @@ export default function CrmPage() {
 
     const [leads, setLeads] = useState<Lead[]>([]);
     const [clients, setClients] = useState<Client[]>([]);
+    const [construtoras, setConstrutoras] = useState<Construtora[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isLeadDialogOpen, setLeadDialogOpen] = useState(false);
     const [isClientDialogOpen, setClientDialogOpen] = useState(false);
+    const [isConstrutoraDialogOpen, setIsConstrutoraDialogOpen] = useState(false);
     const { toast } = useToast();
     
     const [activeTab, setActiveTab] = useState<CrmTab>("leads");
@@ -80,9 +82,10 @@ export default function CrmPage() {
     const refreshData = async () => {
         setIsLoading(true);
         try {
-            const [leadsData, clientsData] = await Promise.all([
+            const [leadsData, clientsData, construtorasData] = await Promise.all([
                 getLeads(),
                 getClients(),
+                getConstrutoras(),
             ]);
 
             const canSeeAll = activeProfile === 'Admin' || activeProfile === 'Imobiliária';
@@ -98,6 +101,7 @@ export default function CrmPage() {
                 setLeads(myLeads);
                 setClients(myClients);
             }
+            setConstrutoras(construtorasData);
 
         } catch (error) {
             console.error("Failed to fetch CRM data:", error);
@@ -192,6 +196,30 @@ export default function CrmPage() {
             setClientDialogOpen(false);
         } catch (error) {
             toast({ variant: "destructive", title: "Erro", description: "Não foi possível adicionar o cliente." });
+        }
+    };
+
+    const handleAddConstrutora = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const formData = new FormData(form);
+        const newConstrutoraData: Omit<Construtora, 'id'> = {
+            name: formData.get("name") as string,
+            cnpj: formData.get("cnpj") as string,
+            email: formData.get("email") as string,
+            phone: formData.get("phone") as string,
+            address: formData.get("address") as string,
+            responsible: formData.get("responsible") as string,
+        };
+
+        try {
+            await addConstrutora(newConstrutoraData);
+            await refreshData();
+            toast({ title: "Sucesso!", description: "Construtora adicionada com sucesso." });
+            form.reset();
+            setIsConstrutoraDialogOpen(false);
+        } catch (error) {
+             toast({ variant: "destructive", title: "Erro", description: "Não foi possível adicionar a construtora." });
         }
     };
     
@@ -312,6 +340,34 @@ export default function CrmPage() {
                         </DialogContent>
                     </Dialog>
                 );
+             case 'construtoras':
+                return (
+                    <Dialog open={isConstrutoraDialogOpen} onOpenChange={setIsConstrutoraDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button><Building className="mr-2 h-4 w-4" /> Adicionar Construtora</Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Adicionar Nova Construtora</DialogTitle>
+                                <DialogDescription>Preencha os detalhes da construtora.</DialogDescription>
+                            </DialogHeader>
+                            <form onSubmit={handleAddConstrutora}>
+                                <div className="grid gap-4 py-4">
+                                    <div className="space-y-2"><Label htmlFor="name-construtora">Razão Social</Label><Input id="name-construtora" name="name" required /></div>
+                                    <div className="space-y-2"><Label htmlFor="cnpj-construtora">CNPJ</Label><Input id="cnpj-construtora" name="cnpj" required /></div>
+                                    <div className="space-y-2"><Label htmlFor="email-construtora">E-mail</Label><Input id="email-construtora" name="email" type="email" required /></div>
+                                    <div className="space-y-2"><Label htmlFor="phone-construtora">Telefone</Label><Input id="phone-construtora" name="phone" required /></div>
+                                    <div className="space-y-2"><Label htmlFor="address-construtora">Endereço</Label><Input id="address-construtora" name="address" required /></div>
+                                    <div className="space-y-2"><Label htmlFor="responsible-construtora">Responsável</Label><Input id="responsible-construtora" name="responsible" /></div>
+                                </div>
+                                <DialogFooter>
+                                    <Button type="button" variant="outline" onClick={() => setIsConstrutoraDialogOpen(false)}>Cancelar</Button>
+                                    <Button type="submit">Salvar Construtora</Button>
+                                </DialogFooter>
+                            </form>
+                        </DialogContent>
+                    </Dialog>
+                );
             default:
                 return null;
         }
@@ -334,6 +390,7 @@ export default function CrmPage() {
                 <TabsList>
                     <TabsTrigger value="leads">Leads</TabsTrigger>
                     <TabsTrigger value="clients">Clientes</TabsTrigger>
+                    <TabsTrigger value="construtoras">Construtoras</TabsTrigger>
                 </TabsList>
                 <TabsContent value="leads">
                     <Card>
@@ -449,6 +506,63 @@ export default function CrmPage() {
                                      ) : (
                                         <TableRow>
                                             <TableCell colSpan={6} className="h-24 text-center">Nenhum cliente cadastrado.</TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+                 <TabsContent value="construtoras">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Construtoras</CardTitle>
+                            <CardDescription>Lista de construtoras e parceiros de empreendimentos.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                             <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Razão Social</TableHead>
+                                        <TableHead>CNPJ</TableHead>
+                                        <TableHead className="hidden sm:table-cell">E-mail</TableHead>
+                                        <TableHead className="hidden md:table-cell">Telefone</TableHead>
+                                        <TableHead className="hidden lg:table-cell">Responsável</TableHead>
+                                        <TableHead><span className="sr-only">Ações</span></TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                     {isLoading ? (
+                                        Array.from({ length: 3 }).map((_, i) => (
+                                            <TableRow key={i}>
+                                                <TableCell colSpan={6}><Skeleton className="h-8 w-full" /></TableCell>
+                                            </TableRow>
+                                        ))
+                                    ) : construtoras.length > 0 ? (
+                                        construtoras.map(c => (
+                                            <TableRow key={c.id}>
+                                                <TableCell className="font-medium">{c.name}</TableCell>
+                                                <TableCell>{c.cnpj}</TableCell>
+                                                <TableCell className="hidden sm:table-cell">{c.email}</TableCell>
+                                                <TableCell className="hidden md:table-cell">{c.phone}</TableCell>
+                                                <TableCell className="hidden lg:table-cell">{c.responsible}</TableCell>
+                                                <TableCell>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button aria-haspopup="true" size="icon" variant="ghost"><MoreHorizontal className="h-4 w-4" /></Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                                                            <DropdownMenuItem>Ver Detalhes</DropdownMenuItem>
+                                                            <DropdownMenuItem>Editar</DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                     ) : (
+                                        <TableRow>
+                                            <TableCell colSpan={6} className="h-24 text-center">Nenhuma construtora cadastrada.</TableCell>
                                         </TableRow>
                                     )}
                                 </TableBody>
