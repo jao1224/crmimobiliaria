@@ -730,14 +730,14 @@ export default function NegotiationsPage() {
                         <Button>Iniciar Nova Negociação</Button>
                     </DialogTrigger>
                      <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col">
-                        <DialogHeader>
+                        <DialogHeader className="px-6 pt-6">
                             <DialogTitle>Iniciar Nova Negociação</DialogTitle>
                             <DialogDescription>
                                 Selecione um imóvel e um cliente da lista para buscar os dados.
                             </DialogDescription>
                         </DialogHeader>
-                        <ScrollArea className="-mx-6 flex-grow">
-                            <form id="new-negotiation-form" onSubmit={handleAddNegotiation} className="space-y-4 px-6 py-4">
+                        <div className="flex-grow overflow-y-auto px-6">
+                            <form id="new-negotiation-form" onSubmit={handleAddNegotiation} className="space-y-4 pt-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label>Imóvel</Label>
@@ -787,10 +787,10 @@ export default function NegotiationsPage() {
                                             {foundProperty ? (
                                                 <>
                                                     <p className="font-bold text-foreground">{foundProperty.name}</p>
-                                                    <p><span className="font-semibold text-primary">Cód:</span> {foundProperty.displayCode}</p>
-                                                    <p><span className="font-semibold text-primary">End:</span> {foundProperty.address}</p>
-                                                    <p><span className="font-semibold text-primary">Preço:</span> {formatCurrency(foundProperty.price)}</p>
-                                                    <p><span className="font-semibold text-primary">Tipo:</span> {foundProperty.type || 'N/A'}</p>
+                                                    <p><span className="text-primary font-semibold">Cód:</span> {foundProperty.displayCode}</p>
+                                                    <p><span className="text-primary font-semibold">End:</span> {foundProperty.address}</p>
+                                                    <p><span className="text-primary font-semibold">Preço:</span> {formatCurrency(foundProperty.price)}</p>
+                                                    <p><span className="text-primary font-semibold">Tipo:</span> {foundProperty.type || 'N/A'}</p>
                                                 </>
                                             ) : <p className="text-muted-foreground">Nenhum imóvel selecionado.</p>}
                                         </div>
@@ -801,12 +801,12 @@ export default function NegotiationsPage() {
                                             {foundClient ? (
                                                 <>
                                                      <p className="font-bold text-foreground">{foundClient.name}</p>
-                                                     <p><span className="font-semibold text-primary">Doc:</span> {foundClient.document || 'N/A'}</p>
-                                                     <p><span className="font-semibold text-primary">Email:</span> {foundClient.email}</p>
-                                                     <p><span className="font-semibold text-primary">Tel:</span> {foundClient.phone}</p>
-                                                     <p><span className="font-semibold text-primary">End:</span> {foundClient.address || 'N/A'}</p>
-                                                     <p><span className="font-semibold text-primary">Renda:</span> {foundClient.monthlyIncome ? formatCurrency(foundClient.monthlyIncome) : 'N/A'}</p>
-                                                     <p><span className="font-semibold text-primary">Responsável:</span> {foundClient.assignedTo}</p>
+                                                     <p><span className="text-primary font-semibold">Doc:</span> {foundClient.document || 'N/A'}</p>
+                                                     <p><span className="text-primary font-semibold">Email:</span> {foundClient.email}</p>
+                                                     <p><span className="text-primary font-semibold">Tel:</span> {foundClient.phone}</p>
+                                                     <p><span className="text-primary font-semibold">End:</span> {foundClient.address || 'N/A'}</p>
+                                                     <p><span className="text-primary font-semibold">Renda:</span> {foundClient.monthlyIncome ? formatCurrency(foundClient.monthlyIncome) : 'N/A'}</p>
+                                                     <p><span className="text-primary font-semibold">Responsável:</span> {foundClient.assignedTo}</p>
                                                 </>
                                             ) : <p className="text-muted-foreground">Nenhum cliente selecionado.</p>}
                                         </div>
@@ -890,8 +890,8 @@ export default function NegotiationsPage() {
                                     </div>
                                 </div>
                             </form>
-                        </ScrollArea>
-                        <DialogFooter className="mt-auto pt-4 border-t -mx-6 px-6 bg-background">
+                        </div>
+                        <DialogFooter className="px-6 pb-6 pt-4 border-t bg-background">
                             <Button type="button" variant="outline" onClick={() => setNewNegotiationOpen(false)}>Cancelar</Button>
                             <Button type="submit" form="new-negotiation-form" disabled={!foundProperty || !foundClient || !proposalValue || !proposalDate}>Criar Negociação</Button>
                         </DialogFooter>
