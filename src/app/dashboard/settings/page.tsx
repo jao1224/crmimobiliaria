@@ -616,7 +616,7 @@ export default function SettingsPage() {
                                                         <Label htmlFor="imobiliariaId-member">Imobiliária</Label>
                                                         <Select name="imobiliariaId">
                                                             <SelectTrigger>
-                                                                <SelectValue placeholder="Associar a uma imobiliária (opcional)" />
+                                                                <SelectValue placeholder="Associar a uma imobiliária" />
                                                             </SelectTrigger>
                                                             <SelectContent>
                                                                 <SelectItem value="admin">Nenhuma (Vincular ao Admin)</SelectItem>
@@ -1017,5 +1017,4 @@ export default function SettingsPage() {
             </AlertDialog>
         </div>
     );
-}
 

@@ -7,7 +7,7 @@ import {PDFDocument, rgb, StandardFonts, PDFFont} from "pdf-lib";
 import * as nodemailer from "nodemailer";
 import {defineString} from "firebase-functions/params";
 import { getAuth } from "firebase-admin/auth";
-import { getFirestore, writeBatch } from "firebase-admin/firestore";
+import { getFirestore } from "firebase-admin/firestore";
 
 initializeApp();
 const adminAuth = getAuth();
@@ -80,7 +80,6 @@ interface ReportData {
 }
 
 export const createUser = onCall(async (request) => {
-    // Verifica se o usuário que está chamando a função é um admin de imobiliária ou o Admin do sistema.
     const callerRole = request.auth?.token.role;
     if (callerRole !== 'Admin' && callerRole !== 'Imobiliária') {
         throw new HttpsError('permission-denied', 'Apenas administradores podem criar usuários.');
@@ -134,7 +133,6 @@ export const createUser = onCall(async (request) => {
         throw new HttpsError('internal', "Ocorreu um erro interno no servidor ao criar o usuário.", error);
     }
 });
-
 
 // Esta função adiciona custom claims ao criar um usuário diretamente pelo Firebase Auth (ex: no registro).
 export const addRoleOnCreate = beforeUserCreated(async (event) => {
@@ -384,48 +382,4 @@ export const generateContractPdf = onCall<ContractData, Promise<{pdfBase64: stri
   return {pdfBase64};
 });
 
-export const deleteUser = onCall(async (request) => {
-    // Verifica se o usuário que está chamando a função é um admin.
-    const callerRole = request.auth?.token.role;
-    const callerId = request.auth?.token.uid;
-    const callerImobiliariaId = request.auth?.token.imobiliariaId;
-
-    if (!callerId) {
-        throw new HttpsError('unauthenticated', 'Usuário não autenticado.');
-    }
-
-    const { uid: uidToDelete } = request.data;
-    if (callerId === uidToDelete) {
-        throw new HttpsError('permission-denied', 'Você não pode remover sua própria conta.');
-    }
-
-    const userToDeleteRecord = await adminAuth.getUser(uidToDelete);
-    const userToDeleteRole = userToDeleteRecord.customClaims?.role;
-    const userToDeleteImobiliariaId = userToDeleteRecord.customClaims?.imobiliariaId;
-
-    // Lógica de permissão de exclusão
-    if (callerRole === 'Admin') {
-        if(userToDeleteRole === 'Admin') {
-            throw new HttpsError('permission-denied', 'Um Admin não pode remover outro Admin.');
-        }
-        // Admin geral pode remover qualquer um, exceto outro Admin.
-    } else if (callerRole === 'Imobiliária') {
-        if (userToDeleteImobiliariaId !== callerImobiliariaId) {
-             throw new HttpsError('permission-denied', 'Você só pode remover membros da sua própria imobiliária.');
-        }
-    } else {
-        throw new HttpsError('permission-denied', 'Você não tem permissão para remover usuários.');
-    }
-
-
-    try {
-        await adminAuth.deleteUser(uidToDelete);
-        await adminDb.collection('users').doc(uidToDelete).delete();
-        // Adicional: Lógica para reatribuir leads/negócios, se necessário.
-        return { success: true };
-    } catch (error: any) {
-        console.error("Error deleting user:", error);
-        throw new HttpsError('internal', 'Não foi possível remover o usuário.', error);
-    }
-});
-
+    
