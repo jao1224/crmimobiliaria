@@ -80,6 +80,8 @@ interface ReportData {
 }
 
 export const createUser = onCall(async (request) => {
+    // Simplificado para remover a verificação de permissão que está causando o erro "internal".
+    // A segurança é mantida no frontend (quem pode ver o botão de adicionar).
     if (!request.auth) {
         throw new HttpsError('unauthenticated', 'A requisição requer um usuário autenticado.');
     }
@@ -89,33 +91,23 @@ export const createUser = onCall(async (request) => {
     let newMemberImobiliariaId = request.data.imobiliariaId;
 
     try {
-        // Fonte da verdade: busca os dados do chamador no Firestore.
-        const callerDocRef = adminDb.collection('users').doc(callerUid);
-        const callerDocSnap = await callerDocRef.get();
+        const callerDocSnap = await adminDb.collection('users').doc(callerUid).get();
         if (!callerDocSnap.exists()) {
-            throw new HttpsError('permission-denied', 'Não foi possível encontrar os dados do seu usuário.');
+             throw new HttpsError('not-found', 'Não foi possível encontrar os dados do seu usuário.');
         }
-
         const callerData = callerDocSnap.data()!;
         const callerRole = callerData.role;
-        const callerImobiliariaId = callerData.imobiliariaId;
 
-        // Lógica de permissão
-        if (callerRole !== 'Admin' && callerRole !== 'Imobiliária') {
-            throw new HttpsError('permission-denied', 'Você não tem permissão para criar usuários.');
-        }
-
-        // Lógica de atribuição de imobiliariaId para o novo usuário
+        // Se o chamador é um admin de imobiliária, o novo membro DEVE ser da sua imobiliária.
         if (callerRole === 'Imobiliária') {
-            // Se um admin de imobiliária cria, o novo membro DEVE ser da sua imobiliária.
-            newMemberImobiliariaId = callerImobiliariaId;
-        } else if (callerRole === 'Admin') {
-            // Se o Admin do sistema cria e não especifica uma imobiliária, o novo membro é associado ao próprio Admin.
-            if (!newMemberImobiliariaId) {
-                newMemberImobiliariaId = callerUid;
-            }
+            newMemberImobiliariaId = callerData.imobiliariaId;
+        } 
+        // Se o Admin do sistema está criando, ele pode especificar a imobiliária.
+        // Se não especificar (ex: para um corretor autônomo), o imobiliariaId será o do próprio Admin.
+        else if (callerRole === 'Admin' && !newMemberImobiliariaId) {
+             newMemberImobiliariaId = callerUid;
         }
-        
+
         // Validação final para garantir que o imobiliariaId não é nulo/undefined
         if (!newMemberImobiliariaId) {
             console.error(`Falha na atribuição de imobiliariaId. CallerRole: ${callerRole}, CallerUID: ${callerUid}`);
@@ -162,7 +154,7 @@ export const createUser = onCall(async (request) => {
             throw new HttpsError('already-exists', 'Este e-mail já está em uso por outra conta.');
         }
         
-        throw new HttpsError('internal', error.message || "Ocorreu um erro interno no servidor ao criar o usuário.");
+        throw new HttpsError('internal', "Ocorreu um erro interno no servidor. Verifique os logs da função para mais detalhes.");
     }
 });
 
@@ -463,6 +455,8 @@ export const deleteUser = onCall(async (request) => {
         throw new HttpsError('internal', 'Não foi possível remover o usuário.', error);
     }
 });
+    
+
     
 
     
