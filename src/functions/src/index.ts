@@ -150,22 +150,25 @@ export const deleteUser = onCall(async (request) => {
         const isCallerAdmin = callingUserClaims?.role === 'Admin';
         const isCallerImobiliariaAdmin = callingUserClaims?.role === 'Imobiliária';
 
-        // REGRA 1: Admin Geral pode excluir qualquer um, menos outro Admin.
+        let canDelete = false;
+
         if (isCallerAdmin) {
+            // REGRA 1: Admin Geral pode excluir qualquer um, menos outro Admin.
             if (userToDeleteClaims.role === 'Admin') {
                 throw new HttpsError('permission-denied', 'A conta de Administrador do sistema não pode ser excluída.');
             }
-            // Se não for Admin, a exclusão é permitida para o Admin Geral.
-        } 
-        // REGRA 2: Admin de Imobiliária só pode excluir membros da sua própria imobiliária.
-        else if (isCallerImobiliariaAdmin) {
-            if (userToDeleteClaims.imobiliariaId !== callingUserClaims.imobiliariaId) {
-                throw new HttpsError('permission-denied', 'Você só pode excluir usuários da sua própria imobiliária.');
+            canDelete = true;
+        } else if (isCallerImobiliariaAdmin) {
+            // REGRA 2: Admin de Imobiliária só pode excluir membros da sua própria imobiliária.
+            if (userToDeleteClaims.imobiliariaId === callingUserClaims.imobiliariaId) {
+                canDelete = true;
+            } else {
+                 throw new HttpsError('permission-denied', 'Você só pode excluir usuários da sua própria imobiliária.');
             }
-        } 
-        // REGRA 3: Ninguém mais pode excluir.
-        else {
-            throw new HttpsError('permission-denied', 'Apenas administradores podem excluir usuários.');
+        }
+        
+        if (!canDelete) {
+            throw new HttpsError('permission-denied', 'Você não tem permissão para excluir este usuário.');
         }
         
         // Se todas as verificações passaram, exclui o usuário.
@@ -179,7 +182,7 @@ export const deleteUser = onCall(async (request) => {
         if (error instanceof HttpsError) {
             throw error;
         }
-        throw new HttpsError('internal', error.message, error);
+        throw new HttpsError('internal', 'Ocorreu um erro interno ao tentar excluir o usuário.', error);
     }
 });
 
