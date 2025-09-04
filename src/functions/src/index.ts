@@ -81,8 +81,8 @@ interface ReportData {
 
 export const createUser = onCall(async (request) => {
     // Verifica se o usuário que está chamando a função é um admin de imobiliária ou o Admin do sistema.
-    const isImobiliariaAdmin = !!request.auth?.token.imobiliariaId;
     const isAdmin = request.auth?.token.role === 'Admin';
+    const isImobiliariaAdmin = request.auth?.token.role === 'Imobiliária';
 
     if (!isImobiliariaAdmin && !isAdmin) {
         throw new HttpsError('permission-denied', 'Apenas administradores podem criar usuários.');
@@ -90,21 +90,28 @@ export const createUser = onCall(async (request) => {
 
     const { email, password, name, role, imobiliariaId: imobiliariaIdFromRequest } = request.data;
     
+    let imobiliariaIdToAssign: string | undefined;
+
     // Define a lógica para o imobiliariaId
-    let imobiliariaIdToAssign: string | null = null;
-    
-    if (isAdmin) {
-        // Se o Admin está criando, ele pode especificar a imobiliária.
-        // Se não especificar, o novo membro fica associado ao próprio Admin.
-        imobiliariaIdToAssign = imobiliariaIdFromRequest || request.auth!.uid;
-    } else if (isImobiliariaAdmin) {
+    if (isImobiliariaAdmin) {
         // Se um Admin de Imobiliária está criando, o membro é sempre da sua imobiliária.
         imobiliariaIdToAssign = request.auth!.token.imobiliariaId;
-    } else {
-        // Fallback de segurança, embora a verificação inicial já deva barrar.
-        throw new HttpsError('permission-denied', 'Permissão insuficiente para atribuir a uma imobiliária.');
+    } else if (isAdmin) {
+        // Se o Admin do Sistema está criando:
+        if (role === 'Imobiliária') {
+            // Se estiver criando uma nova imobiliária, o id dela será o UID do novo usuário.
+            // imobiliariaIdToAssign será definido após a criação do usuário.
+            imobiliariaIdToAssign = undefined;
+        } else {
+            // Se estiver criando um membro para uma imobiliária existente, usa o ID fornecido.
+            imobiliariaIdToAssign = imobiliariaIdFromRequest;
+        }
     }
-    
+
+    if (!imobiliariaIdToAssign && role !== 'Imobiliária' && isAdmin) {
+         // O Admin precisa selecionar uma imobiliária para criar um membro que não seja uma imobiliária
+         throw new HttpsError('invalid-argument', 'Um administrador do sistema deve selecionar uma imobiliária para criar um novo membro.');
+    }
 
     try {
         const userRecord = await adminAuth.createUser({
@@ -114,13 +121,11 @@ export const createUser = onCall(async (request) => {
         });
 
         const claims: { [key: string]: any } = { role };
-        if (imobiliariaIdToAssign) {
-            claims.imobiliariaId = imobiliariaIdToAssign;
-        }
-
-        // Se um Admin está criando uma imobiliária, o ID dela é o ID do novo usuário
-        if (isAdmin && role === 'Imobiliária') {
+        
+        if (role === 'Imobiliária') {
             claims.imobiliariaId = userRecord.uid;
+        } else if (imobiliariaIdToAssign) {
+            claims.imobiliariaId = imobiliariaIdToAssign;
         }
         
         // Define as custom claims (role e imobiliariaId) para o novo usuário.
@@ -396,4 +401,6 @@ export const generateContractPdf = onCall<ContractData, Promise<{pdfBase64: stri
 });
 
     
+    
+
     
