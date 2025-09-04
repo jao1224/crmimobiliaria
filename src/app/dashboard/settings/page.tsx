@@ -82,6 +82,9 @@ export default function SettingsPage() {
     const [isTeamDialogOpen, setTeamDialogOpen] = useState(false);
     const [isManageMembersDialogOpen, setManageMembersDialogOpen] = useState(false);
     
+    // State for adding members
+    const [isAddMemberOpen, setAddMemberOpen] = useState(false);
+    
     // State for deleting members
     const [memberToDelete, setMemberToDelete] = useState<TeamMember | null>(null);
     const [isDeleteMemberDialogOpen, setDeleteMemberDialogOpen] = useState(false);
@@ -205,6 +208,41 @@ export default function SettingsPage() {
                 description = 'A nova senha é muito fraca. Use pelo menos 6 caracteres.';
             }
             toast({ variant: 'destructive', title: 'Erro na Atualização', description });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+    
+    const handleCreateUser = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        setIsSaving(true);
+
+        const formData = new FormData(event.currentTarget);
+        const userData = {
+            email: formData.get('email') as string,
+            password: formData.get('password') as string,
+            name: formData.get('name') as string,
+            role: formData.get('role') as string,
+            imobiliariaId: formData.get('imobiliariaId') as string | null,
+        };
+
+        try {
+            const functions = getFunctions(app);
+            const createUser = httpsCallable(functions, 'createUser');
+            const result = await createUser(userData);
+
+            if ((result.data as any).success) {
+                toast({ title: "Sucesso!", description: `Usuário ${userData.name} criado com sucesso.` });
+                await fetchTeamData();
+                setAddMemberOpen(false);
+            } else {
+                 throw new Error((result.data as any).message || "Falha ao criar usuário.");
+            }
+        } catch (error: any) {
+             console.error("Error creating user: ", error);
+             const defaultMessage = "Ocorreu um erro ao criar o usuário.";
+             const message = error.details?.message || defaultMessage;
+             toast({ variant: "destructive", title: "Erro", description: message });
         } finally {
             setIsSaving(false);
         }
@@ -553,6 +591,68 @@ export default function SettingsPage() {
                                     <CardTitle>Membros da Equipe</CardTitle>
                                     <CardDescription>Gerencie sua equipe e suas funções.</CardDescription>
                                 </div>
+                                <Dialog open={isAddMemberOpen} onOpenChange={setAddMemberOpen}>
+                                    <DialogTrigger asChild>
+                                        <Button><UserPlus className="mr-2 h-4 w-4"/>Adicionar Membro</Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                        <DialogHeader>
+                                            <DialogTitle>Adicionar Novo Membro</DialogTitle>
+                                            <DialogDescription>Preencha os dados para criar um novo usuário.</DialogDescription>
+                                        </DialogHeader>
+                                        <form onSubmit={handleCreateUser}>
+                                            <div className="grid gap-4 py-4">
+                                                 <div className="space-y-2">
+                                                    <Label htmlFor="name">Nome</Label>
+                                                    <Input id="name" name="name" required />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="email">Email</Label>
+                                                    <Input id="email" name="email" type="email" required />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="password">Senha</Label>
+                                                    <Input id="password" name="password" type="password" required />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="role">Função</Label>
+                                                    <Select name="role" required>
+                                                        <SelectTrigger>
+                                                            <SelectValue placeholder="Selecione uma função" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {creatableRoles.map(role => (
+                                                                <SelectItem key={role} value={role}>{role}</SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                                {isAdmin && (
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="imobiliariaId">Vincular à Imobiliária (Opcional)</Label>
+                                                        <Select name="imobiliariaId">
+                                                            <SelectTrigger>
+                                                                <SelectValue placeholder="Selecione uma imobiliária" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="admin">Nenhuma (Vincular ao Admin)</SelectItem>
+                                                                {imobiliarias.map(imob => (
+                                                                    <SelectItem key={imob.id} value={imob.id}>{imob.name}</SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <DialogFooter>
+                                                <Button type="button" variant="outline" onClick={() => setAddMemberOpen(false)}>Cancelar</Button>
+                                                <Button type="submit" disabled={isSaving}>
+                                                    {isSaving ? "Criando..." : "Criar Usuário"}
+                                                </Button>
+                                            </DialogFooter>
+                                        </form>
+                                    </DialogContent>
+                                </Dialog>
                             </CardHeader>
                             <CardContent>
                                  <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -915,3 +1015,4 @@ export default function SettingsPage() {
     );
 
     
+
