@@ -80,19 +80,33 @@ interface ReportData {
 }
 
 export const createUser = onCall(async (request) => {
+    if (!request.auth) {
+        throw new HttpsError('unauthenticated', 'A função deve ser chamada enquanto autenticado.');
+    }
+    
+    const callerUid = request.auth.uid;
+    const callerDocRef = adminDb.collection('users').doc(callerUid);
+    const callerDoc = await callerDocRef.get();
+
+    if (!callerDoc.exists) {
+        throw new HttpsError('not-found', 'Documento do usuário chamador não encontrado.');
+    }
+
+    const callerData = callerDoc.data();
+    const callerRole = callerData?.role;
+
     // Verifica se o usuário que está chamando a função é um admin de imobiliária ou o Admin do sistema.
-    const callerRole = request.auth?.token.role;
     if (callerRole !== 'Admin' && callerRole !== 'Imobiliária') {
         throw new HttpsError('permission-denied', 'Apenas administradores podem criar usuários.');
     }
 
     const { email, password, name, role, imobiliariaId: requestedImobiliariaId } = request.data;
-    const callerUid = request.auth?.token.uid;
+    
     let finalImobiliariaId;
 
     if (callerRole === 'Imobiliária') {
         // Se um admin de imobiliária está criando, força o ID da sua própria imobiliária.
-        finalImobiliariaId = request.auth?.token.imobiliariaId;
+        finalImobiliariaId = callerData?.imobiliariaId;
     } else { // Se for o Admin do Sistema
         if (requestedImobiliariaId && requestedImobiliariaId !== 'admin') {
             finalImobiliariaId = requestedImobiliariaId;
@@ -383,3 +397,4 @@ export const generateContractPdf = onCall<ContractData, Promise<{pdfBase64: stri
 
   return {pdfBase64};
 });
+    
