@@ -92,7 +92,7 @@ export const createUser = onCall(async (request) => {
 
     try {
         const callerDocSnap = await adminDb.collection('users').doc(callerUid).get();
-        if (!callerDocSnap.exists()) {
+        if (!callerDocSnap.exists) {
              throw new HttpsError('not-found', 'Não foi possível encontrar os dados do seu usuário.');
         }
         const callerData = callerDocSnap.data()!;
