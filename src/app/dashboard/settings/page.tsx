@@ -217,12 +217,16 @@ export default function SettingsPage() {
         setIsSaving(true);
 
         const formData = new FormData(event.currentTarget);
-        const newMemberData = {
+        const newMemberData: { [key: string]: any } = {
             email: formData.get("email") as string,
             password: formData.get("password") as string,
             name: formData.get("name") as string,
             role: formData.get("role") as string,
         };
+
+        if (isAdmin && imobiliariaFilter !== 'all') {
+            newMemberData.imobiliariaId = imobiliariaFilter;
+        }
 
         if (!newMemberData.password) {
             toast({ variant: 'destructive', title: 'Erro', description: 'O campo de senha é obrigatório.' });
@@ -265,10 +269,9 @@ export default function SettingsPage() {
         
         setIsSaving(true);
         try {
-            // A lógica de permissão está dentro da Cloud Function
             const functions = getFunctions(app);
-            const deleteUser = httpsCallable(functions, 'deleteUser');
-            await deleteUser({ uid: memberToDelete.id });
+            const deleteUserCallable = httpsCallable(functions, 'deleteUser');
+            await deleteUserCallable({ uid: memberToDelete.id });
 
             toast({ title: "Sucesso", description: `O usuário ${memberToDelete.name} foi removido.` });
             await fetchTeamData();
@@ -278,7 +281,6 @@ export default function SettingsPage() {
         } catch (error: any) {
             console.error("Error deleting user: ", error);
             const defaultMessage = "Não foi possível remover o membro.";
-            // A HttpsError da Cloud Function tem detalhes no 'error.details.message'
             const message = error.details?.message || defaultMessage;
             toast({ variant: "destructive", title: "Erro", description: message });
         } finally {
@@ -1002,4 +1004,3 @@ export default function SettingsPage() {
         </div>
     );
 }
-

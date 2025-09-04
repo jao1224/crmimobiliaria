@@ -1,4 +1,5 @@
 
+
 import {initializeApp} from "firebase-admin/app";
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {beforeUserCreated} from "firebase-functions/v2/identity";
@@ -80,19 +81,31 @@ interface ReportData {
 }
 
 export const createUser = onCall(async (request) => {
-    // Verifica se o usuário que está chamando a função é um admin de imobiliária ou o Admin do sistema.
-    const isAdmin = request.auth?.token.role === 'Admin';
-    const isImobiliariaAdmin = !!request.auth?.token.imobiliariaId && request.auth?.token.role === 'Imobiliária';
+    const callerRole = request.auth?.token.role;
+    const isAdmin = callerRole === 'Admin';
+    const isImobiliariaAdmin = callerRole === 'Imobiliária';
 
     if (!isAdmin && !isImobiliariaAdmin) {
         throw new HttpsError('permission-denied', 'Apenas administradores podem criar usuários.');
     }
 
-    const { email, password, name, role } = request.data;
+    const { email, password, name, role, imobiliariaId: imobiliariaIdFromRequest } = request.data;
     
-    // Admin do sistema pode criar uma imobiliária. Neste caso, o imobiliariaId será o uid do novo usuário.
-    // Para outros perfis, usa o imobiliariaId do admin que está chamando.
-    let imobiliariaId = request.auth?.token.imobiliariaId;
+    // Admin do sistema pode criar uma imobiliária, o ID será o do novo usuário.
+    // Para Admin de Imobiliária, usa o ID do seu próprio token.
+    // Se Admin Geral cria para uma imobiliária, usa o ID enviado na requisição.
+    let finalImobiliariaId = request.auth?.token.imobiliariaId;
+
+    if (isAdmin) {
+        if (role === 'Imobiliária') {
+            finalImobiliariaId = null; // Será definido depois
+        } else if (imobiliariaIdFromRequest) {
+            finalImobiliariaId = imobiliariaIdFromRequest;
+        } else {
+            finalImobiliariaId = null; // Usuário do Admin sem imobiliária
+        }
+    }
+
 
     try {
         const userRecord = await adminAuth.createUser({
@@ -103,11 +116,11 @@ export const createUser = onCall(async (request) => {
 
         // Se um Admin está criando uma imobiliária, o ID dela é o ID do novo usuário
         if (isAdmin && role === 'Imobiliária') {
-            imobiliariaId = userRecord.uid;
+            finalImobiliariaId = userRecord.uid;
         }
         
         // Define as custom claims (role e imobiliariaId) para o novo usuário.
-        await adminAuth.setCustomUserClaims(userRecord.uid, { role, imobiliariaId });
+        await adminAuth.setCustomUserClaims(userRecord.uid, { role, imobiliariaId: finalImobiliariaId });
 
         // Salva informações adicionais no Firestore.
         await adminDb.collection('users').doc(userRecord.uid).set({
@@ -115,7 +128,7 @@ export const createUser = onCall(async (request) => {
             name,
             email,
             role,
-            imobiliariaId, // Salva o ID da imobiliária no documento do usuário
+            imobiliariaId: finalImobiliariaId, // Salva o ID da imobiliária no documento do usuário
             createdAt: new Date().toISOString(),
         });
 
@@ -128,13 +141,12 @@ export const createUser = onCall(async (request) => {
 
 export const deleteUser = onCall(async (request) => {
     // 1. Validar autenticação básica
-    if (!request.auth?.token.uid) {
+    const callingUid = request.auth?.token.uid;
+    if (!callingUid) {
         throw new HttpsError('unauthenticated', 'Ação não autenticada.');
     }
-    const callingUid = request.auth.token.uid;
     const callerRole = request.auth.token.role;
-    const callerImobiliariaId = request.auth.token.imobiliariaId;
-
+    
     const { uid: uidToDelete } = request.data;
     if (!uidToDelete) {
         throw new HttpsError('invalid-argument', 'O ID do usuário a ser excluído é obrigatório.');
@@ -147,43 +159,38 @@ export const deleteUser = onCall(async (request) => {
 
     try {
         const userToDeleteRecord = await adminAuth.getUser(uidToDelete);
-        const userToDeleteRole = userToDeleteRecord.customClaims?.role;
-        const userToDeleteImobiliariaId = userToDeleteRecord.customClaims?.imobiliariaId;
+        const userToDeleteClaims = userToDeleteRecord.customClaims || {};
 
         let hasPermission = false;
         
-        // 3. Lógica de permissão hierárquica
+        // REGRA 1: Admin Geral pode excluir qualquer um, exceto outro Admin Geral.
         if (callerRole === 'Admin') {
-            // Admin do sistema não pode excluir outro Admin
-            if (userToDeleteRole === 'Admin') {
-                throw new HttpsError('permission-denied', 'Administradores do sistema não podem ser excluídos por outros administradores.');
+            if (userToDeleteClaims.role === 'Admin') {
+                 throw new HttpsError('permission-denied', 'Administradores do sistema não podem ser excluídos.');
             }
-            hasPermission = true; // Admin do sistema pode excluir qualquer outro usuário.
-        } else if (callerRole === 'Imobiliária') {
-            // Admin da imobiliária só pode excluir membros da sua própria imobiliária.
-            // O ID da imobiliária do admin é o seu próprio UID.
-            if (userToDeleteImobiliariaId === callingUid) {
+            hasPermission = true;
+        } 
+        // REGRA 2: Admin de Imobiliária só pode excluir membros da sua própria imobiliária.
+        else if (callerRole === 'Imobiliária') {
+            const callerImobiliariaId = request.auth.token.imobiliariaId;
+            if (userToDeleteClaims.imobiliariaId === callerImobiliariaId) {
                 hasPermission = true;
             }
         }
         
-        // 4. Se não tiver permissão, lançar erro
         if (!hasPermission) {
             throw new HttpsError('permission-denied', 'Você não tem permissão para excluir este usuário.');
         }
 
-        // 5. Executar a exclusão
         await adminAuth.deleteUser(uidToDelete);
         await adminDb.collection('users').doc(uidToDelete).delete();
         
         return { success: true, message: `Usuário ${uidToDelete} excluído com sucesso.` };
 
     } catch (error: any) {
-        // Se o erro já for do tipo HttpsError, apenas o relance
         if (error instanceof HttpsError) {
             throw error;
         }
-        // Para outros erros (ex: usuário não encontrado), trate como erro interno
         console.error('Error deleting user:', error);
         throw new HttpsError('internal', 'Ocorreu um erro interno ao tentar excluir o usuário.', error.message);
     }
