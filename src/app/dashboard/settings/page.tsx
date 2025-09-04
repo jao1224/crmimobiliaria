@@ -61,7 +61,8 @@ type PermissionsState = Record<UserProfile, string[]>;
 export default function SettingsPage() {
     const { activeProfile } = useContext(ProfileContext);
     const isAdmin = activeProfile === 'Admin';
-    const hasPermissionForTeamTabs = isAdmin || activeProfile === 'Imobiliária';
+    const isImobiliariaAdmin = activeProfile === 'Imobiliária';
+    const hasPermissionForTeamTabs = isAdmin || isImobiliariaAdmin;
 
 
     const [isSaving, setIsSaving] = useState(false);
@@ -79,9 +80,11 @@ export default function SettingsPage() {
     const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
     const [teams, setTeams] = useState<Team[]>([]);
     const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
-    const [isTeamMemberDialogOpen, setTeamMemberDialogOpen] = useState(false);
     const [isTeamDialogOpen, setTeamDialogOpen] = useState(false);
     const [isManageMembersDialogOpen, setManageMembersDialogOpen] = useState(false);
+    
+    // State for adding members
+    const [isAddMemberOpen, setAddMemberOpen] = useState(false);
     
     // State for deleting members
     const [memberToDelete, setMemberToDelete] = useState<TeamMember | null>(null);
@@ -100,6 +103,8 @@ export default function SettingsPage() {
     const getMemberCountForImobiliaria = (imobiliariaId: string) => {
         return teamMembers.filter(m => m.imobiliariaId === imobiliariaId).length;
     };
+
+    const [selectedRole, setSelectedRole] = useState<string>('');
 
 
     useEffect(() => {
@@ -121,47 +126,42 @@ export default function SettingsPage() {
         });
 
         return () => unsubscribe();
-    }, []);
-
-    useEffect(() => {
-        if (hasPermissionForTeamTabs && user) {
-            fetchTeamData();
-        }
-    }, [hasPermissionForTeamTabs, user, activeProfile]);
+    }, [hasPermissionForTeamTabs]);
 
     const fetchTeamData = async () => {
         if (!user) return;
         
-        const userDocRef = doc(db, "users", user.uid);
-        const userDocSnap = await getDoc(userDocRef);
-        const currentUserData = userDocSnap.data();
-        
         let usersQuery;
         let teamsQuery;
+        
+        const currentUserDoc = await getDoc(doc(db, "users", user.uid));
+        const currentUserData = currentUserDoc.data();
 
-        if (activeProfile === 'Admin') {
+        if (isAdmin) {
             usersQuery = query(collection(db, "users"));
             teamsQuery = query(collection(db, "teams"));
+        } else if (isImobiliariaAdmin && currentUserData?.imobiliariaId) {
+             usersQuery = query(collection(db, "users"), where("imobiliariaId", "==", currentUserData.imobiliariaId));
+             teamsQuery = query(collection(db, "teams"), where("imobiliariaId", "==", currentUserData.imobiliariaId));
         } else {
-            const imobiliariaId = currentUserData?.imobiliariaId;
-            if (!imobiliariaId) return;
-            usersQuery = query(collection(db, "users"), where("imobiliariaId", "==", imobiliariaId));
-            teamsQuery = query(collection(db, "teams"), where("imobiliariaId", "==", imobiliariaId));
+            setTeamMembers([]);
+            setTeams([]);
+            return;
         }
 
         const usersSnapshot = await getDocs(usersQuery);
         const members = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeamMember));
         
-        if (activeProfile === 'Admin') {
-             const imobiliariasSnapshot = await getDocs(query(collection(db, "users"), where("role", "==", "Imobiliária")));
-             const imobiliariasMap = new Map(imobiliariasSnapshot.docs.map(doc => [doc.id, doc.data().name]));
+        const imobiliariasSnapshot = await getDocs(query(collection(db, "users"), where("role", "==", "Imobiliária")));
+        const imobiliariasMap = new Map(imobiliariasSnapshot.docs.map(doc => [doc.id, doc.data().name]));
+        imobiliariasMap.set(user.uid, "Admin (Raiz)");
 
-             for (const member of members) {
-                 if (member.imobiliariaId) {
-                     member.imobiliariaName = imobiliariasMap.get(member.imobiliariaId) || 'N/A';
-                 }
+
+         for (const member of members) {
+             if (member.imobiliariaId) {
+                 member.imobiliariaName = imobiliariasMap.get(member.imobiliariaId) || 'N/A';
              }
-        }
+         }
         
         setTeamMembers(members);
 
@@ -210,45 +210,72 @@ export default function SettingsPage() {
             setIsSaving(false);
         }
     };
-
-    const handleAddTeamMember = async (event: React.FormEvent<HTMLFormElement>) => {
+    
+    const handleCreateUser = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
+        if (!user) return;
         
         setIsSaving(true);
 
         const formData = new FormData(event.currentTarget);
-        const newMemberData = {
+        const newMemberData: { [key: string]: any } = {
             email: formData.get("email") as string,
             password: formData.get("password") as string,
             name: formData.get("name") as string,
             role: formData.get("role") as string,
-            imobiliariaId: formData.get("imobiliariaId") as string, // Pode ser null se não for admin
+            imobiliariaId: formData.get("imobiliariaId") as string || undefined,
         };
 
-        if (!newMemberData.password) {
+        if (!newMemberData.password || newMemberData.password.trim() === '') {
             toast({ variant: 'destructive', title: 'Erro', description: 'O campo de senha é obrigatório.' });
             setIsSaving(false);
             return;
         }
 
+        if (!newMemberData.role || newMemberData.role.trim() === '') {
+            toast({ variant: 'destructive', title: 'Erro', description: 'O campo de função é obrigatório.' });
+            setIsSaving(false);
+            return;
+        }
+
+>>>>>>> 654b243dcb4264e802b0bb3eb57e4d4ede7a1ac6
         try {
+            console.log('App Firebase:', app);
+            console.log('Usuário atual:', user);
+            console.log('Perfil ativo:', activeProfile);
+            console.log('Dados do usuário:', userData);
+            console.log('Permissões para equipes:', hasPermissionForTeamTabs);
+            console.log('É admin:', isAdmin);
+            
             const functions = getFunctions(app);
+            console.log('Funções Firebase:', functions);
+            
+            // Verificar se as funções estão disponíveis
+            if (!functions) {
+                throw new Error('Funções Firebase não estão disponíveis');
+            }
+            
             const createUser = httpsCallable(functions, 'createUser');
-            const result = await createUser(newMemberData);
+            const result = await createUser(newMemberData) as any;
 
             if ((result.data as any).success) {
                 if (user) await fetchTeamData();
                 toast({ title: "Sucesso!", description: "Novo membro da equipe criado." });
                 setTeamMemberDialogOpen(false);
+                setSelectedRole(''); // Reset do campo role
             } else {
-                throw new Error((result.data as any).error || "A função de nuvem retornou um erro não especificado.");
+                throw new Error(result.data.error || "A função de nuvem retornou um erro.");
             }
         } catch (error: any) {
-            console.error("Erro na Cloud Function:", error);
-            const defaultMessage = "Ocorreu um erro ao criar o usuário.";
-            const errorMessage = error.details?.message || error.message || defaultMessage;
-            toast({ variant: "destructive", title: "Erro na Criação", description: errorMessage });
+            let description = "Ocorreu um erro ao criar o usuário.";
+            if (error.code === 'functions/already-exists' || error.message.includes('already-exists') || (error.details && error.details.message.includes('EMAIL_EXISTS'))) {
+                description = 'Este e-mail já está em uso por outra conta.';
+            } else if (error.message.includes('permission-denied')) {
+                description = 'Você não tem permissão para executar esta ação.';
+            }
+            toast({ variant: "destructive", title: "Erro na Criação", description });
         } finally {
+            console.log('Finalizando operação de adição de membro');
             setIsSaving(false);
         }
     };
@@ -326,6 +353,8 @@ export default function SettingsPage() {
         setSelectedTeam(team);
         setManageMembersDialogOpen(true);
     };
+
+    const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
 
     const handleAddMemberToTeam = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -444,7 +473,7 @@ export default function SettingsPage() {
 
     const filteredMembers = teamMembers.filter(member => {
         if (member.role === 'Imobiliária' || member.role === 'Admin') {
-            return false; // Exclui imobiliárias da aba Membros
+            return false; // Exclui imobiliárias e Admins da aba Membros
         }
 
         const searchLower = searchQuery.toLowerCase();
@@ -596,16 +625,16 @@ export default function SettingsPage() {
                                     <CardTitle>Membros da Equipe</CardTitle>
                                     <CardDescription>Gerencie sua equipe e suas funções.</CardDescription>
                                 </div>
-                                 <Dialog open={isTeamMemberDialogOpen} onOpenChange={setTeamMemberDialogOpen}>
+                                <Dialog open={isAddMemberOpen} onOpenChange={setAddMemberOpen}>
                                     <DialogTrigger asChild>
                                         <Button><UserPlus className="mr-2 h-4 w-4"/>Adicionar Membro</Button>
                                     </DialogTrigger>
                                     <DialogContent>
                                         <DialogHeader>
                                             <DialogTitle>Adicionar Novo Membro</DialogTitle>
-                                            <DialogDescription>Preencha os detalhes para convidar um novo membro para a equipe.</DialogDescription>
+                                            <DialogDescription>Preencha os dados para criar um novo usuário.</DialogDescription>
                                         </DialogHeader>
-                                        <form onSubmit={handleAddTeamMember}>
+                                        <form onSubmit={handleCreateUser}>
                                             <div className="grid gap-4 py-4">
                                                 {isAdmin && (
                                                     <div className="space-y-2">
@@ -615,6 +644,7 @@ export default function SettingsPage() {
                                                                 <SelectValue placeholder="Associar a uma imobiliária (opcional)" />
                                                             </SelectTrigger>
                                                             <SelectContent>
+                                                                <SelectItem value="admin">Nenhuma (Vincular ao Admin)</SelectItem>
                                                                 {imobiliarias.map(imob => (
                                                                     <SelectItem key={imob.id} value={imob.id}>{imob.name}</SelectItem>
                                                                 ))}
@@ -623,31 +653,48 @@ export default function SettingsPage() {
                                                     </div>
                                                 )}
                                                 <div className="space-y-2">
-                                                    <Label htmlFor="name-member">Nome</Label>
-                                                    <Input id="name-member" name="name" placeholder="Nome completo" required />
+                                                    <Label htmlFor="email">Email</Label>
+                                                    <Input id="email" name="email" type="email" required />
                                                 </div>
                                                 <div className="space-y-2">
-                                                    <Label htmlFor="email-member">E-mail</Label>
-                                                    <Input id="email-member" name="email" type="email" placeholder="email@example.com" required />
-                                                </div>
-                                                 <div className="space-y-2">
-                                                    <Label htmlFor="password-member">Senha</Label>
-                                                    <Input id="password-member" name="password" type="password" placeholder="••••••••" required />
+                                                    <Label htmlFor="password">Senha</Label>
+                                                    <Input id="password" name="password" type="password" required />
                                                 </div>
                                                 <div className="space-y-2">
                                                     <Label htmlFor="role">Função</Label>
-                                                    <Select name="role" required>
+                                                    <Select value={selectedRole} onValueChange={setSelectedRole} required>
                                                         <SelectTrigger>
                                                             <SelectValue placeholder="Selecione uma função" />
                                                         </SelectTrigger>
                                                         <SelectContent>
-                                                            {creatableRoles.map(role => <SelectItem key={role} value={role}>{role}</SelectItem>)}
+                                                            {creatableRoles.map(role => (
+                                                                <SelectItem key={role} value={role}>{role}</SelectItem>
+                                                            ))}
                                                         </SelectContent>
                                                     </Select>
                                                 </div>
+                                                {isAdmin && (
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="imobiliariaId">Vincular à Imobiliária</Label>
+                                                        <Select name="imobiliariaId" required>
+                                                            <SelectTrigger>
+                                                                <SelectValue placeholder="Selecione uma imobiliária" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value={user?.uid || ''}>Nenhuma (Vincular ao Admin)</SelectItem>
+                                                                {imobiliarias.map(imob => (
+                                                                    <SelectItem key={imob.id} value={imob.id}>{imob.name}</SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+                                                )}
                                             </div>
                                             <DialogFooter>
-                                                <Button type="submit" disabled={isSaving}>{isSaving ? "Salvando...": "Adicionar Membro"}</Button>
+                                                <Button type="button" variant="outline" onClick={() => setAddMemberOpen(false)}>Cancelar</Button>
+                                                <Button type="submit" disabled={isSaving}>
+                                                    {isSaving ? "Criando..." : "Criar Usuário"}
+                                                </Button>
                                             </DialogFooter>
                                         </form>
                                     </DialogContent>
@@ -672,7 +719,7 @@ export default function SettingsPage() {
                                             </SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="all">Todas as Imobiliárias</SelectItem>
-                                                {imobiliarias.map(imob => (
+                                                 {imobiliarias.map(imob => (
                                                     <SelectItem key={imob.id} value={imob.id}>{imob.name}</SelectItem>
                                                 ))}
                                             </SelectContent>
@@ -708,7 +755,7 @@ export default function SettingsPage() {
                                                 <TableRow key={member.id}>
                                                     <TableCell className="font-medium">{member.name}</TableCell>
                                                     <TableCell>{member.email}</TableCell>
-                                                    {isAdmin && <TableCell className="text-xs text-muted-foreground">{member.imobiliariaName || 'Admin (Raiz)'}</TableCell>}
+                                                    {isAdmin && <TableCell className="text-xs text-muted-foreground">{member.imobiliariaName || 'N/A'}</TableCell>}
                                                     <TableCell>{findTeamForMember(member.id)}</TableCell>
                                                     <TableCell><Badge variant={member.role === 'Imobiliária' || member.role === 'Admin' ? 'default' : 'secondary'}>{member.role}</Badge></TableCell>
                                                     <TableCell className="text-right">
@@ -930,7 +977,7 @@ export default function SettingsPage() {
                                 <form onSubmit={handleAddMemberToTeam} className="space-y-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="memberId">Selecione um Membro</Label>
-                                        <Select name="memberId" required>
+                                        <Select value={selectedMemberId} onValueChange={setSelectedMemberId} required>
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Selecione um membro para adicionar" />
                                             </SelectTrigger>
@@ -1013,3 +1060,4 @@ export default function SettingsPage() {
         </div>
     );
 }
+
