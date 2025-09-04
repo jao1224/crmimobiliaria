@@ -1,5 +1,4 @@
 
-
 "use client"
 
 import { useState, useEffect } from 'react'
@@ -15,6 +14,8 @@ import { getNotifications, markNotificationsAsRead, type Notification } from '@/
 import { Skeleton } from '../ui/skeleton'
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { auth } from '@/lib/firebase'
+import { onAuthStateChanged } from 'firebase/auth'
 
 export function Notifications() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -22,7 +23,19 @@ export function Notifications() {
   const [hasUnread, setHasUnread] = useState(false);
 
   useEffect(() => {
-    fetchNotifications();
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+        if (user) {
+            fetchNotifications();
+        } else {
+            // Se não houver usuário, limpa as notificações e para de carregar
+            setNotifications([]);
+            setHasUnread(false);
+            setIsLoading(false);
+        }
+    });
+
+    // Limpa o listener quando o componente é desmontado
+    return () => unsubscribe();
   }, []);
 
   const fetchNotifications = async () => {
