@@ -88,15 +88,20 @@ export const createUser = onCall(async (request) => {
 
     const { email, password, name, role, imobiliariaId } = request.data;
     
-    let imobiliariaIdToAssign: string;
+    let imobiliariaIdToAssign: string | undefined;
 
     if (callerRole === 'Admin') {
         // Se o Admin está criando, ele pode especificar uma imobiliária, ou o membro será associado a ele mesmo.
-        imobiliariaIdToAssign = imobiliariaId || request.auth!.token.uid;
+        imobiliariaIdToAssign = imobiliariaId === 'admin' ? request.auth!.token.uid : imobiliariaId;
     } else { // 'Imobiliária'
         // Se um Admin de Imobiliária está criando, o membro é sempre da sua imobiliária.
         imobiliariaIdToAssign = request.auth!.token.imobiliariaId;
     }
+
+    if (!imobiliariaIdToAssign) {
+        throw new HttpsError('invalid-argument', 'O ID da imobiliária é necessário para criar um novo membro.');
+    }
+
 
     try {
         const userRecord = await adminAuth.createUser({
@@ -423,3 +428,4 @@ export const deleteUser = onCall(async (request) => {
         throw new HttpsError('internal', 'Não foi possível remover o usuário.', error);
     }
 });
+

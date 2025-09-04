@@ -619,7 +619,7 @@ export default function SettingsPage() {
                                                                 <SelectValue placeholder="Associar a uma imobiliária (opcional)" />
                                                             </SelectTrigger>
                                                             <SelectContent>
-                                                                <SelectItem value="">Nenhuma (Vincular ao Admin)</SelectItem>
+                                                                <SelectItem value="admin">Nenhuma (Vincular ao Admin)</SelectItem>
                                                                 {imobiliarias.map(imob => (
                                                                     <SelectItem key={imob.id} value={imob.id}>{imob.name}</SelectItem>
                                                                 ))}
