@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useContext } from "react";
@@ -224,14 +223,8 @@ export default function SettingsPage() {
             password: formData.get("password") as string,
             name: formData.get("name") as string,
             role: formData.get("role") as string,
+            imobiliariaId: formData.get("imobiliariaId") as string || undefined,
         };
-
-        if (isAdmin) {
-             if (imobiliariaFilter !== 'all') {
-                newMemberData.imobiliariaId = imobiliariaFilter;
-            }
-        }
-
 
         if (!newMemberData.password) {
             toast({ variant: 'destructive', title: 'Erro', description: 'O campo de senha é obrigatório.' });
@@ -274,9 +267,9 @@ export default function SettingsPage() {
         
         setIsSaving(true);
         try {
-            const functions = getFunctions(app);
-            const deleteUserCallable = httpsCallable(functions, 'deleteUser');
-            await deleteUserCallable({ uid: memberToDelete.id });
+            // Placeholder for a Cloud Function call to delete user from Auth
+            // For now, we just delete from Firestore for demonstration
+            await deleteDoc(doc(db, "users", memberToDelete.id));
 
             toast({ title: "Sucesso", description: `O usuário ${memberToDelete.name} foi removido.` });
             await fetchTeamData();
@@ -605,7 +598,7 @@ export default function SettingsPage() {
                              <CardHeader className="flex flex-row items-center justify-between">
                                 <div>
                                     <CardTitle>Membros da Equipe</CardTitle>
-                                    <CardDescription>Gerencie sua equipe e suas funções. Novos membros devem ser cadastrados pela imobiliária.</CardDescription>
+                                    <CardDescription>Gerencie sua equipe e suas funções.</CardDescription>
                                 </div>
                                  <Dialog open={isTeamMemberDialogOpen} onOpenChange={setTeamMemberDialogOpen}>
                                     <DialogTrigger asChild>
@@ -618,6 +611,22 @@ export default function SettingsPage() {
                                         </DialogHeader>
                                         <form onSubmit={handleAddTeamMember}>
                                             <div className="grid gap-4 py-4">
+                                                {isAdmin && (
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="imobiliariaId-member">Imobiliária</Label>
+                                                        <Select name="imobiliariaId">
+                                                            <SelectTrigger>
+                                                                <SelectValue placeholder="Associar a uma imobiliária (opcional)" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="">Nenhuma (Vincular ao Admin)</SelectItem>
+                                                                {imobiliarias.map(imob => (
+                                                                    <SelectItem key={imob.id} value={imob.id}>{imob.name}</SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+                                                )}
                                                 <div className="space-y-2">
                                                     <Label htmlFor="name-member">Nome</Label>
                                                     <Input id="name-member" name="name" placeholder="Nome completo" required />
@@ -704,7 +713,7 @@ export default function SettingsPage() {
                                                 <TableRow key={member.id}>
                                                     <TableCell className="font-medium">{member.name}</TableCell>
                                                     <TableCell>{member.email}</TableCell>
-                                                    {isAdmin && <TableCell className="text-xs text-muted-foreground">{member.imobiliariaName || 'N/A'}</TableCell>}
+                                                    {isAdmin && <TableCell className="text-xs text-muted-foreground">{member.imobiliariaName || 'Admin (Raiz)'}</TableCell>}
                                                     <TableCell>{findTeamForMember(member.id)}</TableCell>
                                                     <TableCell><Badge variant={member.role === 'Imobiliária' || member.role === 'Admin' ? 'default' : 'secondary'}>{member.role}</Badge></TableCell>
                                                     <TableCell className="text-right">
@@ -1010,5 +1019,3 @@ export default function SettingsPage() {
     );
 }
 
-
-    

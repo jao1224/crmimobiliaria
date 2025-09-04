@@ -81,37 +81,21 @@ interface ReportData {
 
 export const createUser = onCall(async (request) => {
     // Verifica se o usuário que está chamando a função é um admin de imobiliária ou o Admin do sistema.
-    const isAdmin = request.auth?.token.role === 'Admin';
-    const isImobiliariaAdmin = request.auth?.token.role === 'Imobiliária';
-
-    if (!isImobiliariaAdmin && !isAdmin) {
+    const callerRole = request.auth?.token.role;
+    if (callerRole !== 'Admin' && callerRole !== 'Imobiliária') {
         throw new HttpsError('permission-denied', 'Apenas administradores podem criar usuários.');
     }
 
     const { email, password, name, role, imobiliariaId } = request.data;
     
-    let imobiliariaIdToAssign: string | undefined;
+    let imobiliariaIdToAssign: string;
 
-    // Define a lógica para o imobiliariaId
-    if (isImobiliariaAdmin) {
+    if (callerRole === 'Admin') {
+        // Se o Admin está criando, ele pode especificar uma imobiliária, ou o membro será associado a ele mesmo.
+        imobiliariaIdToAssign = imobiliariaId || request.auth!.token.uid;
+    } else { // 'Imobiliária'
         // Se um Admin de Imobiliária está criando, o membro é sempre da sua imobiliária.
         imobiliariaIdToAssign = request.auth!.token.imobiliariaId;
-    } else if (isAdmin) {
-        // Se o Admin do Sistema está criando:
-        if (role === 'Imobiliária') {
-            // Se estiver criando uma nova imobiliária, o id dela será o UID do novo usuário.
-            // imobiliariaIdToAssign será definido após a criação do usuário.
-            imobiliariaIdToAssign = undefined;
-        } else {
-            // Se estiver criando um membro para uma imobiliária existente, usa o ID fornecido.
-            // Se nenhum ID for fornecido, associa ao próprio Admin.
-            imobiliariaIdToAssign = imobiliariaId || request.auth?.uid;
-        }
-    }
-
-    if (!imobiliariaIdToAssign && role !== 'Imobiliária' && isAdmin) {
-         // Esta validação pode ser removida ou ajustada dependendo se o Admin pode criar membros "soltos".
-         // Por agora, vamos assumir que um Admin ou seleciona uma imobiliária ou o membro é associado a ele.
     }
 
     try {
@@ -121,16 +105,7 @@ export const createUser = onCall(async (request) => {
             displayName: name,
         });
 
-        const claims: { [key: string]: any } = { role };
-        
-        let finalImobiliariaId = imobiliariaIdToAssign;
-        if (role === 'Imobiliária') {
-            finalImobiliariaId = userRecord.uid;
-        } 
-        
-        if(finalImobiliariaId) {
-            claims.imobiliariaId = finalImobiliariaId;
-        }
+        const claims: { [key: string]: any } = { role, imobiliariaId: imobiliariaIdToAssign };
         
         // Define as custom claims (role e imobiliariaId) para o novo usuário.
         await adminAuth.setCustomUserClaims(userRecord.uid, claims);
@@ -141,7 +116,7 @@ export const createUser = onCall(async (request) => {
             name,
             email,
             role,
-            imobiliariaId: claims.imobiliariaId || null,
+            imobiliariaId: imobiliariaIdToAssign,
             createdAt: new Date().toISOString(),
         });
 
@@ -151,7 +126,7 @@ export const createUser = onCall(async (request) => {
          if (error.code === 'auth/email-already-exists') {
             throw new HttpsError('already-exists', 'Este e-mail já está em uso por outra conta.');
         }
-        throw new HttpsError('internal', error.message, error);
+        throw new HttpsError('internal', "Ocorreu um erro interno no servidor ao criar o usuário.", error);
     }
 });
 
@@ -404,7 +379,47 @@ export const generateContractPdf = onCall<ContractData, Promise<{pdfBase64: stri
   return {pdfBase64};
 });
 
-    
-    
+export const deleteUser = onCall(async (request) => {
+    // Verifica se o usuário que está chamando a função é um admin.
+    const callerRole = request.auth?.token.role;
+    const callerId = request.auth?.token.uid;
+    const callerImobiliariaId = request.auth?.token.imobiliariaId;
 
-    
+    if (!callerId) {
+        throw new HttpsError('unauthenticated', 'Usuário não autenticado.');
+    }
+
+    const { uid: uidToDelete } = request.data;
+    if (callerId === uidToDelete) {
+        throw new HttpsError('permission-denied', 'Você não pode remover sua própria conta.');
+    }
+
+    const userToDeleteRecord = await adminAuth.getUser(uidToDelete);
+    const userToDeleteRole = userToDeleteRecord.customClaims?.role;
+    const userToDeleteImobiliariaId = userToDeleteRecord.customClaims?.imobiliariaId;
+
+    // Lógica de permissão de exclusão
+    if (callerRole === 'Admin') {
+        if(userToDeleteRole === 'Admin') {
+            throw new HttpsError('permission-denied', 'Um Admin não pode remover outro Admin.');
+        }
+        // Admin geral pode remover qualquer um, exceto outro Admin.
+    } else if (callerRole === 'Imobiliária') {
+        if (userToDeleteImobiliariaId !== callerImobiliariaId) {
+             throw new HttpsError('permission-denied', 'Você só pode remover membros da sua própria imobiliária.');
+        }
+    } else {
+        throw new HttpsError('permission-denied', 'Você não tem permissão para remover usuários.');
+    }
+
+
+    try {
+        await adminAuth.deleteUser(uidToDelete);
+        await adminDb.collection('users').doc(uidToDelete).delete();
+        // Adicional: Lógica para reatribuir leads/negócios, se necessário.
+        return { success: true };
+    } catch (error: any) {
+        console.error("Error deleting user:", error);
+        throw new HttpsError('internal', 'Não foi possível remover o usuário.', error);
+    }
+});
