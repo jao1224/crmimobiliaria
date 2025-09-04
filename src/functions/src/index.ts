@@ -129,8 +129,10 @@ export const createUser = onCall(async (request) => {
 
 export const deleteUser = onCall(async (request) => {
     const callingUid = request.auth?.uid;
-    const callerClaims = request.auth?.token;
-    if (!callingUid || !callerClaims) {
+    const callerRole = request.auth?.token.role;
+    const callerImobiliariaId = request.auth?.token.imobiliariaId;
+
+    if (!callingUid || !callerRole) {
         throw new HttpsError('unauthenticated', 'Ação não autenticada.');
     }
 
@@ -146,28 +148,23 @@ export const deleteUser = onCall(async (request) => {
         const userToDelete = await adminAuth.getUser(uidToDelete);
         const userToDeleteClaims = userToDelete.customClaims || {};
 
-        const isCallerAdmin = callerClaims.role === 'Admin';
-        
-        if (isCallerAdmin) {
+        let hasPermission = false;
+
+        if (callerRole === 'Admin') {
             // REGRA 1: Admin do sistema pode deletar qualquer um, exceto outro Admin.
             if (userToDeleteClaims.role === 'Admin') {
                  throw new HttpsError('permission-denied', 'Administradores do sistema não podem ser excluídos.');
             }
-             // Permissão concedida
-        } else {
-            // REGRA 2: Outros usuários (incluindo Admin de Imobiliária)
-            const isCallerImobiliariaAdmin = callerClaims.role === 'Imobiliária';
-            if (isCallerImobiliariaAdmin) {
-                const callerImobiliariaId = callerClaims.imobiliariaId;
-                const targetImobiliariaId = userToDeleteClaims.imobiliariaId;
-                if (!callerImobiliariaId || callerImobiliariaId !== targetImobiliariaId) {
-                    throw new HttpsError('permission-denied', 'Você só tem permissão para excluir usuários da sua própria imobiliária.');
-                }
-                // Permissão concedida
-            } else {
-                 // REGRA 3: Nenhum outro perfil pode excluir
-                 throw new HttpsError('permission-denied', 'Você não tem permissão para executar esta ação.');
+            hasPermission = true;
+        } else if (callerRole === 'Imobiliária') {
+            // REGRA 2: Admin de Imobiliária só pode deletar membros da sua imobiliária
+            if (userToDeleteClaims.imobiliariaId === callerImobiliariaId) {
+                hasPermission = true;
             }
+        }
+
+        if (!hasPermission) {
+            throw new HttpsError('permission-denied', 'Você não tem permissão para excluir este usuário.');
         }
         
         // Se chegou até aqui, a permissão foi concedida.
