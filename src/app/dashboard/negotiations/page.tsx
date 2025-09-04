@@ -747,14 +747,14 @@ export default function NegotiationsPage() {
                         <Button>Iniciar Nova Negociação</Button>
                     </DialogTrigger>
                      <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col">
-                        <DialogHeader className="px-6 pt-6">
+                        <DialogHeader>
                             <DialogTitle>Iniciar Nova Negociação</DialogTitle>
                             <DialogDescription>
                                 Selecione um imóvel e um cliente da lista para buscar os dados.
                             </DialogDescription>
                         </DialogHeader>
-                        <ScrollArea className="flex-grow pr-6">
-                            <form id="new-negotiation-form" onSubmit={handleAddNegotiation} className="space-y-4 pt-4 pl-6">
+                        <form id="new-negotiation-form" onSubmit={handleAddNegotiation} className="flex-grow overflow-y-auto pr-6 pl-1">
+                            <div className="space-y-4 py-4 pl-5">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label>Imóvel</Label>
@@ -948,8 +948,8 @@ export default function NegotiationsPage() {
                                         </Collapsible>
                                     </div>
                                 </div>
-                            </form>
-                        </ScrollArea>
+                            </div>
+                        </form>
                         <DialogFooter className="px-6 pb-6 pt-4 border-t bg-background">
                             <Button type="button" variant="outline" onClick={() => setNewNegotiationOpen(false)}>Cancelar</Button>
                             <Button type="submit" form="new-negotiation-form" disabled={!foundProperty || !foundClient || !proposalValue || !proposalDate}>Criar Negociação</Button>
