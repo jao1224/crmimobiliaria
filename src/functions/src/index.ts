@@ -84,7 +84,7 @@ export const createUser = onCall(async (request) => {
         throw new HttpsError('unauthenticated', 'A função deve ser chamada por um usuário autenticado.');
     }
     const callerUid = request.auth.uid;
-    const { email, password, name, role, imobiliariaId } = request.data;
+    const { email, password, name, role } = request.data;
     
     // 2. Busca os dados do usuário que está chamando a função (o chamador) do Firestore
     const callerDocRef = adminDb.collection('users').doc(callerUid);
@@ -92,28 +92,20 @@ export const createUser = onCall(async (request) => {
     if (!callerDoc.exists) {
         throw new HttpsError('not-found', 'Perfil do usuário chamador não encontrado.');
     }
-    const callerData = callerDoc.data();
-    const callerRole = callerData?.role;
+    const callerData = callerDoc.data()!;
+    const callerRole = callerData.role;
 
     // 3. Valida a permissão do chamador
     if (callerRole !== 'Admin' && callerRole !== 'Imobiliária') {
         throw new HttpsError('permission-denied', 'Apenas administradores podem criar usuários.');
     }
     
-    let imobiliariaIdToAssign: string | undefined;
-
     // 4. Determina qual imobiliariaId atribuir ao novo usuário
-    if (callerRole === 'Admin') {
-        // Se o Admin do sistema está criando, ele pode especificar uma imobiliária, 
-        // ou vincular o usuário a si mesmo (se 'admin' for passado como imobiliariaId).
-        imobiliariaIdToAssign = imobiliariaId === 'admin' ? callerUid : imobiliariaId;
-    } else { // Se for um Admin de Imobiliária
-        // Ele SÓ pode criar usuários para sua própria imobiliária.
-        imobiliariaIdToAssign = callerData?.imobiliariaId;
-    }
+    // O novo usuário sempre pertencerá à imobiliária de quem o criou.
+    const imobiliariaIdToAssign = callerData.imobiliariaId;
 
     if (!imobiliariaIdToAssign) {
-        throw new HttpsError('invalid-argument', 'O ID da imobiliária para o novo membro não pôde ser determinado.');
+        throw new HttpsError('invalid-argument', 'O ID da imobiliária do criador não foi encontrado.');
     }
 
     // 5. Cria o usuário no Firebase Authentication e no Firestore
@@ -240,7 +232,7 @@ async function drawPartyInfo(
     let currentY = y - 15;
 
     for (const party of parties) {
-        const partyText = `${'${party.name}'}, CPF/CNPJ: ${'${party.doc}'}, residente em ${'${party.address}'}.`;
+        const partyText = `${party.name}, CPF/CNPJ: ${party.doc}, residente em ${party.address}.`;
         currentY = await drawText(font, partyText, x, currentY, 10, contentWidth, 15, page);
         currentY -= 5;
     }
@@ -264,17 +256,17 @@ export const generateReportPdf = onCall<ReportData, Promise<{pdfBase64: string}>
         x: margin, y, font: boldFont, size: 18, color: rgb(0, 0, 0),
     });
     y -= 20;
-    page.drawText(`Período: ${'${data.filters.startDate}'} a ${'${data.filters.endDate}'}`, {
+    page.drawText(`Período: ${data.filters.startDate} a ${data.filters.endDate}`, {
         x: margin, y, font, size: 10, color: rgb(0.5, 0.5, 0.5),
     });
     y -= 30;
 
     page.drawText("Resumo do Período", {x: margin, y, font: boldFont, size: 14});
     y -= 20;
-    const revenueText = `Receita Total: ${'${new Intl.NumberFormat(\'pt-BR\', {style: \'currency\', currency: \'BRL\'}).format(data.summary.totalRevenue)}'}`;
+    const revenueText = `Receita Total: ${new Intl.NumberFormat('pt-BR', {style: 'currency', currency: 'BRL'}).format(data.summary.totalRevenue)}`;
     page.drawText(revenueText, {x: margin, y, font, size: 12});
     y -= 20;
-    const dealsText = `Total de Negócios Concluídos: ${'${data.summary.totalDeals}'}`;
+    const dealsText = `Total de Negócios Concluídos: ${data.summary.totalDeals}`;
     page.drawText(dealsText, {x: margin, y, font, size: 12});
     y -= 40;
 
@@ -338,19 +330,19 @@ export const generateContractPdf = onCall<ContractData, Promise<{pdfBase64: stri
 
   page.drawText("INTERVENIENTE ANUENTE (IMOBILIÁRIA):", {x: margin, y, font: boldFont, size: 12});
   y -= 15;
-  const realtorText = `Ideal Imóveis Ltda., representada por ${'${data.realtorName}'}, CRECI: ${'${data.realtorCreci}'}.`;
+  const realtorText = `Ideal Imóveis Ltda., representada por ${data.realtorName}, CRECI: ${data.realtorCreci}.`;
   y = await drawText(font, realtorText, margin, y, 10, contentWidth, 15, page);
   y -= 20;
 
   page.drawText("CLÁUSULA PRIMEIRA - DO OBJETO", {x: margin, y, font: boldFont, size: 12});
   y -= 15;
-  const objectText = `O presente contrato tem por objeto a promessa de compra e venda do imóvel a seguir descrito: ${'${data.propertyName}'} (Cód. ${'${data.propertyCode}'}), localizado em ${'${data.propertyAddress}'}, com área de ${'${data.propertyArea}'}m², matrícula ${'${data.propertyRegistration}'} do ${'${data.propertyRegistryOffice}'}.`;
+  const objectText = `O presente contrato tem por objeto a promessa de compra e venda do imóvel a seguir descrito: ${data.propertyName} (Cód. ${data.propertyCode}), localizado em ${data.propertyAddress}, com área de ${data.propertyArea}m², matrícula ${data.propertyRegistration} do ${data.propertyRegistryOffice}.`;
   y = await drawText(font, objectText, margin, y, 10, contentWidth, 15, page);
   y -= 10;
 
   page.drawText("CLÁUSULA SEGUNDA - DO PREÇO E DA FORMA DE PAGAMENTO", {x: margin, y, font: boldFont, size: 12});
   y -= 15;
-  const priceText = `O valor total da presente transação é de R$ ${'${data.negotiationValue}'}, a ser pago da seguinte forma:`;
+  const priceText = `O valor total da presente transação é de R$ ${data.negotiationValue}, a ser pago da seguinte forma:`;
   y = await drawText(font, priceText, margin, y, 10, contentWidth, 15, page);
   y = await drawText(font, data.paymentTerms, margin + 10, y, 10, contentWidth - 10, 15, page);
   y -= 10;
@@ -399,49 +391,5 @@ export const generateContractPdf = onCall<ContractData, Promise<{pdfBase64: stri
   return {pdfBase64};
 });
 
-export const deleteUser = onCall(async (request) => {
-    // Verifica se o usuário que está chamando a função é um admin.
-    const callerRole = request.auth?.token.role;
-    const callerId = request.auth?.token.uid;
-    const callerImobiliariaId = request.auth?.token.imobiliariaId;
-
-    if (!callerId) {
-        throw new HttpsError('unauthenticated', 'Usuário não autenticado.');
-    }
-
-    const { uid: uidToDelete } = request.data;
-    if (callerId === uidToDelete) {
-        throw new HttpsError('permission-denied', 'Você não pode remover sua própria conta.');
-    }
-
-    const userToDeleteRecord = await adminAuth.getUser(uidToDelete);
-    const userToDeleteRole = userToDeleteRecord.customClaims?.role;
-    const userToDeleteImobiliariaId = userToDeleteRecord.customClaims?.imobiliariaId;
-
-    // Lógica de permissão de exclusão
-    if (callerRole === 'Admin') {
-        if(userToDeleteRole === 'Admin') {
-            throw new HttpsError('permission-denied', 'Um Admin não pode remover outro Admin.');
-        }
-        // Admin geral pode remover qualquer um, exceto outro Admin.
-    } else if (callerRole === 'Imobiliária') {
-        if (userToDeleteImobiliariaId !== callerImobiliariaId) {
-             throw new HttpsError('permission-denied', 'Você só pode remover membros da sua própria imobiliária.');
-        }
-    } else {
-        throw new HttpsError('permission-denied', 'Você não tem permissão para remover usuários.');
-    }
-
-
-    try {
-        await adminAuth.deleteUser(uidToDelete);
-        await adminDb.collection('users').doc(uidToDelete).delete();
-        // Adicional: Lógica para reatribuir leads/negócios, se necessário.
-        return { success: true };
-    } catch (error: any) {
-        console.error("Error deleting user:", error);
-        throw new HttpsError('internal', 'Não foi possível remover o usuário.', error);
-    }
-});
-
+    
     

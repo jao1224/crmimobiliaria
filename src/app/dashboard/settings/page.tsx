@@ -223,7 +223,6 @@ export default function SettingsPage() {
             password: formData.get("password") as string,
             name: formData.get("name") as string,
             role: formData.get("role") as string,
-            imobiliariaId: formData.get("imobiliariaId") as string || undefined,
         };
 
         if (!newMemberData.password || newMemberData.password.trim() === '') {
@@ -239,28 +238,14 @@ export default function SettingsPage() {
         }
 
         try {
-            console.log('App Firebase:', app);
-            console.log('Usuário atual:', user);
-            console.log('Perfil ativo:', activeProfile);
-            console.log('Dados do usuário:', userData);
-            console.log('Permissões para equipes:', hasPermissionForTeamTabs);
-            console.log('É admin:', isAdmin);
-            
             const functions = getFunctions(app);
-            console.log('Funções Firebase:', functions);
-            
-            // Verificar se as funções estão disponíveis
-            if (!functions) {
-                throw new Error('Funções Firebase não estão disponíveis');
-            }
-            
             const createUser = httpsCallable(functions, 'createUser');
             const result = await createUser(newMemberData) as any;
 
             if ((result.data as any).success) {
                 if (user) await fetchTeamData();
                 toast({ title: "Sucesso!", description: "Novo membro da equipe criado." });
-                setTeamMemberDialogOpen(false);
+                setAddMemberOpen(false);
                 setSelectedRole(''); // Reset do campo role
             } else {
                 throw new Error(result.data.error || "A função de nuvem retornou um erro.");
@@ -274,7 +259,6 @@ export default function SettingsPage() {
             }
             toast({ variant: "destructive", title: "Erro na Criação", description });
         } finally {
-            console.log('Finalizando operação de adição de membro');
             setIsSaving(false);
         }
     };
@@ -635,22 +619,6 @@ export default function SettingsPage() {
                                         </DialogHeader>
                                         <form onSubmit={handleCreateUser}>
                                             <div className="grid gap-4 py-4">
-                                                {isAdmin && (
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="imobiliariaId-member">Imobiliária</Label>
-                                                        <Select name="imobiliariaId">
-                                                            <SelectTrigger>
-                                                                <SelectValue placeholder="Associar a uma imobiliária (opcional)" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem value="admin">Nenhuma (Vincular ao Admin)</SelectItem>
-                                                                {imobiliarias.map(imob => (
-                                                                    <SelectItem key={imob.id} value={imob.id}>{imob.name}</SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-                                                )}
                                                 <div className="space-y-2">
                                                     <Label htmlFor="name">Nome</Label>
                                                     <Input id="name" name="name" type="text" required />
@@ -676,22 +644,6 @@ export default function SettingsPage() {
                                                         </SelectContent>
                                                     </Select>
                                                 </div>
-                                                {isAdmin && (
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="imobiliariaId">Vincular à Imobiliária</Label>
-                                                        <Select name="imobiliariaId" required>
-                                                            <SelectTrigger>
-                                                                <SelectValue placeholder="Selecione uma imobiliária" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem value={user?.uid || ''}>Nenhuma (Vincular ao Admin)</SelectItem>
-                                                                {imobiliarias.map(imob => (
-                                                                    <SelectItem key={imob.id} value={imob.id}>{imob.name}</SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-                                                )}
                                             </div>
                                             <DialogFooter>
                                                 <Button type="button" variant="outline" onClick={() => setAddMemberOpen(false)}>Cancelar</Button>
@@ -1064,3 +1016,5 @@ export default function SettingsPage() {
     );
 }
 
+
+    
