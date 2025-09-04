@@ -402,8 +402,7 @@ export default function NegotiationsPage() {
     }, [filteredNegotiations]);
     
     const brokerUsers = useMemo(() => {
-        const brokerRoles = ['Corretor Autônomo', 'Vendedor', 'Imobiliária', 'Admin'];
-        return allUsers.filter(user => brokerRoles.includes(user.role));
+        return allUsers.filter(user => user.role === 'Vendedor');
     }, [allUsers]);
 
 
@@ -753,8 +752,8 @@ export default function NegotiationsPage() {
                                 Selecione um imóvel e um cliente da lista para buscar os dados.
                             </DialogDescription>
                         </DialogHeader>
-                         <div className="flex-grow overflow-y-auto pr-6 pl-1 -mr-6">
-                            <form id="new-negotiation-form" onSubmit={handleAddNegotiation} className="pl-5 py-4 space-y-4">
+                         <ScrollArea className="flex-grow pr-6 -mr-6">
+                            <form id="new-negotiation-form" onSubmit={handleAddNegotiation} className="pl-1 py-4 space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label>Imóvel</Label>
@@ -949,7 +948,7 @@ export default function NegotiationsPage() {
                                     </div>
                                 </div>
                             </form>
-                        </div>
+                        </ScrollArea>
                         <DialogFooter className="px-6 pb-6 pt-4 border-t bg-background">
                             <Button type="button" variant="outline" onClick={() => setNewNegotiationOpen(false)}>Cancelar</Button>
                             <Button type="submit" form="new-negotiation-form" disabled={!foundProperty || !foundClient || !proposalValue || !proposalDate}>Criar Negociação</Button>
