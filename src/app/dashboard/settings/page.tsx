@@ -3,7 +3,7 @@
 "use client";
 
 import React, { useState, useEffect, useContext } from "react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -24,10 +24,20 @@ import { collection, getDocs, doc, setDoc, addDoc, updateDoc, arrayUnion, arrayR
 import { EmailAuthProvider, onAuthStateChanged, reauthenticateWithCredential, updatePassword, updateProfile, type User } from "firebase/auth";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+} from "@/components/ui/collapsible"
 
 
 type TeamMember = {
@@ -74,6 +84,10 @@ export default function SettingsPage() {
     const [isTeamDialogOpen, setTeamDialogOpen] = useState(false);
     const [isManageMembersDialogOpen, setManageMembersDialogOpen] = useState(false);
     
+    // State for deleting members
+    const [memberToDelete, setMemberToDelete] = useState<TeamMember | null>(null);
+    const [isDeleteMemberDialogOpen, setDeleteMemberDialogOpen] = useState(false);
+    
     const [searchQuery, setSearchQuery] = useState("");
     const [teamFilter, setTeamFilter] = useState("all");
     const [imobiliariaFilter, setImobiliariaFilter] = useState("all");
@@ -112,14 +126,14 @@ export default function SettingsPage() {
 
     useEffect(() => {
         if (hasPermissionForTeamTabs && user) {
-            fetchTeamData(user);
+            fetchTeamData();
         }
     }, [hasPermissionForTeamTabs, user, activeProfile]);
 
-    const fetchTeamData = async (currentUser: User) => {
-        if (!currentUser) return;
+    const fetchTeamData = async () => {
+        if (!user) return;
         
-        const userDocRef = doc(db, "users", currentUser.uid);
+        const userDocRef = doc(db, "users", user.uid);
         const userDocSnap = await getDoc(userDocRef);
         const currentUserData = userDocSnap.data();
         
@@ -222,7 +236,7 @@ export default function SettingsPage() {
             const result = await createUser(newMemberData) as any;
 
             if (result.data.success) {
-                if (user) await fetchTeamData(user);
+                if (user) await fetchTeamData();
                 toast({ title: "Sucesso!", description: "Novo membro da equipe criado." });
                 setTeamMemberDialogOpen(false);
             } else {
@@ -240,6 +254,32 @@ export default function SettingsPage() {
             setIsSaving(false);
         }
     };
+    
+    const handleOpenDeleteMemberDialog = (member: TeamMember) => {
+        setMemberToDelete(member);
+        setDeleteMemberDialogOpen(true);
+    };
+
+    const handleDeleteMember = async () => {
+        if (!memberToDelete) return;
+        setIsSaving(true);
+        try {
+            const functions = getFunctions(app);
+            const deleteUser = httpsCallable(functions, 'deleteUser');
+            await deleteUser({ uid: memberToDelete.id });
+
+            toast({ title: "Sucesso", description: `O usuário ${memberToDelete.name} foi removido.` });
+            await fetchTeamData();
+            setDeleteMemberDialogOpen(false);
+            setMemberToDelete(null);
+
+        } catch (error) {
+            console.error("Error deleting user: ", error);
+            toast({ variant: "destructive", title: "Erro", description: "Não foi possível remover o membro." });
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
     const handleAddTeam = async (event: React.FormEvent<HTMLFormElement>) => {
        event.preventDefault();
@@ -250,7 +290,6 @@ export default function SettingsPage() {
        
        let imobiliariaIdForTeam = userData?.imobiliariaId;
 
-       // Se o admin está criando, ele precisa selecionar para qual.
        if (isAdmin) {
            imobiliariaIdForTeam = formData.get("imobiliariaId") as string;
            if (!imobiliariaIdForTeam) {
@@ -272,7 +311,7 @@ export default function SettingsPage() {
                 memberIds: [],
                 imobiliariaId: imobiliariaIdForTeam
             });
-            if(user) await fetchTeamData(user);
+            if(user) await fetchTeamData();
             toast({ title: "Sucesso!", description: `A equipe "${teamName}" foi criada.`});
             setTeamDialogOpen(false);
        } catch (error) {
@@ -298,11 +337,15 @@ export default function SettingsPage() {
         try {
             const teamRef = doc(db, 'teams', selectedTeam.id);
             await updateDoc(teamRef, { memberIds: arrayUnion(memberId) });
-            if (user) await fetchTeamData(user);
             
             const updatedTeamDoc = await getDoc(teamRef);
             if (updatedTeamDoc.exists()) {
-                setSelectedTeam({ ...updatedTeamDoc.data(), id: updatedTeamDoc.id } as Team);
+                const updatedTeamData = { ...updatedTeamDoc.data(), id: updatedTeamDoc.id } as Team;
+                setSelectedTeam(updatedTeamData);
+                // Update the main teams list
+                setTeams(currentTeams => 
+                    currentTeams.map(t => t.id === updatedTeamData.id ? updatedTeamData : t)
+                );
             }
            
             toast({ title: "Sucesso!", description: "Membro adicionado à equipe." });
@@ -320,11 +363,14 @@ export default function SettingsPage() {
          try {
             const teamRef = doc(db, 'teams', selectedTeam.id);
             await updateDoc(teamRef, { memberIds: arrayRemove(memberId) });
-            if (user) await fetchTeamData(user);
             
              const updatedTeamDoc = await getDoc(teamRef);
              if (updatedTeamDoc.exists()) {
-                 setSelectedTeam({ ...updatedTeamDoc.data(), id: updatedTeamDoc.id } as Team);
+                 const updatedTeamData = { ...updatedTeamDoc.data(), id: updatedTeamDoc.id } as Team;
+                 setSelectedTeam(updatedTeamData);
+                 setTeams(currentTeams => 
+                    currentTeams.map(t => t.id === updatedTeamData.id ? updatedTeamData : t)
+                );
              } else {
                  setManageMembersDialogOpen(false);
              }
@@ -345,7 +391,7 @@ export default function SettingsPage() {
         if (window.confirm("Tem certeza que deseja excluir esta equipe? Esta ação não pode ser desfeita.")) {
             try {
                 await deleteDoc(doc(db, "teams", teamId));
-                if (user) await fetchTeamData(user);
+                if (user) await fetchTeamData();
                 toast({ title: "Sucesso", description: "Equipe excluída." });
             } catch (error) {
                 toast({ variant: "destructive", title: "Erro", description: "Não foi possível excluir a equipe." });
@@ -380,8 +426,7 @@ export default function SettingsPage() {
             const userRef = doc(db, 'users', memberId);
             await updateDoc(userRef, { role: newRole });
             
-            // Re-fetch data after role change
-            await fetchTeamData(user);
+            await fetchTeamData();
             
             toast({ title: "Sucesso", description: `Função do usuário alterada para ${newRole}.` });
         } catch (error) {
@@ -659,7 +704,7 @@ export default function SettingsPage() {
                                                                         {creatableRoles.map(role => (
                                                                             <DropdownMenuItem 
                                                                                 key={role} 
-                                                                                onClick={() => handleChangeUserRole(member.id, role as UserProfile)}
+                                                                                onSelect={() => handleChangeUserRole(member.id, role as UserProfile)}
                                                                                 disabled={isSaving}
                                                                             >
                                                                                 {role}
@@ -667,7 +712,13 @@ export default function SettingsPage() {
                                                                         ))}
                                                                     </DropdownMenuSubContent>
                                                                 </DropdownMenuSub>
-                                                                <DropdownMenuItem className="text-destructive" disabled={member.role === 'Admin' || member.id === user?.uid}>Remover</DropdownMenuItem>
+                                                                <DropdownMenuItem 
+                                                                    className="text-destructive" 
+                                                                    disabled={member.role === 'Admin' || member.id === user?.uid}
+                                                                    onSelect={() => handleOpenDeleteMemberDialog(member)}
+                                                                >
+                                                                    Remover
+                                                                </DropdownMenuItem>
                                                             </DropdownMenuContent>
                                                         </DropdownMenu>
                                                     </TableCell>
@@ -864,7 +915,9 @@ export default function SettingsPage() {
                                                 <SelectValue placeholder="Selecione um membro para adicionar" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {teamMembers.map(member => <SelectItem key={member.id} value={member.id} disabled={selectedTeam.memberIds.includes(member.id)}>{member.name}</SelectItem>)}
+                                                {teamMembers
+                                                    .filter(member => member.imobiliariaId === selectedTeam.imobiliariaId)
+                                                    .map(member => <SelectItem key={member.id} value={member.id} disabled={selectedTeam.memberIds.includes(member.id)}>{member.name}</SelectItem>)}
                                             </SelectContent>
                                         </Select>
                                     </div>
@@ -915,6 +968,28 @@ export default function SettingsPage() {
                     )}
                 </DialogContent>
             </Dialog>
+
+            <AlertDialog open={isDeleteMemberDialogOpen} onOpenChange={setDeleteMemberDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Esta ação removerá permanentemente o usuário <span className="font-bold">{memberToDelete?.name}</span> do sistema.
+                            Isso não pode ser desfeito.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                            className={cn(buttonVariants({ variant: "destructive" }))}
+                            onClick={handleDeleteMember}
+                            disabled={isSaving}
+                        >
+                            {isSaving ? "Removendo..." : "Sim, Remover Membro"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

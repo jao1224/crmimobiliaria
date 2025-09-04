@@ -126,6 +126,63 @@ export const createUser = onCall(async (request) => {
     }
 });
 
+
+export const deleteUser = onCall(async (request) => {
+    const callingUid = request.auth?.uid;
+    if (!callingUid) {
+        throw new HttpsError('unauthenticated', 'Ação não autenticada.');
+    }
+
+    const callingUserClaims = request.auth?.token;
+    const isCallerAdmin = callingUserClaims?.role === 'Admin';
+    const isCallerImobiliariaAdmin = callingUserClaims?.role === 'Imobiliária';
+
+    if (!isCallerAdmin && !isCallerImobiliariaAdmin) {
+        throw new HttpsError('permission-denied', 'Apenas administradores podem excluir usuários.');
+    }
+    
+    const { uid: uidToDelete } = request.data;
+    if (!uidToDelete) {
+        throw new HttpsError('invalid-argument', 'O ID do usuário a ser excluído é obrigatório.');
+    }
+    
+    // Previne auto-exclusão
+    if (uidToDelete === callingUid) {
+         throw new HttpsError('invalid-argument', 'Você não pode excluir sua própria conta.');
+    }
+
+    try {
+        const userToDelete = await adminAuth.getUser(uidToDelete);
+        const userToDeleteClaims = userToDelete.customClaims || {};
+        
+        if (userToDeleteClaims.role === 'Admin') {
+            throw new HttpsError('permission-denied', 'A conta de Administrador do sistema não pode ser excluída.');
+        }
+
+        if (isCallerImobiliariaAdmin) {
+            if (userToDeleteClaims.imobiliariaId !== callingUserClaims.imobiliariaId) {
+                 throw new HttpsError('permission-denied', 'Você só pode excluir usuários da sua própria imobiliária.');
+            }
+        }
+        
+        // Excluir do Firebase Auth
+        await adminAuth.deleteUser(uidToDelete);
+        
+        // Excluir do Firestore
+        await adminDb.collection('users').doc(uidToDelete).delete();
+        
+        return { success: true };
+
+    } catch (error: any) {
+        console.error('Error deleting user:', error);
+        if (error.code === 'auth/user-not-found') {
+            throw new HttpsError('not-found', 'Usuário não encontrado.');
+        }
+        throw new HttpsError('internal', error.message, error);
+    }
+});
+
+
 // Esta função adiciona custom claims ao criar um usuário diretamente pelo Firebase Auth (ex: no registro).
 export const addRoleOnCreate = beforeUserCreated(async (event) => {
     const user = event.data;
