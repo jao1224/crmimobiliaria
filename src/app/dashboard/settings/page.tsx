@@ -310,15 +310,16 @@ export default function SettingsPage() {
             console.error('Erro completo:', error);
             console.error('Mensagem do erro:', error.message);
             console.error('Detalhes do erro:', error.details);
+            console.error('Código do erro:', error.code);
             
             let description = "Ocorreu um erro ao criar o usuário.";
             if (error.message.includes('auth/email-already-exists') || (error.details && error.details.message.includes('EMAIL_EXISTS'))) {
                 description = 'Este e-mail já está em uso por outra conta.';
-            } else if (error.message.includes('permission-denied')) {
+            } else if (error.message.includes('permission-denied') || error.code === 'permission-denied') {
                 description = 'Você não tem permissão para executar esta ação.';
-            } else if (error.message.includes('unavailable')) {
+            } else if (error.message.includes('unavailable') || error.code === 'unavailable') {
                 description = 'Serviço temporariamente indisponível. Tente novamente em alguns instantes.';
-            } else if (error.message.includes('timeout')) {
+            } else if (error.message.includes('timeout') || error.code === 'timeout') {
                 description = 'A operação demorou muito para responder. Tente novamente.';
             } else if (error.message.includes('Função createUser não está disponível')) {
                 description = 'Serviço de criação de usuários não está disponível. Tente novamente em alguns instantes.';
@@ -326,6 +327,10 @@ export default function SettingsPage() {
                 description = 'Erro na comunicação com o servidor. Tente novamente.';
             } else if (error.message.includes('Funções Firebase não estão disponíveis')) {
                 description = 'Serviços do Firebase não estão disponíveis. Tente novamente em alguns instantes.';
+            } else if (error.code === 'functions/unavailable') {
+                description = 'Serviço de funções não está disponível. Verifique se as funções foram deployadas.';
+            } else if (error.code === 'functions/not-found') {
+                description = 'Função não encontrada. Verifique se a função createUser foi deployada.';
             }
             toast({ variant: "destructive", title: "Erro na Criação", description });
         } finally {
@@ -379,6 +384,8 @@ export default function SettingsPage() {
         setSelectedTeam(team);
         setManageMembersDialogOpen(true);
     };
+
+    const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
 
     const handleAddMemberToTeam = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -932,7 +939,7 @@ export default function SettingsPage() {
                                 <form onSubmit={handleAddMemberToTeam} className="space-y-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="memberId">Selecione um Membro</Label>
-                                        <Select name="memberId" required>
+                                        <Select value={selectedMemberId} onValueChange={setSelectedMemberId} required>
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Selecione um membro para adicionar" />
                                             </SelectTrigger>
