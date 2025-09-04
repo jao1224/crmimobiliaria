@@ -127,14 +127,13 @@ export const createUser = onCall(async (request) => {
 });
 
 export const deleteUser = onCall(async (request) => {
-    const callingUid = request.auth?.token.uid;
-    const callerRole = request.auth?.token.role;
-    const callerImobiliariaId = request.auth?.token.imobiliariaId;
-
     // 1. Validar autenticação básica
-    if (!callingUid) {
+    if (!request.auth?.token.uid) {
         throw new HttpsError('unauthenticated', 'Ação não autenticada.');
     }
+    const callingUid = request.auth.token.uid;
+    const callerRole = request.auth.token.role;
+    const callerImobiliariaId = request.auth.token.imobiliariaId;
 
     const { uid: uidToDelete } = request.data;
     if (!uidToDelete) {
@@ -147,21 +146,23 @@ export const deleteUser = onCall(async (request) => {
     }
 
     try {
-        let hasPermission = false;
         const userToDeleteRecord = await adminAuth.getUser(uidToDelete);
         const userToDeleteRole = userToDeleteRecord.customClaims?.role;
+        const userToDeleteImobiliariaId = userToDeleteRecord.customClaims?.imobiliariaId;
 
+        let hasPermission = false;
+        
         // 3. Lógica de permissão hierárquica
         if (callerRole === 'Admin') {
             // Admin do sistema não pode excluir outro Admin
             if (userToDeleteRole === 'Admin') {
                 throw new HttpsError('permission-denied', 'Administradores do sistema não podem ser excluídos por outros administradores.');
             }
-            hasPermission = true;
+            hasPermission = true; // Admin do sistema pode excluir qualquer outro usuário.
         } else if (callerRole === 'Imobiliária') {
-            const userToDeleteImobiliariaId = userToDeleteRecord.customClaims?.imobiliariaId;
-            // Admin da imobiliária só pode excluir membros da sua própria imobiliária
-            if (userToDeleteImobiliariaId === callerImobiliariaId) {
+            // Admin da imobiliária só pode excluir membros da sua própria imobiliária.
+            // O ID da imobiliária do admin é o seu próprio UID.
+            if (userToDeleteImobiliariaId === callingUid) {
                 hasPermission = true;
             }
         }
