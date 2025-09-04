@@ -102,7 +102,7 @@ export const createUser = onCall(async (request) => {
         // Um admin de imobiliária só pode criar membros para sua própria imobiliária.
         finalImobiliariaId = callerImobiliariaId;
     } else if (callerRole === 'Admin') {
-        // O Admin do sistema pode especificar uma imobiliária ou associar a si mesmo.
+        // O Admin do sistema pode especificar uma imobiliária ou associar a si mesmo (se nenhum for fornecido).
         finalImobiliariaId = imobiliariaId || callerUid;
     }
 
@@ -435,3 +435,4 @@ export const deleteUser = onCall(async (request) => {
         throw new HttpsError('internal', 'Não foi possível remover o usuário.', error);
     }
 });
+    

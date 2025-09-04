@@ -227,8 +227,10 @@ export default function SettingsPage() {
 
         if (isAdmin) {
              const selectedImobiliariaId = formData.get("imobiliariaId") as string;
-             // Se 'admin' for selecionado, passa o UID do admin atual. Se não, passa o ID selecionado.
-             newMemberData.imobiliariaId = selectedImobiliariaId === 'admin' ? user.uid : selectedImobiliariaId;
+             // Se 'admin' for selecionado, não passa imobiliariaId para que a função use o UID do Admin
+             if (selectedImobiliariaId && selectedImobiliariaId !== 'admin') {
+                newMemberData.imobiliariaId = selectedImobiliariaId;
+             }
         }
 
         if (!newMemberData.password) {
