@@ -76,6 +76,7 @@ export default function SettingsPage() {
     
     const [searchQuery, setSearchQuery] = useState("");
     const [teamFilter, setTeamFilter] = useState("all");
+    const [imobiliariaFilter, setImobiliariaFilter] = useState("all");
     const [openTeamId, setOpenTeamId] = useState<string | null>(null);
 
     const [permissions, setPermissions] = useState<PermissionsState>(menuConfig);
@@ -397,7 +398,9 @@ export default function SettingsPage() {
         
         const teamMatch = teamFilter === 'all' || findTeamForMember(member.id) === teamFilter;
         
-        return (nameMatch || emailMatch) && teamMatch;
+        const imobiliariaMatch = imobiliariaFilter === 'all' || member.imobiliariaId === imobiliariaFilter;
+
+        return (nameMatch || emailMatch) && teamMatch && imobiliariaMatch;
     });
 
 
@@ -581,8 +584,8 @@ export default function SettingsPage() {
                                 </Dialog>
                             </CardHeader>
                             <CardContent>
-                                 <div className="mb-4 flex items-center gap-2">
-                                    <div className="relative w-full">
+                                 <div className="mb-4 flex flex-wrap items-center gap-2">
+                                    <div className="relative flex-grow">
                                         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                                         <Input
                                             type="search"
@@ -592,8 +595,21 @@ export default function SettingsPage() {
                                             onChange={(e) => setSearchQuery(e.target.value)}
                                         />
                                     </div>
+                                     {isAdmin && (
+                                        <Select value={imobiliariaFilter} onValueChange={setImobiliariaFilter}>
+                                            <SelectTrigger className="w-full md:w-[200px]">
+                                                <SelectValue placeholder="Filtrar por imobiliária" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="all">Todas as Imobiliárias</SelectItem>
+                                                {imobiliarias.map(imob => (
+                                                    <SelectItem key={imob.id} value={imob.id}>{imob.name}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    )}
                                     <Select value={teamFilter} onValueChange={setTeamFilter}>
-                                        <SelectTrigger className="w-[180px]">
+                                        <SelectTrigger className="w-full md:w-[180px]">
                                             <SelectValue placeholder="Filtrar por equipe" />
                                         </SelectTrigger>
                                         <SelectContent>
