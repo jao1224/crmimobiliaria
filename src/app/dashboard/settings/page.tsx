@@ -227,12 +227,8 @@ export default function SettingsPage() {
         };
 
         if (isAdmin) {
-            // Se o admin selecionou uma imobiliária no filtro, use-a.
-            // Se não, o novo membro será associado ao próprio admin.
             if (imobiliariaFilter !== 'all') {
                 newMemberData.imobiliariaId = imobiliariaFilter;
-            } else {
-                newMemberData.imobiliariaId = user.uid; // Associa ao próprio admin
             }
         }
 
@@ -257,7 +253,7 @@ export default function SettingsPage() {
             }
         } catch (error: any) {
             let description = "Ocorreu um erro ao criar o usuário.";
-            if (error.code === 'auth/email-already-exists' || error.message.includes('already-exists') || (error.details && error.details.message.includes('EMAIL_EXISTS'))) {
+            if (error.code === 'functions/already-exists' || error.message.includes('already-exists') || (error.details && error.details.message.includes('EMAIL_EXISTS'))) {
                 description = 'Este e-mail já está em uso por outra conta.';
             } else if (error.message.includes('permission-denied')) {
                 description = 'Você não tem permissão para executar esta ação.';
@@ -1013,3 +1009,6 @@ export default function SettingsPage() {
         </div>
     );
 }
+
+
+    

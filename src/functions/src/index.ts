@@ -88,11 +88,23 @@ export const createUser = onCall(async (request) => {
         throw new HttpsError('permission-denied', 'Apenas administradores podem criar usuários.');
     }
 
-    const { email, password, name, role } = request.data;
+    const { email, password, name, role, imobiliariaId: imobiliariaIdFromRequest } = request.data;
     
-    // Admin do sistema pode criar uma imobiliária. Neste caso, o imobiliariaId será o uid do novo usuário.
-    // Para outros perfis, usa o imobiliariaId do admin que está chamando.
-    let imobiliariaId = request.auth?.token.imobiliariaId;
+    // Define a lógica para o imobiliariaId
+    let imobiliariaIdToAssign: string | null = null;
+    
+    if (isAdmin) {
+        // Se o Admin está criando, ele pode especificar a imobiliária.
+        // Se não especificar, o novo membro fica associado ao próprio Admin.
+        imobiliariaIdToAssign = imobiliariaIdFromRequest || request.auth!.uid;
+    } else if (isImobiliariaAdmin) {
+        // Se um Admin de Imobiliária está criando, o membro é sempre da sua imobiliária.
+        imobiliariaIdToAssign = request.auth!.token.imobiliariaId;
+    } else {
+        // Fallback de segurança, embora a verificação inicial já deva barrar.
+        throw new HttpsError('permission-denied', 'Permissão insuficiente para atribuir a uma imobiliária.');
+    }
+    
 
     try {
         const userRecord = await adminAuth.createUser({
@@ -101,13 +113,18 @@ export const createUser = onCall(async (request) => {
             displayName: name,
         });
 
+        const claims: { [key: string]: any } = { role };
+        if (imobiliariaIdToAssign) {
+            claims.imobiliariaId = imobiliariaIdToAssign;
+        }
+
         // Se um Admin está criando uma imobiliária, o ID dela é o ID do novo usuário
         if (isAdmin && role === 'Imobiliária') {
-            imobiliariaId = userRecord.uid;
+            claims.imobiliariaId = userRecord.uid;
         }
         
         // Define as custom claims (role e imobiliariaId) para o novo usuário.
-        await adminAuth.setCustomUserClaims(userRecord.uid, { role, imobiliariaId });
+        await adminAuth.setCustomUserClaims(userRecord.uid, claims);
 
         // Salva informações adicionais no Firestore.
         await adminDb.collection('users').doc(userRecord.uid).set({
@@ -115,13 +132,16 @@ export const createUser = onCall(async (request) => {
             name,
             email,
             role,
-            imobiliariaId, // Salva o ID da imobiliária no documento do usuário
+            imobiliariaId: claims.imobiliariaId || null,
             createdAt: new Date().toISOString(),
         });
 
         return { success: true, uid: userRecord.uid };
     } catch (error: any) {
         console.error('Error creating new user:', error);
+         if (error.code === 'auth/email-already-exists') {
+            throw new HttpsError('already-exists', 'Este e-mail já está em uso por outra conta.');
+        }
         throw new HttpsError('internal', error.message, error);
     }
 });
@@ -375,4 +395,5 @@ export const generateContractPdf = onCall<ContractData, Promise<{pdfBase64: stri
   return {pdfBase64};
 });
 
+    
     
