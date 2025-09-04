@@ -92,12 +92,15 @@ export const createUser = onCall(async (request) => {
 
     let finalImobiliariaId = null;
 
+    // Se o Admin Geral estiver criando, ele pode opcionalmente passar um imobiliariaId.
+    // Se não passar, o novo usuário será associado ao próprio Admin.
     if (callerRole === 'Admin') {
-        // Admin geral deve fornecer um imobiliariaId para criar um membro
-        if (role !== 'Imobiliária' && !imobiliariaId) {
-            throw new HttpsError('invalid-argument', 'Ao criar um membro para uma imobiliária, o ID da imobiliária é necessário.');
+        if (role !== 'Imobiliária') {
+             finalImobiliariaId = imobiliariaId || request.auth?.token.uid; // Associa ao próprio admin se não for especificado
+        } else {
+             // Se estiver criando uma imobiliária, o imobiliariaId será nulo por enquanto.
+             finalImobiliariaId = imobiliariaId;
         }
-        finalImobiliariaId = imobiliariaId;
     } else { // callerRole === 'Imobiliária'
         // Admin de imobiliária usa seu próprio imobiliariaId
         finalImobiliariaId = request.auth?.token.imobiliariaId;
@@ -210,9 +213,9 @@ export const addRoleOnCreate = beforeUserCreated(async (event) => {
         // Verifica se já existe algum usuário. Se não, este é o primeiro e será Admin.
         const allUsers = await adminAuth.listUsers(1);
         if (allUsers.users.length === 0) {
-             await adminAuth.setCustomUserClaims(user.uid, { role: 'Admin' });
+             await adminAuth.setCustomUserClaims(user.uid, { role: 'Admin', imobiliariaId: user.uid });
              // Também salva no documento do Firestore, pois o gatilho pode não ter essa info ainda
-             await userDocRef.set({ role: 'Admin' }, { merge: true });
+             await userDocRef.set({ role: 'Admin', imobiliariaId: user.uid }, { merge: true });
              return;
         }
 

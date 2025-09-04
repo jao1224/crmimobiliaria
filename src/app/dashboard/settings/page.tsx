@@ -214,6 +214,8 @@ export default function SettingsPage() {
 
     const handleAddTeamMember = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
+        if (!user) return;
+        
         setIsSaving(true);
 
         const formData = new FormData(event.currentTarget);
@@ -225,12 +227,13 @@ export default function SettingsPage() {
         };
 
         if (isAdmin) {
-             if (imobiliariaFilter === 'all') {
-                toast({ variant: 'destructive', title: 'Erro', description: 'Como Admin, você deve selecionar uma imobiliária no filtro da tabela para adicionar um membro.' });
-                setIsSaving(false);
-                return;
+            // Se o admin selecionou uma imobiliária no filtro, use-a.
+            // Se não, o novo membro será associado ao próprio admin.
+            if (imobiliariaFilter !== 'all') {
+                newMemberData.imobiliariaId = imobiliariaFilter;
+            } else {
+                newMemberData.imobiliariaId = user.uid; // Associa ao próprio admin
             }
-            newMemberData.imobiliariaId = imobiliariaFilter;
         }
 
 
