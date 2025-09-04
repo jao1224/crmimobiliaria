@@ -248,7 +248,7 @@ export default function SettingsPage() {
             }
         } catch (error: any) {
             let description = "Ocorreu um erro ao criar o usuário.";
-            if (error.message.includes('auth/email-already-exists') || (error.details && error.details.message.includes('EMAIL_EXISTS'))) {
+            if (error.code === 'auth/email-already-exists' || error.message.includes('already-exists') || (error.details && error.details.message.includes('EMAIL_EXISTS'))) {
                 description = 'Este e-mail já está em uso por outra conta.';
             } else if (error.message.includes('permission-denied')) {
                 description = 'Você não tem permissão para executar esta ação.';

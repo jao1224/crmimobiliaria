@@ -1,5 +1,4 @@
 
-
 import {initializeApp} from "firebase-admin/app";
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {beforeUserCreated} from "firebase-functions/v2/identity";
@@ -8,7 +7,7 @@ import {PDFDocument, rgb, StandardFonts, PDFFont} from "pdf-lib";
 import * as nodemailer from "nodemailer";
 import {defineString} from "firebase-functions/params";
 import { getAuth } from "firebase-admin/auth";
-import { getFirestore } from "firebase-admin/firestore";
+import { getFirestore, writeBatch } from "firebase-admin/firestore";
 
 initializeApp();
 const adminAuth = getAuth();
@@ -81,26 +80,26 @@ interface ReportData {
 }
 
 export const createUser = onCall(async (request) => {
-    // Verifica se o usuário que está chamando a função é um admin de imobiliária ou o Admin do sistema.
     const callerRole = request.auth?.token.role;
-    const isAdmin = callerRole === 'Admin';
-    const isImobiliariaAdmin = callerRole === 'Imobiliária';
-
-    if (!isAdmin && !isImobiliariaAdmin) {
+    if (callerRole !== 'Admin' && callerRole !== 'Imobiliária') {
         throw new HttpsError('permission-denied', 'Apenas administradores podem criar usuários.');
     }
 
-    const { email, password, name, role, imobiliariaId: imobiliariaIdFromRequest } = request.data;
-    
-    let finalImobiliariaId: string | null = null;
-    
-    if (isAdmin) {
-        if (role === 'Imobiliária') {
-            finalImobiliariaId = null; // Será definido como o UID do novo usuário
-        } else if (imobiliariaIdFromRequest) {
-            finalImobiliariaId = imobiliariaIdFromRequest;
+    const { email, password, name, role, imobiliariaId } = request.data;
+    if (!email || !password || !name || !role) {
+        throw new HttpsError('invalid-argument', 'Dados insuficientes para criar o usuário.');
+    }
+
+    let finalImobiliariaId = null;
+
+    if (callerRole === 'Admin') {
+        // Se o Admin está criando uma Imobiliária, o ID será definido depois.
+        // Se estiver criando outro perfil, ele deve fornecer o imobiliariaId.
+        if (role !== 'Imobiliária' && !imobiliariaId) {
+            throw new HttpsError('invalid-argument', 'Ao criar um membro para uma imobiliária, o ID da imobiliária é necessário.');
         }
-    } else if (isImobiliariaAdmin) {
+        finalImobiliariaId = imobiliariaId;
+    } else { // callerRole === 'Imobiliária'
         finalImobiliariaId = request.auth?.token.imobiliariaId;
     }
 
@@ -111,30 +110,96 @@ export const createUser = onCall(async (request) => {
             displayName: name,
         });
 
-        // Se um Admin está criando uma imobiliária, o ID dela é o ID do novo usuário
-        if (isAdmin && role === 'Imobiliária') {
+        // Se um Admin está criando uma Imobiliária, o ID dela se torna o próprio UID do novo usuário.
+        if (callerRole === 'Admin' && role === 'Imobiliária') {
             finalImobiliariaId = userRecord.uid;
         }
         
-        // Define as custom claims (role e imobiliariaId) para o novo usuário.
         await adminAuth.setCustomUserClaims(userRecord.uid, { role, imobiliariaId: finalImobiliariaId });
 
-        // Salva informações adicionais no Firestore.
         await adminDb.collection('users').doc(userRecord.uid).set({
             uid: userRecord.uid,
             name,
             email,
             role,
-            imobiliariaId: finalImobiliariaId, // Salva o ID da imobiliária no documento do usuário
+            imobiliariaId: finalImobiliariaId,
             createdAt: new Date().toISOString(),
         });
 
         return { success: true, uid: userRecord.uid };
     } catch (error: any) {
         console.error('Error creating new user:', error);
-        throw new HttpsError('internal', error.message, error);
+        if (error.code === 'auth/email-already-exists') {
+             throw new HttpsError('already-exists', 'Este e-mail já está em uso por outra conta.');
+        }
+        throw new HttpsError('internal', 'Ocorreu um erro interno ao criar o usuário.', error);
     }
 });
+
+
+export const deleteUser = onCall(async (request) => {
+    const callerUid = request.auth?.token.uid;
+    const callerRole = request.auth?.token.role;
+    const targetUid = request.data.uid;
+
+    if (!callerUid) {
+        throw new HttpsError('unauthenticated', 'Ação não autenticada.');
+    }
+    if (!targetUid) {
+        throw new HttpsError('invalid-argument', 'O ID do usuário a ser excluído não foi fornecido.');
+    }
+    if (callerUid === targetUid) {
+        throw new HttpsError('invalid-argument', 'Você não pode excluir sua própria conta.');
+    }
+
+    try {
+        const targetUser = await adminAuth.getUser(targetUid);
+        const targetRole = targetUser.customClaims?.role;
+
+        if (targetRole === 'Admin') {
+            throw new HttpsError('permission-denied', 'Contas de Admin não podem ser excluídas por esta função.');
+        }
+        
+        const batch = writeBatch(adminDb);
+
+        // Se o chamador é o Admin Geral, ele tem permissão
+        if (callerRole === 'Admin') {
+            await adminAuth.deleteUser(targetUid);
+            const userDocRef = adminDb.collection('users').doc(targetUid);
+            batch.delete(userDocRef);
+            await batch.commit();
+            return { success: true, message: 'Usuário excluído com sucesso pelo Admin.' };
+        }
+
+        // Se o chamador é um Admin de Imobiliária
+        if (callerRole === 'Imobiliária') {
+            const callerImobiliariaId = request.auth?.token.imobiliariaId;
+            const targetImobiliariaId = targetUser.customClaims?.imobiliariaId;
+
+            if (callerImobiliariaId && callerImobiliariaId === targetImobiliariaId) {
+                await adminAuth.deleteUser(targetUid);
+                const userDocRef = adminDb.collection('users').doc(targetUid);
+                batch.delete(userDocRef);
+                await batch.commit();
+                return { success: true, message: 'Membro da equipe excluído.' };
+            } else {
+                throw new HttpsError('permission-denied', 'Você só pode excluir membros da sua própria imobiliária.');
+            }
+        }
+        
+        // Se não for nenhum dos casos acima, nega a permissão
+        throw new HttpsError('permission-denied', 'Você não tem permissão para excluir este usuário.');
+
+    } catch (error: any) {
+        if (error instanceof HttpsError) {
+            throw error;
+        }
+        console.error("Erro ao excluir usuário:", error);
+        throw new HttpsError('internal', 'Ocorreu um erro interno ao tentar excluir o usuário.');
+    }
+});
+
+
 
 // Esta função adiciona custom claims ao criar um usuário diretamente pelo Firebase Auth (ex: no registro).
 export const addRoleOnCreate = beforeUserCreated(async (event) => {
