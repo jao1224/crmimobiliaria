@@ -81,6 +81,7 @@ interface ReportData {
 }
 
 export const createUser = onCall(async (request) => {
+    // Verifica se o usuário que está chamando a função é um admin de imobiliária ou o Admin do sistema.
     const callerRole = request.auth?.token.role;
     const isAdmin = callerRole === 'Admin';
     const isImobiliariaAdmin = callerRole === 'Imobiliária';
@@ -91,21 +92,17 @@ export const createUser = onCall(async (request) => {
 
     const { email, password, name, role, imobiliariaId: imobiliariaIdFromRequest } = request.data;
     
-    // Admin do sistema pode criar uma imobiliária, o ID será o do novo usuário.
-    // Para Admin de Imobiliária, usa o ID do seu próprio token.
-    // Se Admin Geral cria para uma imobiliária, usa o ID enviado na requisição.
-    let finalImobiliariaId = request.auth?.token.imobiliariaId;
-
+    let finalImobiliariaId: string | null = null;
+    
     if (isAdmin) {
         if (role === 'Imobiliária') {
-            finalImobiliariaId = null; // Será definido depois
+            finalImobiliariaId = null; // Será definido como o UID do novo usuário
         } else if (imobiliariaIdFromRequest) {
             finalImobiliariaId = imobiliariaIdFromRequest;
-        } else {
-            finalImobiliariaId = null; // Usuário do Admin sem imobiliária
         }
+    } else if (isImobiliariaAdmin) {
+        finalImobiliariaId = request.auth?.token.imobiliariaId;
     }
-
 
     try {
         const userRecord = await adminAuth.createUser({
@@ -138,64 +135,6 @@ export const createUser = onCall(async (request) => {
         throw new HttpsError('internal', error.message, error);
     }
 });
-
-export const deleteUser = onCall(async (request) => {
-    // 1. Validar autenticação básica
-    const callingUid = request.auth?.token.uid;
-    if (!callingUid) {
-        throw new HttpsError('unauthenticated', 'Ação não autenticada.');
-    }
-    const callerRole = request.auth.token.role;
-    
-    const { uid: uidToDelete } = request.data;
-    if (!uidToDelete) {
-        throw new HttpsError('invalid-argument', 'O ID do usuário a ser excluído é obrigatório.');
-    }
-
-    // 2. Proteger contra autoexclusão
-    if (uidToDelete === callingUid) {
-        throw new HttpsError('invalid-argument', 'Você não pode excluir sua própria conta.');
-    }
-
-    try {
-        const userToDeleteRecord = await adminAuth.getUser(uidToDelete);
-        const userToDeleteClaims = userToDeleteRecord.customClaims || {};
-
-        let hasPermission = false;
-        
-        // REGRA 1: Admin Geral pode excluir qualquer um, exceto outro Admin Geral.
-        if (callerRole === 'Admin') {
-            if (userToDeleteClaims.role === 'Admin') {
-                 throw new HttpsError('permission-denied', 'Administradores do sistema não podem ser excluídos.');
-            }
-            hasPermission = true;
-        } 
-        // REGRA 2: Admin de Imobiliária só pode excluir membros da sua própria imobiliária.
-        else if (callerRole === 'Imobiliária') {
-            const callerImobiliariaId = request.auth.token.imobiliariaId;
-            if (userToDeleteClaims.imobiliariaId === callerImobiliariaId) {
-                hasPermission = true;
-            }
-        }
-        
-        if (!hasPermission) {
-            throw new HttpsError('permission-denied', 'Você não tem permissão para excluir este usuário.');
-        }
-
-        await adminAuth.deleteUser(uidToDelete);
-        await adminDb.collection('users').doc(uidToDelete).delete();
-        
-        return { success: true, message: `Usuário ${uidToDelete} excluído com sucesso.` };
-
-    } catch (error: any) {
-        if (error instanceof HttpsError) {
-            throw error;
-        }
-        console.error('Error deleting user:', error);
-        throw new HttpsError('internal', 'Ocorreu um erro interno ao tentar excluir o usuário.', error.message);
-    }
-});
-
 
 // Esta função adiciona custom claims ao criar um usuário diretamente pelo Firebase Auth (ex: no registro).
 export const addRoleOnCreate = beforeUserCreated(async (event) => {
@@ -444,3 +383,6 @@ export const generateContractPdf = onCall<ContractData, Promise<{pdfBase64: stri
 
   return {pdfBase64};
 });
+
+    
+    
