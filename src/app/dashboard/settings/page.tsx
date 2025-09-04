@@ -213,7 +213,10 @@ export default function SettingsPage() {
 
     const handleAddTeamMember = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        if (!user) return;
+        if (!user || !userData) {
+            toast({ variant: 'destructive', title: 'Erro', description: 'Usuário não autenticado ou dados de perfil não carregados.' });
+            return;
+        }
         
         setIsSaving(true);
 
@@ -224,13 +227,13 @@ export default function SettingsPage() {
             name: formData.get("name") as string,
             role: formData.get("role") as string,
         };
-
+        
         if (isAdmin) {
              const selectedImobiliariaId = formData.get("imobiliariaId") as string;
-             // Se 'admin' for selecionado, não passa imobiliariaId para que a função use o UID do Admin
-             if (selectedImobiliariaId && selectedImobiliariaId !== 'admin') {
-                newMemberData.imobiliariaId = selectedImobiliariaId;
-             }
+             // Se nenhum for selecionado, associa ao próprio Admin.
+             newMemberData.imobiliariaId = selectedImobiliariaId || user.uid;
+        } else {
+             newMemberData.imobiliariaId = userData.imobiliariaId;
         }
 
         if (!newMemberData.password) {
@@ -253,15 +256,9 @@ export default function SettingsPage() {
             }
         } catch (error: any) {
             console.error("Cloud function error:", error);
-            let description = "Ocorreu um erro ao criar o usuário.";
-             if (error.code === 'functions/already-exists' || (error.details && error.details.message?.includes('EMAIL_EXISTS'))) {
-                description = 'Este e-mail já está em uso por outra conta.';
-            } else if (error.code === 'functions/permission-denied') {
-                description = 'Você não tem permissão para executar esta ação.';
-            } else if (error.details) {
-                description = error.details.message || description;
-            }
-            toast({ variant: "destructive", title: "Erro na Criação", description });
+            const defaultMessage = "Ocorreu um erro ao criar o usuário.";
+            const errorMessage = error.details?.message || error.message || defaultMessage;
+            toast({ variant: "destructive", title: "Erro na Criação", description: errorMessage });
         } finally {
             setIsSaving(false);
         }
@@ -629,7 +626,6 @@ export default function SettingsPage() {
                                                                 <SelectValue placeholder="Associar a uma imobiliária (opcional)" />
                                                             </SelectTrigger>
                                                             <SelectContent>
-                                                                <SelectItem value="admin">Nenhuma (Vincular ao Admin)</SelectItem>
                                                                 {imobiliarias.map(imob => (
                                                                     <SelectItem key={imob.id} value={imob.id}>{imob.name}</SelectItem>
                                                                 ))}
@@ -1028,4 +1024,3 @@ export default function SettingsPage() {
         </div>
     );
 }
-
