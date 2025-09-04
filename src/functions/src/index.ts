@@ -79,7 +79,6 @@ interface ReportData {
 }
 
 export const createUser = onCall(async (request) => {
-    // 1. Verifica se o usuário chamador está autenticado
     if (!request.auth) {
         throw new HttpsError('unauthenticated', 'A requisição requer um usuário autenticado.');
     }
@@ -89,7 +88,6 @@ export const createUser = onCall(async (request) => {
     const imobiliariaIdFromRequest = request.data.imobiliariaId;
 
     try {
-        // 2. Busca os dados do chamador no Firestore como fonte da verdade
         const callerDocSnap = await adminDb.collection('users').doc(callerUid).get();
         if (!callerDocSnap.exists) {
             throw new HttpsError('not-found', 'Não foi possível encontrar os dados do seu usuário para verificar as permissões.');
@@ -97,13 +95,12 @@ export const createUser = onCall(async (request) => {
         const callerData = callerDocSnap.data()!;
         const callerRole = callerData.role;
 
-        // 3. Verifica a permissão para criar usuários
         if (callerRole !== 'Admin' && callerRole !== 'Imobiliária') {
             throw new HttpsError('permission-denied', 'Você não tem permissão para criar usuários.');
         }
 
-        // 4. Determina o imobiliariaId para o novo usuário de forma segura
         let newMemberImobiliariaId: string;
+
         if (callerRole === 'Imobiliária') {
             newMemberImobiliariaId = callerData.imobiliariaId || callerUid;
         } else { // callerRole === 'Admin'
@@ -114,14 +111,11 @@ export const createUser = onCall(async (request) => {
             throw new HttpsError('internal', 'O ID da imobiliária não pôde ser determinado. Contate o suporte.');
         }
         
-        // 5. Cria o usuário na autenticação
         const userRecord = await adminAuth.createUser({ email, password, displayName: name });
 
-        // 6. Define as custom claims (perfil e imobiliária)
         const claims = { role, imobiliariaId: newMemberImobiliariaId };
         await adminAuth.setCustomUserClaims(userRecord.uid, claims);
 
-        // 7. Salva informações adicionais no Firestore
         await adminDb.collection('users').doc(userRecord.uid).set({
             uid: userRecord.uid,
             name,
@@ -154,7 +148,7 @@ export const addRoleOnCreate = beforeUserCreated(async (event) => {
     try {
         const allUsers = await adminAuth.listUsers(1);
         if (allUsers.users.length === 0) {
-             const imobiliariaId = user.uid;
+             const imobiliariaId = user.uid; // O ID da imobiliária do Admin é seu próprio UID
              await adminAuth.setCustomUserClaims(user.uid, { role: 'Admin', imobiliariaId });
              await userDocRef.set({ role: 'Admin', imobiliariaId, uid: user.uid, name: user.displayName, email: user.email }, { merge: true });
              return;
@@ -167,6 +161,7 @@ export const addRoleOnCreate = beforeUserCreated(async (event) => {
                 const claims: { [key: string]: any } = { role: userData.role };
                 let imobiliariaId = userData.imobiliariaId;
 
+                // Se o usuário for do tipo Imobiliária e não tiver um imobiliariaId, o uid dele é o imobiliariaId.
                 if (userData.role === 'Imobiliária' && !imobiliariaId) {
                     imobiliariaId = user.uid;
                     claims.imobiliariaId = imobiliariaId;
