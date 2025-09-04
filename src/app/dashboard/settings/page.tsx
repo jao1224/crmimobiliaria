@@ -224,9 +224,15 @@ export default function SettingsPage() {
             role: formData.get("role") as string,
         };
 
-        if (isAdmin && imobiliariaFilter !== 'all') {
+        if (isAdmin) {
+             if (imobiliariaFilter === 'all') {
+                toast({ variant: 'destructive', title: 'Erro', description: 'Como Admin, você deve selecionar uma imobiliária no filtro da tabela para adicionar um membro.' });
+                setIsSaving(false);
+                return;
+            }
             newMemberData.imobiliariaId = imobiliariaFilter;
         }
+
 
         if (!newMemberData.password) {
             toast({ variant: 'destructive', title: 'Erro', description: 'O campo de senha é obrigatório.' });
@@ -1004,5 +1010,3 @@ export default function SettingsPage() {
         </div>
     );
 }
-
-    

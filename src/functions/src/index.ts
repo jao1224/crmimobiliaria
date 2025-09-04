@@ -93,13 +93,13 @@ export const createUser = onCall(async (request) => {
     let finalImobiliariaId = null;
 
     if (callerRole === 'Admin') {
-        // Se o Admin está criando uma Imobiliária, o ID será definido depois.
-        // Se estiver criando outro perfil, ele deve fornecer o imobiliariaId.
+        // Admin geral deve fornecer um imobiliariaId para criar um membro
         if (role !== 'Imobiliária' && !imobiliariaId) {
             throw new HttpsError('invalid-argument', 'Ao criar um membro para uma imobiliária, o ID da imobiliária é necessário.');
         }
         finalImobiliariaId = imobiliariaId;
     } else { // callerRole === 'Imobiliária'
+        // Admin de imobiliária usa seu próprio imobiliariaId
         finalImobiliariaId = request.auth?.token.imobiliariaId;
     }
 
@@ -448,7 +448,3 @@ export const generateContractPdf = onCall<ContractData, Promise<{pdfBase64: stri
 
   return {pdfBase64};
 });
-
-    
-    
-    
