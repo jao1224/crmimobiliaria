@@ -146,7 +146,6 @@ export const deleteUser = onCall(async (request) => {
         throw new HttpsError('invalid-argument', 'O ID do usuário a ser excluído é obrigatório.');
     }
     
-    // Previne auto-exclusão
     if (uidToDelete === callingUid) {
          throw new HttpsError('invalid-argument', 'Você não pode excluir sua própria conta.');
     }
@@ -159,16 +158,14 @@ export const deleteUser = onCall(async (request) => {
             throw new HttpsError('permission-denied', 'A conta de Administrador do sistema não pode ser excluída.');
         }
         
-        if (isCallerImobiliariaAdmin) {
-            if (userToDeleteClaims.imobiliariaId !== callingUserClaims.uid) {
+        // Se quem chama é um admin de imobiliária, ele só pode excluir usuários da sua imobiliária
+        if (isCallerImobiliariaAdmin && !isCallerAdmin) {
+            if (userToDeleteClaims.imobiliariaId !== callingUserClaims.imobiliariaId) {
                  throw new HttpsError('permission-denied', 'Você só pode excluir usuários da sua própria imobiliária.');
             }
         }
         
-        // Excluir do Firebase Auth
         await adminAuth.deleteUser(uidToDelete);
-        
-        // Excluir do Firestore
         await adminDb.collection('users').doc(uidToDelete).delete();
         
         return { success: true };
@@ -191,11 +188,10 @@ export const addRoleOnCreate = beforeUserCreated(async (event) => {
     try {
         // Verifica se já existe algum usuário. Se não, este é o primeiro e será Admin.
         const allUsers = await adminAuth.listUsers(1);
-        // Se a lista de usuários tiver 0 ou 1 (apenas o que está sendo criado), ele é o primeiro.
-        if (allUsers.users.length <= 1) {
-             await adminAuth.setCustomUserClaims(user.uid, { role: 'Admin', imobiliariaId: null });
+        if (allUsers.users.length === 0) {
+             await adminAuth.setCustomUserClaims(user.uid, { role: 'Admin' });
              // Também salva no documento do Firestore, pois o gatilho pode não ter essa info ainda
-             await userDocRef.set({ role: 'Admin', imobiliariaId: null }, { merge: true });
+             await userDocRef.set({ role: 'Admin' }, { merge: true });
              return;
         }
 
@@ -431,7 +427,3 @@ export const generateContractPdf = onCall<ContractData, Promise<{pdfBase64: stri
 
   return {pdfBase64};
 });
-    
-    
-
-    
