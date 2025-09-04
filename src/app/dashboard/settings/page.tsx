@@ -114,7 +114,7 @@ export default function SettingsPage() {
         if (hasPermissionForTeamTabs && user) {
             fetchTeamData(user);
         }
-    }, [hasPermissionForTeamTabs, user]);
+    }, [hasPermissionForTeamTabs, user, activeProfile]);
 
     const fetchTeamData = async (currentUser: User) => {
         if (!currentUser) return;
@@ -373,11 +373,16 @@ export default function SettingsPage() {
     };
 
     const handleChangeUserRole = async (memberId: string, newRole: UserProfile) => {
+        if (!user) return;
+        
         setIsSaving(true);
         try {
             const userRef = doc(db, 'users', memberId);
             await updateDoc(userRef, { role: newRole });
-            if (user) await fetchTeamData(user);
+            
+            // Re-fetch data after role change
+            await fetchTeamData(user);
+            
             toast({ title: "Sucesso", description: `Função do usuário alterada para ${newRole}.` });
         } catch (error) {
              toast({ variant: "destructive", title: "Erro", description: "Não foi possível alterar a função do usuário." });
@@ -649,7 +654,7 @@ export default function SettingsPage() {
                                                             <DropdownMenuContent>
                                                                 <DropdownMenuLabel>Ações</DropdownMenuLabel>
                                                                 <DropdownMenuSub>
-                                                                    <DropdownMenuSubTrigger disabled={member.role === 'Admin'}>Alterar Função</DropdownMenuSubTrigger>
+                                                                    <DropdownMenuSubTrigger disabled={member.role === 'Admin' || member.id === user?.uid}>Alterar Função</DropdownMenuSubTrigger>
                                                                     <DropdownMenuSubContent>
                                                                         {creatableRoles.map(role => (
                                                                             <DropdownMenuItem 
@@ -662,7 +667,7 @@ export default function SettingsPage() {
                                                                         ))}
                                                                     </DropdownMenuSubContent>
                                                                 </DropdownMenuSub>
-                                                                <DropdownMenuItem className="text-destructive" disabled={member.role === 'Admin'}>Remover</DropdownMenuItem>
+                                                                <DropdownMenuItem className="text-destructive" disabled={member.role === 'Admin' || member.id === user?.uid}>Remover</DropdownMenuItem>
                                                             </DropdownMenuContent>
                                                         </DropdownMenu>
                                                     </TableCell>
