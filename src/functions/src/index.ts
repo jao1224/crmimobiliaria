@@ -104,16 +104,24 @@ export const createUser = onCall(async (request) => {
         if (callerRole === 'Imobiliária') {
             newMemberImobiliariaId = callerData.imobiliariaId || callerUid;
         } else { // callerRole === 'Admin'
-            newMemberImobiliariaId = imobiliariaIdFromRequest || callerData.imobiliariaId || callerUid;
+            newMemberImobiliariaId = imobiliariaIdFromRequest;
+            // Se um Admin está criando um corretor autônomo sem imobiliária, associa ao seu próprio ID
+             if (!newMemberImobiliariaId && (role === 'Corretor Autônomo' || role === 'Financeiro' || role === 'Vendedor')) {
+                newMemberImobiliariaId = callerData.imobiliariaId || callerUid;
+            }
         }
-
-        if (!newMemberImobiliariaId) {
-            throw new HttpsError('internal', 'O ID da imobiliária não pôde ser determinado. Contate o suporte.');
+        
+        // Validação final para garantir que um imobiliariaId será definido, exceto para novas imobiliárias
+        if (!newMemberImobiliariaId && role !== 'Imobiliária') {
+            throw new HttpsError('invalid-argument', 'O ID da imobiliária é necessário para criar este tipo de usuário.');
         }
         
         const userRecord = await adminAuth.createUser({ email, password, displayName: name });
+        
+        // Para uma nova imobiliária, o ID dela é o UID do novo usuário.
+        const finalImobiliariaId = role === 'Imobiliária' ? userRecord.uid : newMemberImobiliariaId;
 
-        const claims = { role, imobiliariaId: newMemberImobiliariaId };
+        const claims = { role, imobiliariaId: finalImobiliariaId };
         await adminAuth.setCustomUserClaims(userRecord.uid, claims);
 
         await adminDb.collection('users').doc(userRecord.uid).set({
@@ -121,7 +129,7 @@ export const createUser = onCall(async (request) => {
             name,
             email,
             role,
-            imobiliariaId: newMemberImobiliariaId,
+            imobiliariaId: finalImobiliariaId,
             createdAt: new Date().toISOString(),
         });
 
@@ -150,7 +158,13 @@ export const addRoleOnCreate = beforeUserCreated(async (event) => {
         if (allUsers.users.length === 0) {
              const imobiliariaId = user.uid; // O ID da imobiliária do Admin é seu próprio UID
              await adminAuth.setCustomUserClaims(user.uid, { role: 'Admin', imobiliariaId });
-             await userDocRef.set({ role: 'Admin', imobiliariaId, uid: user.uid, name: user.displayName, email: user.email }, { merge: true });
+             await userDocRef.set({ 
+                role: 'Admin', 
+                imobiliariaId, 
+                uid: user.uid, 
+                name: user.displayName || 'Admin', 
+                email: user.email 
+            }, { merge: true });
              return;
         }
 
