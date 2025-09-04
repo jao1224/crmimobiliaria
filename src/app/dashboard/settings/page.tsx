@@ -87,6 +87,8 @@ export default function SettingsPage() {
         return teamMembers.filter(m => m.imobiliariaId === imobiliariaId).length;
     };
 
+    const [selectedRole, setSelectedRole] = useState<string>('');
+
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -112,6 +114,13 @@ export default function SettingsPage() {
 
         return () => unsubscribe();
     }, [hasPermissionForTeamTabs]);
+
+    // Reset do formulário quando o diálogo for fechado
+    useEffect(() => {
+        if (!isTeamMemberDialogOpen) {
+            setSelectedRole('');
+        }
+    }, [isTeamMemberDialogOpen]);
 
     const fetchTeamData = async (currentUser: User) => {
         if (!currentUser) return;
@@ -197,6 +206,25 @@ export default function SettingsPage() {
 
     const handleAddTeamMember = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
+        
+        // Verificar se o usuário tem permissão
+        if (!hasPermissionForTeamTabs) {
+            toast({ variant: 'destructive', title: 'Erro', description: 'Você não tem permissão para adicionar membros.' });
+            return;
+        }
+
+        // Verificar se o usuário está autenticado
+        if (!user) {
+            toast({ variant: 'destructive', title: 'Erro', description: 'Você precisa estar logado para adicionar membros.' });
+            return;
+        }
+
+        // Verificar se o usuário tem dados no Firestore
+        if (!userData) {
+            toast({ variant: 'destructive', title: 'Erro', description: 'Dados do usuário não encontrados. Tente fazer login novamente.' });
+            return;
+        }
+        
         setIsSaving(true);
 
         const formData = new FormData(event.currentTarget);
@@ -204,36 +232,104 @@ export default function SettingsPage() {
             email: formData.get("email") as string,
             password: formData.get("password") as string,
             name: formData.get("name") as string,
-            role: formData.get("role") as string,
+            role: selectedRole || formData.get("role") as string,
         };
 
-        if (!newMemberData.password) {
+        console.log('Dados do novo membro:', newMemberData);
+
+        // Validação dos campos
+        if (!newMemberData.name || newMemberData.name.trim() === '') {
+            toast({ variant: 'destructive', title: 'Erro', description: 'O campo de nome é obrigatório.' });
+            setIsSaving(false);
+            return;
+        }
+
+        if (!newMemberData.email || newMemberData.email.trim() === '') {
+            toast({ variant: 'destructive', title: 'Erro', description: 'O campo de e-mail é obrigatório.' });
+            setIsSaving(false);
+            return;
+        }
+
+        if (!newMemberData.password || newMemberData.password.trim() === '') {
             toast({ variant: 'destructive', title: 'Erro', description: 'O campo de senha é obrigatório.' });
             setIsSaving(false);
             return;
         }
 
+        if (!newMemberData.role || newMemberData.role.trim() === '') {
+            toast({ variant: 'destructive', title: 'Erro', description: 'O campo de função é obrigatório.' });
+            setIsSaving(false);
+            return;
+        }
+
         try {
+            console.log('App Firebase:', app);
+            console.log('Usuário atual:', user);
+            console.log('Perfil ativo:', activeProfile);
+            console.log('Dados do usuário:', userData);
+            console.log('Permissões para equipes:', hasPermissionForTeamTabs);
+            console.log('É admin:', isAdmin);
+            
             const functions = getFunctions(app);
+            console.log('Funções Firebase:', functions);
+            
+            // Verificar se as funções estão disponíveis
+            if (!functions) {
+                throw new Error('Funções Firebase não estão disponíveis');
+            }
+            
             const createUser = httpsCallable(functions, 'createUser');
+            console.log('Função createUser criada:', createUser);
+            console.log('Chamando função createUser...');
+            console.log('Dados enviados:', JSON.stringify(newMemberData));
+            
+            // Verificar se a função está disponível
+            if (!createUser) {
+                throw new Error('Função createUser não está disponível');
+            }
+            
             const result = await createUser(newMemberData) as any;
+            console.log('Resultado da função:', result);
+            console.log('Resultado data:', result.data);
+
+            // Verificar se o resultado é válido
+            if (!result || !result.data) {
+                throw new Error('Resposta inválida da função createUser');
+            }
 
             if (result.data.success) {
                 if (user) await fetchTeamData(user);
                 toast({ title: "Sucesso!", description: "Novo membro da equipe criado." });
                 setTeamMemberDialogOpen(false);
+                setSelectedRole(''); // Reset do campo role
             } else {
+                console.error('Erro retornado pela função:', result.data.error);
                 throw new Error(result.data.error || "A função de nuvem retornou um erro.");
             }
         } catch (error: any) {
+            console.error('Erro completo:', error);
+            console.error('Mensagem do erro:', error.message);
+            console.error('Detalhes do erro:', error.details);
+            
             let description = "Ocorreu um erro ao criar o usuário.";
             if (error.message.includes('auth/email-already-exists') || (error.details && error.details.message.includes('EMAIL_EXISTS'))) {
                 description = 'Este e-mail já está em uso por outra conta.';
             } else if (error.message.includes('permission-denied')) {
                 description = 'Você não tem permissão para executar esta ação.';
+            } else if (error.message.includes('unavailable')) {
+                description = 'Serviço temporariamente indisponível. Tente novamente em alguns instantes.';
+            } else if (error.message.includes('timeout')) {
+                description = 'A operação demorou muito para responder. Tente novamente.';
+            } else if (error.message.includes('Função createUser não está disponível')) {
+                description = 'Serviço de criação de usuários não está disponível. Tente novamente em alguns instantes.';
+            } else if (error.message.includes('Resposta inválida da função createUser')) {
+                description = 'Erro na comunicação com o servidor. Tente novamente.';
+            } else if (error.message.includes('Funções Firebase não estão disponíveis')) {
+                description = 'Serviços do Firebase não estão disponíveis. Tente novamente em alguns instantes.';
             }
             toast({ variant: "destructive", title: "Erro na Criação", description });
         } finally {
+            console.log('Finalizando operação de adição de membro');
             setIsSaving(false);
         }
     };
@@ -561,7 +657,7 @@ export default function SettingsPage() {
                                                 </div>
                                                 <div className="space-y-2">
                                                     <Label htmlFor="role">Função</Label>
-                                                    <Select name="role" required>
+                                                    <Select value={selectedRole} onValueChange={setSelectedRole} required>
                                                         <SelectTrigger>
                                                             <SelectValue placeholder="Selecione uma função" />
                                                         </SelectTrigger>
