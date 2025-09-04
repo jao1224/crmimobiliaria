@@ -79,7 +79,6 @@ export default function SettingsPage() {
     const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
     const [teams, setTeams] = useState<Team[]>([]);
     const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
-    const [isTeamMemberDialogOpen, setTeamMemberDialogOpen] = useState(false);
     const [isTeamDialogOpen, setTeamDialogOpen] = useState(false);
     const [isManageMembersDialogOpen, setManageMembersDialogOpen] = useState(false);
     
@@ -206,52 +205,6 @@ export default function SettingsPage() {
                 description = 'A nova senha é muito fraca. Use pelo menos 6 caracteres.';
             }
             toast({ variant: 'destructive', title: 'Erro na Atualização', description });
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    const handleAddTeamMember = async (event: React.FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        if (!user) return;
-        
-        setIsSaving(true);
-
-        const formData = new FormData(event.currentTarget);
-        const newMemberData: { [key: string]: any } = {
-            email: formData.get("email") as string,
-            password: formData.get("password") as string,
-            name: formData.get("name") as string,
-            role: formData.get("role") as string,
-            imobiliariaId: formData.get("imobiliariaId") as string || undefined,
-        };
-
-        if (!newMemberData.password) {
-            toast({ variant: 'destructive', title: 'Erro', description: 'O campo de senha é obrigatório.' });
-            setIsSaving(false);
-            return;
-        }
-
-        try {
-            const functions = getFunctions(app);
-            const createUser = httpsCallable(functions, 'createUser');
-            const result = await createUser(newMemberData) as any;
-
-            if (result.data.success) {
-                if (user) await fetchTeamData();
-                toast({ title: "Sucesso!", description: "Novo membro da equipe criado." });
-                setTeamMemberDialogOpen(false);
-            } else {
-                throw new Error(result.data.error || "A função de nuvem retornou um erro.");
-            }
-        } catch (error: any) {
-            let description = "Ocorreu um erro ao criar o usuário.";
-            if (error.code === 'functions/already-exists' || error.message.includes('already-exists') || (error.details && error.details.message.includes('EMAIL_EXISTS'))) {
-                description = 'Este e-mail já está em uso por outra conta.';
-            } else if (error.message.includes('permission-denied')) {
-                description = 'Você não tem permissão para executar esta ação.';
-            }
-            toast({ variant: "destructive", title: "Erro na Criação", description });
         } finally {
             setIsSaving(false);
         }
@@ -600,63 +553,6 @@ export default function SettingsPage() {
                                     <CardTitle>Membros da Equipe</CardTitle>
                                     <CardDescription>Gerencie sua equipe e suas funções.</CardDescription>
                                 </div>
-                                 <Dialog open={isTeamMemberDialogOpen} onOpenChange={setTeamMemberDialogOpen}>
-                                    <DialogTrigger asChild>
-                                        <Button><UserPlus className="mr-2 h-4 w-4"/>Adicionar Membro</Button>
-                                    </DialogTrigger>
-                                    <DialogContent>
-                                        <DialogHeader>
-                                            <DialogTitle>Adicionar Novo Membro</DialogTitle>
-                                            <DialogDescription>Preencha os detalhes para convidar um novo membro para a equipe.</DialogDescription>
-                                        </DialogHeader>
-                                        <form onSubmit={handleAddTeamMember}>
-                                            <div className="grid gap-4 py-4">
-                                                {isAdmin && (
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="imobiliariaId-member">Imobiliária</Label>
-                                                        <Select name="imobiliariaId">
-                                                            <SelectTrigger>
-                                                                <SelectValue placeholder="Associar a uma imobiliária" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem value="admin">Nenhuma (Vincular ao Admin)</SelectItem>
-                                                                {imobiliarias.map(imob => (
-                                                                    <SelectItem key={imob.id} value={imob.id}>{imob.name}</SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-                                                )}
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="name-member">Nome</Label>
-                                                    <Input id="name-member" name="name" placeholder="Nome completo" required />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="email-member">E-mail</Label>
-                                                    <Input id="email-member" name="email" type="email" placeholder="email@example.com" required />
-                                                </div>
-                                                 <div className="space-y-2">
-                                                    <Label htmlFor="password-member">Senha</Label>
-                                                    <Input id="password-member" name="password" type="password" placeholder="••••••••" required />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="role">Função</Label>
-                                                    <Select name="role" required>
-                                                        <SelectTrigger>
-                                                            <SelectValue placeholder="Selecione uma função" />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {creatableRoles.map(role => <SelectItem key={role} value={role}>{role}</SelectItem>)}
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-                                            </div>
-                                            <DialogFooter>
-                                                <Button type="submit" disabled={isSaving}>{isSaving ? "Salvando...": "Adicionar Membro"}</Button>
-                                            </DialogFooter>
-                                        </form>
-                                    </DialogContent>
-                                </Dialog>
                             </CardHeader>
                             <CardContent>
                                  <div className="mb-4 flex flex-wrap items-center gap-2">

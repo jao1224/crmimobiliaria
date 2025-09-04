@@ -79,62 +79,6 @@ interface ReportData {
     }
 }
 
-export const createUser = onCall(async (request) => {
-    const callerRole = request.auth?.token.role;
-    if (callerRole !== 'Admin' && callerRole !== 'Imobiliária') {
-        throw new HttpsError('permission-denied', 'Apenas administradores podem criar usuários.');
-    }
-
-    const { email, password, name, role, imobiliariaId } = request.data;
-    
-    let imobiliariaIdToAssign: string | undefined;
-
-    if (callerRole === 'Admin') {
-        // Se o Admin está criando e selecionou 'Nenhuma', usa o UID do próprio admin.
-        // Se selecionou uma imobiliária, usa o ID fornecido.
-        imobiliariaIdToAssign = imobiliariaId === 'admin' ? request.auth!.token.uid : imobiliariaId;
-    } else { // 'Imobiliária'
-        // Se um Admin de Imobiliária está criando, o membro é sempre da sua imobiliária.
-        imobiliariaIdToAssign = request.auth!.token.imobiliariaId;
-    }
-
-    if (!imobiliariaIdToAssign) {
-        throw new HttpsError('invalid-argument', 'O ID da imobiliária é necessário para criar um novo membro.');
-    }
-
-
-    try {
-        const userRecord = await adminAuth.createUser({
-            email,
-            password,
-            displayName: name,
-        });
-
-        const claims: { [key: string]: any } = { role, imobiliariaId: imobiliariaIdToAssign };
-        
-        // Define as custom claims (role e imobiliariaId) para o novo usuário.
-        await adminAuth.setCustomUserClaims(userRecord.uid, claims);
-
-        // Salva informações adicionais no Firestore.
-        await adminDb.collection('users').doc(userRecord.uid).set({
-            uid: userRecord.uid,
-            name,
-            email,
-            role,
-            imobiliariaId: imobiliariaIdToAssign,
-            createdAt: new Date().toISOString(),
-        });
-
-        return { success: true, uid: userRecord.uid };
-    } catch (error: any) {
-        console.error('Error creating new user:', error);
-         if (error.code === 'auth/email-already-exists') {
-            throw new HttpsError('already-exists', 'Este e-mail já está em uso por outra conta.');
-        }
-        throw new HttpsError('internal', "Ocorreu um erro interno no servidor ao criar o usuário.", error);
-    }
-});
-
 // Esta função adiciona custom claims ao criar um usuário diretamente pelo Firebase Auth (ex: no registro).
 export const addRoleOnCreate = beforeUserCreated(async (event) => {
     const user = event.data;
