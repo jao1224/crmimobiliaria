@@ -78,13 +78,13 @@ interface ReportData {
     }
 }
 
-export const createUser = onCall(async (request) => {
+export const createUser = onCall(async ({ data, auth }) => {
     // 1. Verifica se quem está chamando a função está autenticado
-    if (!request.auth) {
+    if (!auth) {
         throw new HttpsError('unauthenticated', 'A função deve ser chamada por um usuário autenticado.');
     }
-    const callerUid = request.auth.uid;
-    const { email, password, name, role } = request.data;
+    const callerUid = auth.uid;
+    const { email, password, name, role } = data;
     
     // 2. Busca os dados do usuário que está chamando a função (o chamador) do Firestore
     const callerDocRef = adminDb.collection('users').doc(callerUid);
@@ -390,3 +390,5 @@ export const generateContractPdf = onCall<ContractData, Promise<{pdfBase64: stri
 
   return {pdfBase64};
 });
+
+    
