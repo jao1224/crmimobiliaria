@@ -262,8 +262,10 @@ export default function SettingsPage() {
 
     const handleDeleteMember = async () => {
         if (!memberToDelete) return;
+        
         setIsSaving(true);
         try {
+            // A lógica de permissão está dentro da Cloud Function
             const functions = getFunctions(app);
             const deleteUser = httpsCallable(functions, 'deleteUser');
             await deleteUser({ uid: memberToDelete.id });
@@ -273,9 +275,12 @@ export default function SettingsPage() {
             setDeleteMemberDialogOpen(false);
             setMemberToDelete(null);
 
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error deleting user: ", error);
-            toast({ variant: "destructive", title: "Erro", description: "Não foi possível remover o membro." });
+            const defaultMessage = "Não foi possível remover o membro.";
+            // A HttpsError da Cloud Function tem detalhes no 'error.details.message'
+            const message = error.details?.message || defaultMessage;
+            toast({ variant: "destructive", title: "Erro", description: message });
         } finally {
             setIsSaving(false);
         }
@@ -442,6 +447,10 @@ export default function SettingsPage() {
     };
 
     const filteredMembers = teamMembers.filter(member => {
+        if (member.role === 'Imobiliária' || member.role === 'Admin') {
+            return false; // Exclui imobiliárias da aba Membros
+        }
+
         const searchLower = searchQuery.toLowerCase();
         const nameMatch = member.name.toLowerCase().includes(searchLower);
         const emailMatch = member.email.toLowerCase().includes(searchLower);
@@ -993,3 +1002,4 @@ export default function SettingsPage() {
         </div>
     );
 }
+
