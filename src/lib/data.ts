@@ -1,4 +1,5 @@
 
+
 import { db, storage } from './firebase';
 import { collection, getDocs, addDoc, doc, updateDoc, writeBatch, serverTimestamp, query, orderBy, limit, where, getDoc, setDoc, deleteDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -779,9 +780,16 @@ export const addNotification = async (notification: Omit<Notification, 'id' | 'c
 
 export const getNotifications = async (): Promise<Notification[]> => {
     const imobiliariaId = await getImobiliariaId();
-    const q = query(collection(db, 'notificacoes'), where("imobiliariaId", "==", imobiliariaId), orderBy('createdAt', 'desc'), limit(15));
+    const q = query(collection(db, 'notificacoes'), where("imobiliariaId", "==", imobiliariaId), limit(15));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
+    const notifications = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
+    
+    // Ordenar no lado do cliente
+    return notifications.sort((a, b) => {
+        const dateA = a.createdAt?.seconds ? new Date(a.createdAt.seconds * 1000) : new Date(0);
+        const dateB = b.createdAt?.seconds ? new Date(b.createdAt.seconds * 1000) : new Date(0);
+        return dateB.getTime() - dateA.getTime();
+    });
 };
 
 export const markNotificationsAsRead = async (): Promise<void> => {
