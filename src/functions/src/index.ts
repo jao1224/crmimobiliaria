@@ -133,9 +133,7 @@ export const deleteUser = onCall(async (request) => {
         throw new HttpsError('unauthenticated', 'Ação não autenticada.');
     }
 
-    const callingUserClaims = request.auth?.token;
     const { uid: uidToDelete } = request.data;
-    
     if (!uidToDelete) {
         throw new HttpsError('invalid-argument', 'O ID do usuário a ser excluído é obrigatório.');
     }
@@ -144,45 +142,45 @@ export const deleteUser = onCall(async (request) => {
     }
 
     try {
+        const callingUser = await adminAuth.getUser(callingUid);
         const userToDelete = await adminAuth.getUser(uidToDelete);
-        const userToDeleteClaims = userToDelete.customClaims || {};
-
-        const isCallerAdmin = callingUserClaims?.role === 'Admin';
-        const isCallerImobiliariaAdmin = callingUserClaims?.role === 'Imobiliária';
-
-        let canDelete = false;
-
+        
+        const isCallerAdmin = callingUser.customClaims?.role === 'Admin';
+        const isCallerImobiliariaAdmin = callingUser.customClaims?.role === 'Imobiliária';
+        
+        // REGRA 1: Admin do sistema pode deletar qualquer um, exceto outro Admin.
         if (isCallerAdmin) {
-            // REGRA 1: Admin Geral pode excluir qualquer um, menos outro Admin.
-            if (userToDeleteClaims.role === 'Admin') {
-                throw new HttpsError('permission-denied', 'A conta de Administrador do sistema não pode ser excluída.');
+            if (userToDelete.customClaims?.role === 'Admin') {
+                throw new HttpsError('permission-denied', 'Administradores do sistema não podem ser excluídos.');
             }
-            canDelete = true;
-        } else if (isCallerImobiliariaAdmin) {
-            // REGRA 2: Admin de Imobiliária só pode excluir membros da sua própria imobiliária.
-            if (userToDeleteClaims.imobiliariaId === callingUserClaims.imobiliariaId) {
-                canDelete = true;
-            } else {
-                 throw new HttpsError('permission-denied', 'Você só pode excluir usuários da sua própria imobiliária.');
+            // Permissão concedida para Admin do sistema
+        } 
+        // REGRA 2: Admin de imobiliária só pode deletar usuários da sua própria imobiliária.
+        else if (isCallerImobiliariaAdmin) {
+            const callerImobiliariaId = callingUser.customClaims?.imobiliariaId;
+            const targetImobiliariaId = userToDelete.customClaims?.imobiliariaId;
+            if (!callerImobiliariaId || callerImobiliariaId !== targetImobiliariaId) {
+                throw new HttpsError('permission-denied', 'Você só tem permissão para excluir usuários da sua própria imobiliária.');
             }
+             // Permissão concedida para Admin de imobiliária
+        } 
+        // REGRA 3: Outros perfis não podem excluir ninguém.
+        else {
+            throw new HttpsError('permission-denied', 'Você não tem permissão para executar esta ação.');
         }
-        
-        if (!canDelete) {
-            throw new HttpsError('permission-denied', 'Você não tem permissão para excluir este usuário.');
-        }
-        
-        // Se todas as verificações passaram, exclui o usuário.
+
+        // Se chegou até aqui, a permissão foi concedida.
         await adminAuth.deleteUser(uidToDelete);
         await adminDb.collection('users').doc(uidToDelete).delete();
         
-        return { success: true };
+        return { success: true, message: `Usuário ${uidToDelete} excluído com sucesso.` };
 
     } catch (error: any) {
-        console.error('Error deleting user:', error);
         if (error instanceof HttpsError) {
             throw error;
         }
-        throw new HttpsError('internal', 'Ocorreu um erro interno ao tentar excluir o usuário.', error);
+        console.error('Error deleting user:', error);
+        throw new HttpsError('internal', 'Ocorreu um erro interno ao tentar excluir o usuário.', error.message);
     }
 });
 
