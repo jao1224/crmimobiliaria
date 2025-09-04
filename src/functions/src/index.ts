@@ -79,6 +79,7 @@ interface ReportData {
 }
 
 export const createUser = onCall(async (request) => {
+    // 1. Verificação de Autenticação
     if (!request.auth) {
         throw new HttpsError('unauthenticated', 'A requisição requer um usuário autenticado.');
     }
@@ -88,6 +89,7 @@ export const createUser = onCall(async (request) => {
     const imobiliariaIdFromRequest = request.data.imobiliariaId;
 
     try {
+        // 2. Verificação de Permissão (Fonte da Verdade: Firestore)
         const callerDocSnap = await adminDb.collection('users').doc(callerUid).get();
         if (!callerDocSnap.exists) {
             throw new HttpsError('not-found', 'Não foi possível encontrar os dados do seu usuário para verificar as permissões.');
@@ -95,45 +97,44 @@ export const createUser = onCall(async (request) => {
         const callerData = callerDocSnap.data()!;
         const callerRole = callerData.role;
 
+        // Apenas 'Admin' e 'Imobiliária' podem criar usuários.
         if (callerRole !== 'Admin' && callerRole !== 'Imobiliária') {
             throw new HttpsError('permission-denied', 'Você não tem permissão para criar usuários.');
         }
 
-        let newMemberImobiliariaId: string;
-
-        if (callerRole === 'Imobiliária') {
-            // Se o chamador é uma imobiliária, o novo membro pertence à sua imobiliária.
-            newMemberImobiliariaId = callerData.imobiliariaId || callerUid;
+        // 3. Lógica Clara de Atribuição do `imobiliariaId`
+        let finalImobiliariaId: string;
+        if (role === 'Imobiliária') {
+            // Se está criando uma nova imobiliária, o ID dela será gerado a partir do UID do novo usuário.
+            // A atribuição final acontece após a criação do usuário.
+            finalImobiliariaId = ''; // Será definido depois
+        } else if (callerRole === 'Imobiliária') {
+            // Se um admin de imobiliária cria um membro, ele pertence à sua imobiliária.
+            finalImobiliariaId = callerData.imobiliariaId || callerUid;
         } else { // callerRole === 'Admin'
-            // Se o Admin está criando, usa o ID da imobiliária enviado no formulário.
-            newMemberImobiliariaId = imobiliariaIdFromRequest;
-            
-            // Fallback: Se o Admin cria um corretor sem especificar imobiliária, associa ao ID do próprio Admin.
-            // Isso é útil para corretores autônomos gerenciados pelo Admin do sistema.
-             if (!newMemberImobiliariaId && (role === 'Corretor Autônomo' || role === 'Financeiro' || role === 'Vendedor')) {
-                newMemberImobiliariaId = callerData.imobiliariaId || callerUid;
+            // Se o Admin do sistema cria, ele deve especificar a imobiliária.
+            if (!imobiliariaIdFromRequest) {
+                 throw new HttpsError('invalid-argument', 'Como Admin, você precisa especificar a qual imobiliária este novo membro pertence.');
             }
+            finalImobiliariaId = imobiliariaIdFromRequest;
         }
         
-        // Validação final para garantir que um imobiliariaId será definido, exceto para novas imobiliárias
-        if (!newMemberImobiliariaId && role !== 'Imobiliária') {
-            throw new HttpsError('invalid-argument', 'O ID da imobiliária é necessário para criar este tipo de usuário.');
-        }
-        
+        // 4. Criação do Usuário
         const userRecord = await adminAuth.createUser({ email, password, displayName: name });
         
-        // Para uma nova imobiliária, o ID dela é o UID do novo usuário.
-        const finalImobiliariaId = role === 'Imobiliária' ? userRecord.uid : newMemberImobiliariaId;
-
-        const claims = { role, imobiliariaId: finalImobiliariaId };
+        // 5. Definição do ID Final e Custom Claims
+        const imobiliariaIdToSave = role === 'Imobiliária' ? userRecord.uid : finalImobiliariaId;
+        
+        const claims = { role, imobiliariaId: imobiliariaIdToSave };
         await adminAuth.setCustomUserClaims(userRecord.uid, claims);
 
+        // 6. Salvando no Firestore
         await adminDb.collection('users').doc(userRecord.uid).set({
             uid: userRecord.uid,
             name,
             email,
             role,
-            imobiliariaId: finalImobiliariaId,
+            imobiliariaId: imobiliariaIdToSave,
             createdAt: new Date().toISOString(),
         });
 
@@ -411,52 +412,4 @@ export const generateContractPdf = onCall<ContractData, Promise<{pdfBase64: stri
   return {pdfBase64};
 });
 
-
-export const deleteUser = onCall(async (request) => {
-    // Verifica se o usuário que está chamando a função é um admin.
-    if (!request.auth) {
-        throw new HttpsError('unauthenticated', 'Usuário não autenticado.');
-    }
-    const callerId = request.auth.uid;
     
-    const callerDocSnap = await adminDb.collection('users').doc(callerId).get();
-    if (!callerDocSnap.exists) {
-        throw new HttpsError('not-found', 'Usuário chamador não encontrado.');
-    }
-    const callerData = callerDocSnap.data()!;
-    const callerRole = callerData.role;
-    const callerImobiliariaId = callerData.imobiliariaId;
-
-    const { uid: uidToDelete } = request.data;
-    if (callerId === uidToDelete) {
-        throw new HttpsError('permission-denied', 'Você não pode remover sua própria conta.');
-    }
-
-    const userToDeleteRecord = await adminAuth.getUser(uidToDelete);
-    const userToDeleteRole = (userToDeleteRecord.customClaims || {}).role;
-    const userToDeleteImobiliariaId = (userToDeleteRecord.customClaims || {}).imobiliariaId;
-
-    // Lógica de permissão de exclusão
-    if (callerRole === 'Admin') {
-        if(userToDeleteRole === 'Admin') {
-            throw new HttpsError('permission-denied', 'Um Admin não pode remover outro Admin.');
-        }
-        // Admin geral pode remover qualquer um, exceto outro Admin.
-    } else if (callerRole === 'Imobiliária') {
-        if (userToDeleteImobiliariaId !== callerImobiliariaId) {
-             throw new HttpsError('permission-denied', 'Você só pode remover membros da sua própria imobiliária.');
-        }
-    } else {
-        throw new HttpsError('permission-denied', 'Você não tem permissão para remover usuários.');
-    }
-
-    try {
-        await adminAuth.deleteUser(uidToDelete);
-        await adminDb.collection('users').doc(uidToDelete).delete();
-        // Adicional: Lógica para reatribuir leads/negócios, se necessário.
-        return { success: true };
-    } catch (error: any) {
-        console.error("Error deleting user:", error);
-        throw new HttpsError('internal', 'Não foi possível remover o usuário.', error);
-    }
-});
