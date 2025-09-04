@@ -227,7 +227,7 @@ export default function SettingsPage() {
         };
 
         if (isAdmin) {
-            if (imobiliariaFilter !== 'all') {
+             if (imobiliariaFilter !== 'all') {
                 newMemberData.imobiliariaId = imobiliariaFilter;
             }
         }

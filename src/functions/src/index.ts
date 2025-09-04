@@ -88,7 +88,7 @@ export const createUser = onCall(async (request) => {
         throw new HttpsError('permission-denied', 'Apenas administradores podem criar usuários.');
     }
 
-    const { email, password, name, role, imobiliariaId: imobiliariaIdFromRequest } = request.data;
+    const { email, password, name, role, imobiliariaId } = request.data;
     
     let imobiliariaIdToAssign: string | undefined;
 
@@ -104,13 +104,14 @@ export const createUser = onCall(async (request) => {
             imobiliariaIdToAssign = undefined;
         } else {
             // Se estiver criando um membro para uma imobiliária existente, usa o ID fornecido.
-            imobiliariaIdToAssign = imobiliariaIdFromRequest;
+            // Se nenhum ID for fornecido, associa ao próprio Admin.
+            imobiliariaIdToAssign = imobiliariaId || request.auth?.uid;
         }
     }
 
     if (!imobiliariaIdToAssign && role !== 'Imobiliária' && isAdmin) {
-         // O Admin precisa selecionar uma imobiliária para criar um membro que não seja uma imobiliária
-         throw new HttpsError('invalid-argument', 'Um administrador do sistema deve selecionar uma imobiliária para criar um novo membro.');
+         // Esta validação pode ser removida ou ajustada dependendo se o Admin pode criar membros "soltos".
+         // Por agora, vamos assumir que um Admin ou seleciona uma imobiliária ou o membro é associado a ele.
     }
 
     try {
@@ -122,10 +123,13 @@ export const createUser = onCall(async (request) => {
 
         const claims: { [key: string]: any } = { role };
         
+        let finalImobiliariaId = imobiliariaIdToAssign;
         if (role === 'Imobiliária') {
-            claims.imobiliariaId = userRecord.uid;
-        } else if (imobiliariaIdToAssign) {
-            claims.imobiliariaId = imobiliariaIdToAssign;
+            finalImobiliariaId = userRecord.uid;
+        } 
+        
+        if(finalImobiliariaId) {
+            claims.imobiliariaId = finalImobiliariaId;
         }
         
         // Define as custom claims (role e imobiliariaId) para o novo usuário.
