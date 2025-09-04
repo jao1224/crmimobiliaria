@@ -18,10 +18,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import { cn } from "@/lib/utils";
 import { type UserProfile, userProfiles, menuConfig, allModules, creatableRolesByImobiliaria, creatableRolesByAdmin } from "@/lib/permissions";
-import { auth, db, app } from "@/lib/firebase";
+import { auth, db, app, functions } from "@/lib/firebase";
 import { collection, getDocs, doc, setDoc, addDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc, query, where, getDoc } from "firebase/firestore";
 import { EmailAuthProvider, onAuthStateChanged, reauthenticateWithCredential, updatePassword, updateProfile, type User } from "firebase/auth";
-import { getFunctions, httpsCallable } from "firebase/functions";
+import { getFunctions, httpsCallable, connectFunctionsEmulator } from "firebase/functions";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -218,21 +218,21 @@ export default function SettingsPage() {
         setIsSaving(true);
 
         const formData = new FormData(event.currentTarget);
-        const newMemberData: { [key: string]: any } = {
-            email: formData.get("email") as string,
-            password: formData.get("password") as string,
-            name: formData.get("name") as string,
-            role: formData.get("role") as string,
-            imobiliariaId: formData.get("imobiliariaId") as string || undefined,
-        };
+        const email = formData.get("email") as string;
+        const password = formData.get("password") as string;
+        const name = formData.get("name") as string;
+        let role = selectedRole; // Usar o valor do estado
+        const imobiliariaId = isAdmin ? (formData.get("imobiliariaId") as string || 'admin') : userData?.imobiliariaId;
+        
+        console.log('Dados do novo membro:', { email, name, role, imobiliariaId });
 
-        if (!newMemberData.password || newMemberData.password.trim() === '') {
+        if (!password || password.trim() === '') {
             toast({ variant: 'destructive', title: 'Erro', description: 'O campo de senha é obrigatório.' });
             setIsSaving(false);
             return;
         }
 
-        if (!newMemberData.role || newMemberData.role.trim() === '') {
+        if (!role || role.trim() === '') {
             toast({ variant: 'destructive', title: 'Erro', description: 'O campo de função é obrigatório.' });
             setIsSaving(false);
             return;
@@ -246,7 +246,19 @@ export default function SettingsPage() {
             console.log('Permissões para equipes:', hasPermissionForTeamTabs);
             console.log('É admin:', isAdmin);
             
-            const functions = getFunctions(app);
+            // Verificar se todos os campos obrigatórios estão preenchidos
+            if (!email || email.trim() === '') {
+                toast({ variant: 'destructive', title: 'Erro', description: 'O campo de email é obrigatório.' });
+                setIsSaving(false);
+                return;
+            }
+            
+            if (!name || name.trim() === '') {
+                toast({ variant: 'destructive', title: 'Erro', description: 'O campo de nome é obrigatório.' });
+                setIsSaving(false);
+                return;
+            }
+            
             console.log('Funções Firebase:', functions);
             
             // Verificar se as funções estão disponíveis
@@ -254,24 +266,99 @@ export default function SettingsPage() {
                 throw new Error('Funções Firebase não estão disponíveis');
             }
             
-            const createUser = httpsCallable(functions, 'createUser');
-            const result = await createUser(newMemberData) as any;
-
-            if ((result.data as any).success) {
-                if (user) await fetchTeamData();
-                toast({ title: "Sucesso!", description: "Novo membro da equipe criado." });
-                setTeamMemberDialogOpen(false);
-                setSelectedRole(''); // Reset do campo role
+            // Preparar dados para envio
+            // Garantir que role tenha um valor válido
+            if (!role || role === '') {
+                role = 'Corretor';
+                console.log('Role não definido, usando valor padrão:', role);
+            }
+            
+            // Verificação adicional para garantir que role seja válido
+            if (!['Admin', 'Imobiliária', 'Corretor', 'Captador', 'Corretor Autônomo'].includes(role)) {
+                console.warn('Role inválido detectado:', role, 'usando valor padrão');
+                role = 'Corretor';
+            }
+            
+            // Garantir que imobiliariaId seja sempre válido
+            let finalImobiliariaId = userData?.imobiliariaId || '';
+            
+            if (isAdmin) {
+                // Se for admin e não tiver selecionado uma imobiliária, usar 'admin'
+                // Se tiver selecionado 'Nenhuma', usar explicitamente o ID do admin
+                if (!imobiliariaId || imobiliariaId === 'Nenhuma') {
+                    finalImobiliariaId = 'admin';
+                } else {
+                    finalImobiliariaId = imobiliariaId;
+                }
+                console.log('Admin está criando usuário com imobiliariaId:', finalImobiliariaId);
             } else {
-                throw new Error(result.data.error || "A função de nuvem retornou um erro.");
+                // Garantir que imobiliária sempre use seu próprio ID
+                finalImobiliariaId = userData?.imobiliariaId || '';
+                console.log('Imobiliária está criando usuário com seu próprio ID:', finalImobiliariaId);
+            }
+            
+            const newUserData = {
+                email,
+                password,
+                name,
+                role,
+                imobiliariaId: finalImobiliariaId
+            };
+            
+            console.log('Dados a serem enviados para a função Cloud:', newUserData);
+            
+            console.log('Chamando a função Cloud createUser com os dados:', newUserData);
+            const createUser = httpsCallable(functions, 'createUser');
+            
+            try {
+                console.log('Enviando dados para createUser:', newUserData);
+                const result = await createUser(newUserData) as any;
+                console.log('Resultado da função Cloud:', result);
+
+                if ((result.data as any).success) {
+                    console.log('Usuário criado com sucesso, UID:', result.data.uid);
+                    if (user) await fetchTeamData();
+                    toast({ title: "Sucesso!", description: "Novo membro da equipe criado." });
+                    setAddMemberOpen(false); // Fechar o diálogo correto
+                    setSelectedRole(''); // Reset do campo role
+                    form.reset(); // Limpar o formulário
+                } else {
+                    console.error('Erro retornado pela função Cloud:', result.data);
+                    throw new Error(result.data.error || "A função de nuvem retornou um erro.");
+                }
+            } catch (innerError: any) {
+                console.error('Erro ao chamar a função Cloud createUser:', innerError);
+                console.error('Detalhes do erro:', innerError.code, innerError.message, innerError.details);
+                throw innerError; // Propagar o erro para ser tratado no catch externo
             }
         } catch (error: any) {
+            console.error('Erro completo:', error);
             let description = "Ocorreu um erro ao criar o usuário.";
-            if (error.code === 'functions/already-exists' || error.message.includes('already-exists') || (error.details && error.details.message.includes('EMAIL_EXISTS'))) {
+            
+            // Verificar se é um erro de e-mail já existente
+            if (error.code === 'functions/already-exists' || 
+                error.message?.includes('already-exists') || 
+                (error.details && error.details.message?.includes('EMAIL_EXISTS')) ||
+                error.code === 'auth/email-already-exists') {
                 description = 'Este e-mail já está em uso por outra conta.';
-            } else if (error.message.includes('permission-denied')) {
+            } 
+            // Verificar se é um erro de permissão
+            else if (error.message?.includes('permission-denied') || error.code === 'functions/permission-denied') {
                 description = 'Você não tem permissão para executar esta ação.';
             }
+            // Verificar se é um erro de formato de e-mail inválido
+            else if (error.code === 'auth/invalid-email' || error.message?.includes('invalid-email')) {
+                description = 'O formato do e-mail é inválido.';
+            }
+            // Verificar se é um erro de senha fraca
+            else if (error.code === 'auth/weak-password' || error.message?.includes('weak-password')) {
+                description = 'A senha é muito fraca. Use pelo menos 6 caracteres.';
+            }
+            // Tentar extrair mensagem de erro dos detalhes
+            else if (error.details) {
+                description = error.details.message || description;
+            }
+            
             toast({ variant: "destructive", title: "Erro na Criação", description });
         } finally {
             console.log('Finalizando operação de adição de membro');
@@ -635,22 +722,7 @@ export default function SettingsPage() {
                                         </DialogHeader>
                                         <form onSubmit={handleCreateUser}>
                                             <div className="grid gap-4 py-4">
-                                                {isAdmin && (
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="imobiliariaId-member">Imobiliária</Label>
-                                                        <Select name="imobiliariaId">
-                                                            <SelectTrigger>
-                                                                <SelectValue placeholder="Associar a uma imobiliária (opcional)" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem value="admin">Nenhuma (Vincular ao Admin)</SelectItem>
-                                                                {imobiliarias.map(imob => (
-                                                                    <SelectItem key={imob.id} value={imob.id}>{imob.name}</SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-                                                )}
+
                                                 <div className="space-y-2">
                                                     <Label htmlFor="name">Nome</Label>
                                                     <Input id="name" name="name" type="text" required />
@@ -666,7 +738,7 @@ export default function SettingsPage() {
                                                 <div className="space-y-2">
                                                     <Label htmlFor="role">Função</Label>
                                                     <Select name="role" value={selectedRole} onValueChange={setSelectedRole} required>
-                                                        <SelectTrigger>
+                                                        <SelectTrigger id="role">
                                                             <SelectValue placeholder="Selecione uma função" />
                                                         </SelectTrigger>
                                                         <SelectContent>
@@ -675,16 +747,17 @@ export default function SettingsPage() {
                                                             ))}
                                                         </SelectContent>
                                                     </Select>
+                                                    {selectedRole && <input type="hidden" name="role" value={selectedRole} />}
                                                 </div>
                                                 {isAdmin && (
                                                     <div className="space-y-2">
                                                         <Label htmlFor="imobiliariaId">Vincular à Imobiliária</Label>
                                                         <Select name="imobiliariaId" required>
-                                                            <SelectTrigger>
+                                                            <SelectTrigger id="imobiliariaId">
                                                                 <SelectValue placeholder="Selecione uma imobiliária" />
                                                             </SelectTrigger>
                                                             <SelectContent>
-                                                                <SelectItem value={user?.uid || ''}>Nenhuma (Vincular ao Admin)</SelectItem>
+                                                                <SelectItem value="admin">Nenhuma (Vincular ao Admin)</SelectItem>
                                                                 {imobiliarias.map(imob => (
                                                                     <SelectItem key={imob.id} value={imob.id}>{imob.name}</SelectItem>
                                                                 ))}

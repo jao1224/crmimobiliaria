@@ -87,51 +87,90 @@ export const createUser = onCall(async (request) => {
 
     const { email, password, name, role, imobiliariaId } = request.data;
     
+    console.log('Dados recebidos na função Cloud:', { email, name, role, imobiliariaId });
+    console.log('Dados do chamador:', { callerRole, callerUid: request.auth?.token.uid, callerImobiliariaId: request.auth?.token.imobiliariaId });
+    
+    // Verificar se o role é válido
+    if (!role || !['Admin', 'Imobiliária', 'Corretor', 'Captador', 'Corretor Autônomo'].includes(role)) {
+        throw new HttpsError('invalid-argument', 'A função (role) especificada é inválida.');
+    }
+    
     let imobiliariaIdToAssign: string | undefined;
 
     if (callerRole === 'Admin') {
         // Se o Admin está criando, ele pode especificar uma imobiliária, ou o membro será associado a ele mesmo.
         imobiliariaIdToAssign = imobiliariaId === 'admin' ? request.auth!.token.uid : imobiliariaId;
+        console.log('Admin criando usuário, imobiliariaIdToAssign:', imobiliariaIdToAssign);
     } else { // 'Imobiliária'
         // Se um Admin de Imobiliária está criando, o membro é sempre da sua imobiliária.
         imobiliariaIdToAssign = request.auth!.token.imobiliariaId;
+        console.log('Imobiliária criando usuário, imobiliariaIdToAssign:', imobiliariaIdToAssign);
     }
 
     if (!imobiliariaIdToAssign) {
+        console.error('imobiliariaIdToAssign é undefined ou vazio');
         throw new HttpsError('invalid-argument', 'O ID da imobiliária é necessário para criar um novo membro.');
+    }
+    
+    // Garantir que imobiliariaIdToAssign seja uma string não vazia
+    if (typeof imobiliariaIdToAssign !== 'string' || imobiliariaIdToAssign.trim() === '') {
+        console.error('imobiliariaIdToAssign inválido:', imobiliariaIdToAssign);
+        throw new HttpsError('invalid-argument', 'O ID da imobiliária é inválido.');
     }
 
 
     try {
+        console.log('Criando usuário com dados:', { email, name, role, imobiliariaIdToAssign });
+        
         const userRecord = await adminAuth.createUser({
             email,
             password,
             displayName: name,
         });
+        
+        console.log('Usuário criado com sucesso:', userRecord.uid);
 
         const claims: { [key: string]: any } = { role, imobiliariaId: imobiliariaIdToAssign };
+        console.log('Definindo custom claims:', claims);
         
         // Define as custom claims (role e imobiliariaId) para o novo usuário.
         await adminAuth.setCustomUserClaims(userRecord.uid, claims);
+        console.log('Custom claims definidas com sucesso');
 
         // Salva informações adicionais no Firestore.
-        await adminDb.collection('users').doc(userRecord.uid).set({
+        const userData = {
             uid: userRecord.uid,
             name,
             email,
             role,
             imobiliariaId: imobiliariaIdToAssign,
             createdAt: new Date().toISOString(),
-        });
+        };
+        console.log('Salvando dados no Firestore:', userData);
+        
+        await adminDb.collection('users').doc(userRecord.uid).set(userData);
+        console.log('Dados salvos no Firestore com sucesso');
 
         return { success: true, uid: userRecord.uid };
 
     } catch (error: any) {
         console.error('Error creating new user:', error);
-         if (error.code === 'auth/email-already-exists') {
+        console.error('Error details:', error.code, error.message);
+        console.error('Error stack:', error.stack);
+        
+        if (error.code === 'auth/email-already-exists') {
             throw new HttpsError('already-exists', 'Este e-mail já está em uso por outra conta.');
+        } else if (error.code === 'auth/invalid-email') {
+            throw new HttpsError('invalid-argument', 'O formato do e-mail é inválido.');
+        } else if (error.code === 'auth/weak-password') {
+            throw new HttpsError('invalid-argument', 'A senha é muito fraca. Use pelo menos 6 caracteres.');
+        } else if (error.code === 'auth/operation-not-allowed') {
+            throw new HttpsError('permission-denied', 'A criação de usuário não está permitida.');
         }
-        throw new HttpsError('internal', "Ocorreu um erro interno no servidor ao criar o usuário.", error);
+        
+        // Registra mais detalhes sobre o erro para facilitar a depuração
+        console.error('Detalhes completos do erro:', JSON.stringify(error, null, 2));
+        throw new HttpsError('internal', "Ocorreu um erro interno no servidor ao criar o usuário: " + error.message, error);
     }
 });
 
