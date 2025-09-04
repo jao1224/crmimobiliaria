@@ -223,8 +223,13 @@ export default function SettingsPage() {
             password: formData.get("password") as string,
             name: formData.get("name") as string,
             role: formData.get("role") as string,
-            imobiliariaId: formData.get("imobiliariaId") as string || undefined,
         };
+
+        if (isAdmin) {
+             const selectedImobiliariaId = formData.get("imobiliariaId") as string;
+             // Se 'admin' for selecionado, passa o UID do admin atual. Se não, passa o ID selecionado.
+             newMemberData.imobiliariaId = selectedImobiliariaId === 'admin' ? user.uid : selectedImobiliariaId;
+        }
 
         if (!newMemberData.password) {
             toast({ variant: 'destructive', title: 'Erro', description: 'O campo de senha é obrigatório.' });
@@ -245,11 +250,14 @@ export default function SettingsPage() {
                 throw new Error(result.data.error || "A função de nuvem retornou um erro.");
             }
         } catch (error: any) {
+            console.error("Cloud function error:", error);
             let description = "Ocorreu um erro ao criar o usuário.";
-            if (error.code === 'functions/already-exists' || error.message.includes('already-exists') || (error.details && error.details.message.includes('EMAIL_EXISTS'))) {
+             if (error.code === 'functions/already-exists' || (error.details && error.details.message?.includes('EMAIL_EXISTS'))) {
                 description = 'Este e-mail já está em uso por outra conta.';
-            } else if (error.message.includes('permission-denied')) {
+            } else if (error.code === 'functions/permission-denied') {
                 description = 'Você não tem permissão para executar esta ação.';
+            } else if (error.details) {
+                description = error.details.message || description;
             }
             toast({ variant: "destructive", title: "Erro na Criação", description });
         } finally {
@@ -263,13 +271,13 @@ export default function SettingsPage() {
     };
 
     const handleDeleteMember = async () => {
-        if (!memberToDelete) return;
+        if (!memberToDelete || !user) return;
         
         setIsSaving(true);
         try {
-            // Placeholder for a Cloud Function call to delete user from Auth
-            // For now, we just delete from Firestore for demonstration
-            await deleteDoc(doc(db, "users", memberToDelete.id));
+            const functions = getFunctions(app);
+            const deleteUserFn = httpsCallable(functions, 'deleteUser');
+            await deleteUserFn({ uid: memberToDelete.id });
 
             toast({ title: "Sucesso", description: `O usuário ${memberToDelete.name} foi removido.` });
             await fetchTeamData();
