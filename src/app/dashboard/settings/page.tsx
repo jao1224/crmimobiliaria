@@ -228,12 +228,9 @@ export default function SettingsPage() {
             imobiliariaId: isAdmin ? (formData.get('imobiliariaId') as string) : userData?.imobiliariaId,
         };
         
-        if (!userData.imobiliariaId && (isAdmin || isImobiliariaAdmin)) {
-             toast({ variant: "destructive", title: "Erro", description: "O ID da imobiliária é obrigatório." });
-             setIsSaving(false);
-             return;
+        if (userData.imobiliariaId === 'admin') {
+            userData.imobiliariaId = user?.uid;
         }
-
 
         try {
             const functions = getFunctions(app);
@@ -644,7 +641,7 @@ export default function SettingsPage() {
                                                                 <SelectValue placeholder="Selecione uma imobiliária" />
                                                             </SelectTrigger>
                                                             <SelectContent>
-                                                                <SelectItem value={user?.uid || ''}>Nenhuma (Vincular ao Admin)</SelectItem>
+                                                                <SelectItem value={user?.uid || 'admin'}>Nenhuma (Vincular ao Admin)</SelectItem>
                                                                 {imobiliarias.map(imob => (
                                                                     <SelectItem key={imob.id} value={imob.id}>{imob.name}</SelectItem>
                                                                 ))}
@@ -1024,5 +1021,6 @@ export default function SettingsPage() {
     );
 
     
+
 
 

@@ -85,39 +85,32 @@ export const createUser = onCall(async (request) => {
     }
     
     const callerUid = request.auth.uid;
-    const tokenRole = request.auth.token.role;
-    let callerRole = tokenRole;
-
-    // Plano B: Se o token não tiver a role (usuários antigos), buscar no Firestore.
-    if (!callerRole) {
-        const callerDoc = await adminDb.collection('users').doc(callerUid).get();
-        if (callerDoc.exists) {
-            callerRole = callerDoc.data()?.role;
-        }
-    }
-
-    if (callerRole !== 'Admin' && callerRole !== 'Imobiliária') {
-        throw new HttpsError('permission-denied', 'Apenas administradores podem criar usuários.');
-    }
-
     const { email, password, name, role, imobiliariaId: requestedImobiliariaId } = request.data;
     
     let finalImobiliariaId;
 
+    // Consulta os dados do chamador para determinar seu papel e imobiliariaId
+    const callerDoc = await adminDb.collection('users').doc(callerUid).get();
+    if (!callerDoc.exists) {
+        throw new HttpsError('permission-denied', 'Não foi possível verificar as permissões do usuário.');
+    }
+    const callerData = callerDoc.data();
+    const callerRole = callerData?.role;
+
     if (callerRole === 'Imobiliária') {
-        const callerDoc = await adminDb.collection('users').doc(callerUid).get();
-        if (!callerDoc.exists || !callerDoc.data()?.imobiliariaId) {
-             throw new HttpsError('internal', 'Não foi possível determinar a imobiliária do criador.');
-        }
-        finalImobiliariaId = callerDoc.data()?.imobiliariaId;
-    } else { // Admin do sistema
+        // Se o chamador é uma imobiliária, o novo usuário pertence a essa imobiliária.
+        finalImobiliariaId = callerData?.imobiliariaId;
+    } else if (callerRole === 'Admin') {
+        // Se o chamador é o Admin, ele pode atribuir a uma imobiliária ou a si mesmo.
         finalImobiliariaId = requestedImobiliariaId;
+    } else {
+        // Outros perfis não podem criar usuários.
+        throw new HttpsError('permission-denied', 'Apenas administradores podem criar usuários.');
     }
     
     if (!finalImobiliariaId) {
         throw new HttpsError('invalid-argument', 'O ID da imobiliária é necessário e não pôde ser determinado.');
     }
-
 
     try {
         const userRecord = await adminAuth.createUser({
@@ -155,7 +148,7 @@ export const addRoleOnCreate = beforeUserCreated(async (event) => {
     try {
         const allUsers = await adminAuth.listUsers(1);
         if (allUsers.users.length === 0) {
-             const imobiliariaIdForAdmin = user.uid;
+             const imobiliariaIdForAdmin = user.uid; // O ID de imobiliária do Admin é o seu próprio UID
              await adminAuth.setCustomUserClaims(user.uid, { role: 'Admin', imobiliariaId: imobiliariaIdForAdmin });
              await userDocRef.set({ role: 'Admin', imobiliariaId: imobiliariaIdForAdmin }, { merge: true });
              return;
@@ -173,11 +166,13 @@ export const addRoleOnCreate = beforeUserCreated(async (event) => {
                     claims.imobiliariaId = userData.imobiliariaId;
                 }
                 
-                await adminAuth.setCustomUserClaims(user.uid, claims);
+                if (claims.imobiliariaId) {
+                    await adminAuth.setCustomUserClaims(user.uid, claims);
                 
-                // Garante que o imobiliariaId seja salvo no documento se não estiver lá
-                if (claims.imobiliariaId && !userData.imobiliariaId) {
-                     await userDocRef.update({ imobiliariaId: claims.imobiliariaId });
+                    // Garante que o imobiliariaId seja salvo no documento se não estiver lá
+                    if (!userData.imobiliariaId) {
+                         await userDocRef.update({ imobiliariaId: claims.imobiliariaId });
+                    }
                 }
                 return;
             }
