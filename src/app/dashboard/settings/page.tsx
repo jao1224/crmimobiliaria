@@ -18,10 +18,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ProfileContext } from "@/contexts/ProfileContext";
 import { cn } from "@/lib/utils";
 import { type UserProfile, userProfiles, menuConfig, allModules, creatableRolesByImobiliaria, creatableRolesByAdmin } from "@/lib/permissions";
-import { auth, db, app } from "@/lib/firebase";
+import { auth, db, app, functions } from "@/lib/firebase";
 import { collection, getDocs, doc, setDoc, addDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc, query, where, getDoc } from "firebase/firestore";
 import { EmailAuthProvider, onAuthStateChanged, reauthenticateWithCredential, updatePassword, updateProfile, type User } from "firebase/auth";
-import { getFunctions, httpsCallable } from "firebase/functions";
+import { getFunctions, httpsCallable, connectFunctionsEmulator } from "firebase/functions";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -229,6 +229,7 @@ export default function SettingsPage() {
             password: formData.get("password") as string,
             name: formData.get("name") as string,
             role: formData.get("role") as string,
+            imobiliariaId: formData.get("imobiliariaId") as string || undefined,
         };
 
         if (!newMemberData.password || newMemberData.password.trim() === '') {
@@ -237,32 +238,71 @@ export default function SettingsPage() {
             return;
         }
 
-        if (!newMemberData.role || newMemberData.role.trim() === '') {
+        if (!role || role.trim() === '') {
             toast({ variant: 'destructive', title: 'Erro', description: 'O campo de função é obrigatório.' });
             setIsSaving(false);
             return;
         }
 
         try {
+            console.log('App Firebase:', app);
+            console.log('Usuário atual:', user);
+            console.log('Perfil ativo:', activeProfile);
+            console.log('Dados do usuário:', userData);
+            console.log('Permissões para equipes:', hasPermissionForTeamTabs);
+            console.log('É admin:', isAdmin);
+            
             const functions = getFunctions(app);
+            console.log('Funções Firebase:', functions);
+            
+            // Verificar se as funções estão disponíveis
+            if (!functions) {
+                throw new Error('Funções Firebase não estão disponíveis');
+            }
+            
             const createUser = httpsCallable(functions, 'createUser');
-            const result = await createUser(newMemberData) as any;
+            
+            try {
+                console.log('Enviando dados para createUser:', newUserData);
+                const result = await createUser(newUserData) as any;
+                console.log('Resultado da função Cloud:', result);
 
             if ((result.data as any).success) {
                 if (user) await fetchTeamData();
                 toast({ title: "Sucesso!", description: "Novo membro da equipe criado." });
-                setAddMemberOpen(false);
+                setTeamMemberDialogOpen(false);
                 setSelectedRole(''); // Reset do campo role
             } else {
                 throw new Error(result.data.error || "A função de nuvem retornou um erro.");
             }
         } catch (error: any) {
+            console.error('Erro completo:', error);
             let description = "Ocorreu um erro ao criar o usuário.";
-            if (error.code === 'functions/already-exists' || error.message.includes('already-exists') || (error.details && error.details.message.includes('EMAIL_EXISTS'))) {
+            
+            // Verificar se é um erro de e-mail já existente
+            if (error.code === 'functions/already-exists' || 
+                error.message?.includes('already-exists') || 
+                (error.details && error.details.message?.includes('EMAIL_EXISTS')) ||
+                error.code === 'auth/email-already-exists') {
                 description = 'Este e-mail já está em uso por outra conta.';
-            } else if (error.message.includes('permission-denied')) {
+            } 
+            // Verificar se é um erro de permissão
+            else if (error.message?.includes('permission-denied') || error.code === 'functions/permission-denied') {
                 description = 'Você não tem permissão para executar esta ação.';
             }
+            // Verificar se é um erro de formato de e-mail inválido
+            else if (error.code === 'auth/invalid-email' || error.message?.includes('invalid-email')) {
+                description = 'O formato do e-mail é inválido.';
+            }
+            // Verificar se é um erro de senha fraca
+            else if (error.code === 'auth/weak-password' || error.message?.includes('weak-password')) {
+                description = 'A senha é muito fraca. Use pelo menos 6 caracteres.';
+            }
+            // Tentar extrair mensagem de erro dos detalhes
+            else if (error.details) {
+                description = error.details.message || description;
+            }
+            
             toast({ variant: "destructive", title: "Erro na Criação", description });
         } finally {
             setIsSaving(false);
@@ -629,6 +669,22 @@ export default function SettingsPage() {
                                         </DialogHeader>
                                         <form onSubmit={handleCreateUser}>
                                             <div className="grid gap-4 py-4">
+                                                {isAdmin && (
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="imobiliariaId-member">Imobiliária</Label>
+                                                        <Select name="imobiliariaId">
+                                                            <SelectTrigger>
+                                                                <SelectValue placeholder="Associar a uma imobiliária (opcional)" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="admin">Nenhuma (Vincular ao Admin)</SelectItem>
+                                                                {imobiliarias.map(imob => (
+                                                                    <SelectItem key={imob.id} value={imob.id}>{imob.name}</SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+                                                )}
                                                 <div className="space-y-2">
                                                     <Label htmlFor="name">Nome</Label>
                                                     <Input id="name" name="name" type="text" required />
@@ -644,7 +700,7 @@ export default function SettingsPage() {
                                                 <div className="space-y-2">
                                                     <Label htmlFor="role">Função</Label>
                                                     <Select name="role" value={selectedRole} onValueChange={setSelectedRole} required>
-                                                        <SelectTrigger>
+                                                        <SelectTrigger id="role">
                                                             <SelectValue placeholder="Selecione uma função" />
                                                         </SelectTrigger>
                                                         <SelectContent>
@@ -653,7 +709,24 @@ export default function SettingsPage() {
                                                             ))}
                                                         </SelectContent>
                                                     </Select>
+                                                    {selectedRole && <input type="hidden" name="role" value={selectedRole} />}
                                                 </div>
+                                                {isAdmin && (
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="imobiliariaId">Vincular à Imobiliária</Label>
+                                                        <Select name="imobiliariaId" required>
+                                                            <SelectTrigger>
+                                                                <SelectValue placeholder="Selecione uma imobiliária" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value={user?.uid || ''}>Nenhuma (Vincular ao Admin)</SelectItem>
+                                                                {imobiliarias.map(imob => (
+                                                                    <SelectItem key={imob.id} value={imob.id}>{imob.name}</SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+                                                )}
                                             </div>
                                             <DialogFooter>
                                                 <Button type="button" variant="outline" onClick={() => setAddMemberOpen(false)}>Cancelar</Button>
