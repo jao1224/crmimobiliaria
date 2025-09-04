@@ -238,7 +238,6 @@ export default function SettingsPage() {
             return;
         }
 
->>>>>>> 654b243dcb4264e802b0bb3eb57e4d4ede7a1ac6
         try {
             console.log('App Firebase:', app);
             console.log('Usuário atual:', user);
