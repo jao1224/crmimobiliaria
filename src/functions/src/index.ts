@@ -80,81 +80,124 @@ interface ReportData {
 }
 
 export const createUser = onCall(async (request) => {
-    // Verifica se o usuário que está chamando a função é um admin de imobiliária.
-    const isImobiliariaAdmin = !!request.auth?.token.imobiliariaId;
-
-    if (!isImobiliariaAdmin) {
-        throw new HttpsError('permission-denied', 'Apenas administradores de imobiliária podem criar usuários.');
+    // 1. Verifica se o usuário que chama a função está autenticado.
+    if (!request.auth) {
+        throw new HttpsError('unauthenticated', 'A função deve ser chamada enquanto autenticado.');
     }
 
-    const { email, password, name, role } = request.data;
+    // 2. Extrai dados da requisição.
+    const { email, password, name, role, imobiliariaId } = request.data;
+    const callerUid = request.auth.uid;
+    const callerImobiliariaId = request.auth.token.imobiliariaId;
+
+    let finalImobiliariaId;
+
+    // 3. Determina o imobiliariaId do novo usuário.
+    if (request.auth.token.role === 'Imobiliária') {
+        // Se o chamador é uma imobiliária, o novo usuário pertence a essa imobiliária.
+        finalImobiliariaId = callerImobiliariaId;
+    } else {
+        // Se for o Admin, usa o ID selecionado no formulário.
+        // O frontend envia o UID do Admin se 'Nenhuma' for selecionado.
+        finalImobiliariaId = imobiliariaId;
+    }
     
-    // O imobiliariaId é sempre herdado do admin que está criando o usuário.
-    const imobiliariaId = request.auth?.token.imobiliariaId;
+    // Garante que um imobiliariaId foi definido.
+    if (!finalImobiliariaId) {
+        console.error("Erro: imobiliariaId não pôde ser determinado.", { callerUid, callerImobiliariaId, requestedImobiliariaId: imobiliariaId });
+        throw new HttpsError('invalid-argument', 'O ID da imobiliária é necessário e não pôde ser determinado.');
+    }
 
     try {
+        // 4. Cria o usuário no Firebase Authentication.
         const userRecord = await adminAuth.createUser({
             email,
             password,
             displayName: name,
         });
         
-        // Define as custom claims (role e imobiliariaId) para o novo usuário.
-        await adminAuth.setCustomUserClaims(userRecord.uid, { role, imobiliariaId });
+        // 5. Define as custom claims (role e imobiliariaId) para o novo usuário.
+        await adminAuth.setCustomUserClaims(userRecord.uid, { role, imobiliariaId: finalImobiliariaId });
 
-        // Salva informações adicionais no Firestore.
+        // 6. Salva informações adicionais no Firestore.
         await adminDb.collection('users').doc(userRecord.uid).set({
             uid: userRecord.uid,
             name,
             email,
             role,
-            imobiliariaId, // Salva o ID da imobiliária no documento do usuário
+            imobiliariaId: finalImobiliariaId,
             createdAt: new Date().toISOString(),
         });
 
         return { success: true, uid: userRecord.uid };
     } catch (error: any) {
-        console.error('Error creating new user:', error);
-        throw new HttpsError('internal', error.message, error);
+        console.error('Erro detalhado ao criar usuário:', error);
+        if (error.code === 'auth/email-already-exists') {
+             throw new HttpsError('already-exists', 'Este endereço de e-mail já está em uso por outra conta.');
+        }
+        throw new HttpsError('internal', `Ocorreu um erro no servidor: ${error.message}`, error);
     }
 });
 
-// Esta função adiciona custom claims ao criar um usuário diretamente pelo Firebase Auth (ex: no registro).
+
+// Esta função é acionada ANTES que um usuário seja criado no Firebase Auth (ex: na tela de registro).
+// Sua principal função é definir as 'custom claims' (como 'role' e 'imobiliariaId') no token de autenticação do usuário.
 export const addRoleOnCreate = beforeUserCreated(async (event) => {
     const user = event.data;
     const userDocRef = adminDb.collection('users').doc(user.uid);
     
     try {
-        // Verifica se já existe algum usuário. Se não, este é o primeiro e será Admin.
+        // Verifica se há algum usuário no sistema. Se não houver, este é o primeiro e será Admin.
         const allUsers = await adminAuth.listUsers(1);
         if (allUsers.users.length === 0) {
-             await adminAuth.setCustomUserClaims(user.uid, { role: 'Admin' });
-             // Também salva no documento do Firestore, pois o gatilho pode não ter essa info ainda
-             await userDocRef.set({ role: 'Admin' }, { merge: true });
+             const imobiliariaIdForAdmin = user.uid; // O ID da imobiliária do Admin é o seu próprio UID
+             await adminAuth.setCustomUserClaims(user.uid, { role: 'Admin', imobiliariaId: imobiliariaIdForAdmin });
+             // Também salva no documento do Firestore, pois é onde o app lê os detalhes.
+             await userDocRef.set({ role: 'Admin', imobiliariaId: imobiliariaIdForAdmin }, { merge: true });
              return;
         }
 
+        // Para usuários subsequentes, busca os dados que foram preenchidos no formulário de registro
+        // e salvos no Firestore pela aplicação cliente.
         const userDoc = await userDocRef.get();
         if (userDoc.exists) {
             const userData = userDoc.data();
             if (userData && userData.role) {
                 const claims: { [key: string]: any } = { role: userData.role };
+                
                 // Se o usuário for do tipo Imobiliária, seu imobiliariaId é o próprio uid.
+                // Se for outro tipo de usuário, ele deve ter um imobiliariaId associado (que foi salvo pelo front-end).
                 if (userData.role === 'Imobiliária') {
                     claims.imobiliariaId = user.uid;
-                    // Atualiza o documento no firestore com o imobiliariaId
-                    await userDocRef.update({ imobiliariaId: user.uid });
-                }
-                 if (userData.imobiliariaId) {
+                } else if (userData.imobiliariaId) {
                     claims.imobiliariaId = userData.imobiliariaId;
+                } else {
+                    // Se não for imobiliária e não tiver um imobiliariaId, pode ser um erro.
+                    // Mas como fallback, podemos atribuir ao UID do próprio usuário se ele for autônomo.
+                    if (userData.role === 'Corretor Autônomo' || userData.role === 'Investidor') {
+                        claims.imobiliariaId = user.uid;
+                    }
                 }
                 
-                await adminAuth.setCustomUserClaims(user.uid, claims);
+                // Define as claims se o imobiliariaId foi determinado.
+                if (claims.imobiliariaId) {
+                    await adminAuth.setCustomUserClaims(user.uid, claims);
+                
+                    // Garante que o imobiliariaId também seja salvo no documento do Firestore se estiver faltando.
+                    if (!userData.imobiliariaId) {
+                         await userDocRef.update({ imobiliariaId: claims.imobiliariaId });
+                    }
+                } else {
+                     console.warn(`Não foi possível determinar o imobiliariaId para o usuário ${user.uid} com o perfil ${userData.role}.`);
+                     // Define um perfil padrão sem imobiliariaId se falhar.
+                     await adminAuth.setCustomUserClaims(user.uid, { role: 'Corretor Autônomo' });
+                }
                 return;
             }
         }
         
-        // Fallback: se não encontrar o documento a tempo, define um cargo padrão.
+        // Fallback: se por algum motivo não encontrar o documento a tempo, define um cargo padrão.
+        console.warn(`Documento do usuário ${user.uid} não encontrado a tempo no gatilho onCreate. Aplicando perfil padrão.`);
         await adminAuth.setCustomUserClaims(user.uid, { role: 'Corretor Autônomo' });
 
     } catch (error) {
@@ -366,3 +409,5 @@ export const generateContractPdf = onCall<ContractData, Promise<{pdfBase64: stri
 
   return {pdfBase64};
 });
+    
+    

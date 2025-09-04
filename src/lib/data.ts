@@ -46,6 +46,16 @@ export type Property = {
   ownerInfo?: string;
 };
 
+export type FinancingDetails = {
+    bank: string;
+    outstandingBalance: number;
+    balanceDate: string;
+    installmentValue: number;
+    remainingInstallments: number;
+    dueDate: number;
+    creditLine: string;
+};
+
 
 export type Negotiation = {
     id: string;
@@ -68,8 +78,7 @@ export type Negotiation = {
     completionDate: string | null;
     createdAt: string;
     isFinanced?: boolean;
-    processoId?: string; // Link para o processo
-    contratoId?: string; // Link para o contrato
+    financingDetails?: FinancingDetails;
     isArchived?: boolean;
     isDeleted?: boolean;
     documentUrls?: { url: string; name: string }[];
@@ -489,6 +498,12 @@ export const addNegotiation = async (newNegotiation: Omit<Negotiation, 'id' | 'n
     const negotiationRef = doc(collection(db, 'negociacoes'));
     const negotiationDisplayCode = `NEG-${String(Date.now()).slice(-6)}`;
     const negotiationData = { ...newNegotiation, negotiationDisplayCode };
+    
+    // Remove o campo `financingDetails` se for undefined para evitar erro no Firestore
+    if (negotiationData.financingDetails === undefined) {
+        delete negotiationData.financingDetails;
+    }
+    
     batch.set(negotiationRef, negotiationData);
     
     // 2. Atualiza o status do imóvel para 'Em Negociação'
@@ -1152,4 +1167,5 @@ export const updateActivityStatus = async (activityId: string, newStatus: Activi
     
     console.warn(`Activity with ID ${activityId} not found in 'negotiations' or 'imoveis'.`);
 };
+
 

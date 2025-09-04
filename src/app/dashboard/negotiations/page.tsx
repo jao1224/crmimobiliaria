@@ -28,7 +28,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { VariantProps } from "class-variance-authority";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { getNegotiations, addNegotiation, type Negotiation, addFinancingProcess, completeSaleAndGenerateCommission, getProperties, type Property, updateNegotiation, getUsers, type User, archiveNegotiation, addServiceRequest, markAsDeleted, getProcessos, type Processo, ServiceRequestType, type NegotiationStage, getActivitiesForRealtor, updateActivityStatus, Activity, ActivityStatus } from "@/lib/data";
+import { getNegotiations, addNegotiation, type Negotiation, addFinancingProcess, completeSaleAndGenerateCommission, getProperties, type Property, updateNegotiation, getUsers, type User, archiveNegotiation, addServiceRequest, markAsDeleted, getProcessos, type Processo, ServiceRequestType, type NegotiationStage, getActivitiesForRealtor, updateActivityStatus, Activity, ActivityStatus, type FinancingDetails } from "@/lib/data";
 import { getClients, type Client, type Participant } from "@/lib/crm-data";
 import { cn } from "@/lib/utils";
 import { ProfileContext } from "@/contexts/ProfileContext";
@@ -42,6 +42,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AddPropertyDialog } from "@/components/dashboard/add-property-dialog";
 import { AddClientDialog } from "@/components/dashboard/add-client-dialog";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Switch } from "@/components/ui/switch";
 
 
 const formatCurrency = (value: number) => {
@@ -400,8 +402,7 @@ export default function NegotiationsPage() {
     }, [filteredNegotiations]);
     
     const brokerUsers = useMemo(() => {
-        const brokerRoles = ['Corretor Autônomo', 'Vendedor', 'Imobiliária', 'Admin'];
-        return allUsers.filter(user => brokerRoles.includes(user.role));
+        return allUsers.filter(user => user.role === 'Vendedor');
     }, [allUsers]);
 
 
@@ -492,6 +493,20 @@ export default function NegotiationsPage() {
         const responsibleSalespersonId = formData.get('salespersonId') as string || currentUser.uid;
         const responsibleSalesperson = allUsers.find(u => u.id === responsibleSalespersonId);
 
+        let financingDetails: FinancingDetails | undefined = undefined;
+        if (isFinanced) {
+            financingDetails = {
+                bank: formData.get('financing-bank') as string,
+                outstandingBalance: parseFloat(formData.get('financing-balance') as string),
+                balanceDate: formData.get('financing-balance-date') as string,
+                installmentValue: parseFloat(formData.get('financing-installment-value') as string),
+                remainingInstallments: parseInt(formData.get('financing-remaining-installments') as string, 10),
+                dueDate: parseInt(formData.get('financing-due-date') as string, 10),
+                creditLine: formData.get('financing-credit-line') as string,
+            };
+        }
+        
+
         const newNegotiationData: Omit<Negotiation, 'id' | 'negotiationDisplayCode'> = {
             property: foundProperty.name,
             propertyId: foundProperty.id,
@@ -511,6 +526,7 @@ export default function NegotiationsPage() {
             completionDate: null,
             createdAt: new Date().toISOString(),
             isFinanced: isFinanced,
+            financingDetails: financingDetails,
             isArchived: false,
             isDeleted: false,
         };
@@ -730,14 +746,14 @@ export default function NegotiationsPage() {
                         <Button>Iniciar Nova Negociação</Button>
                     </DialogTrigger>
                      <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col">
-                        <DialogHeader className="px-6 pt-6">
+                        <DialogHeader>
                             <DialogTitle>Iniciar Nova Negociação</DialogTitle>
                             <DialogDescription>
                                 Selecione um imóvel e um cliente da lista para buscar os dados.
                             </DialogDescription>
                         </DialogHeader>
-                        <div className="flex-grow overflow-y-auto px-6">
-                            <form id="new-negotiation-form" onSubmit={handleAddNegotiation} className="space-y-4 pt-4">
+                         <ScrollArea className="flex-grow pr-6 -mr-6">
+                            <form id="new-negotiation-form" onSubmit={handleAddNegotiation} className="pl-1 py-4 space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label>Imóvel</Label>
@@ -852,7 +868,7 @@ export default function NegotiationsPage() {
                                                     <SelectValue placeholder="Selecione um vendedor" />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    {allUsers.map(realtor => (
+                                                    {brokerUsers.map(realtor => (
                                                         <SelectItem key={realtor.id} value={realtor.id}>
                                                             {realtor.name}
                                                         </SelectItem>
@@ -884,13 +900,55 @@ export default function NegotiationsPage() {
                                         )}
                                     </div>
 
-                                    <div className="flex items-center space-x-2">
-                                        <Checkbox id="financed" checked={isFinanced} onCheckedChange={(checked) => setIsFinanced(checked as boolean)} disabled={!foundProperty || !foundClient} />
-                                        <Label htmlFor="financed">É financiado?</Label>
+                                    <div className="space-y-4 rounded-lg border p-4">
+                                        <div className="flex items-center justify-between">
+                                            <Label htmlFor="financed-switch" className="font-semibold">O imóvel está financiado?</Label>
+                                            <Switch
+                                                id="financed-switch"
+                                                checked={isFinanced}
+                                                onCheckedChange={setIsFinanced}
+                                                disabled={!foundProperty || !foundClient}
+                                            />
+                                        </div>
+                                        <Collapsible open={isFinanced}>
+                                            <CollapsibleContent>
+                                                <Separator className="my-4"/>
+                                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 animate-in fade-in-0 slide-in-from-top-4 duration-300">
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="financing-bank">Banco</Label>
+                                                        <Input id="financing-bank" name="financing-bank" placeholder="Ex: Caixa" />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="financing-credit-line">Linha de Crédito</Label>
+                                                        <Input id="financing-credit-line" name="financing-credit-line" placeholder="Ex: SBPE" />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="financing-balance">Saldo Devedor (R$)</Label>
+                                                        <Input id="financing-balance" name="financing-balance" type="number" step="0.01" placeholder="250000.00" />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="financing-balance-date">Data do Saldo</Label>
+                                                        <Input id="financing-balance-date" name="financing-balance-date" type="date" />
+                                                    </div>
+                                                     <div className="space-y-2">
+                                                        <Label htmlFor="financing-installment-value">Valor da Parcela (R$)</Label>
+                                                        <Input id="financing-installment-value" name="financing-installment-value" type="number" step="0.01" placeholder="2500.00" />
+                                                    </div>
+                                                     <div className="space-y-2">
+                                                        <Label htmlFor="financing-remaining-installments">Parcelas Restantes</Label>
+                                                        <Input id="financing-remaining-installments" name="financing-remaining-installments" type="number" placeholder="180" />
+                                                    </div>
+                                                     <div className="space-y-2">
+                                                        <Label htmlFor="financing-due-date">Vencimento</Label>
+                                                        <Input id="financing-due-date" name="financing-due-date" type="number" placeholder="10" min="1" max="31"/>
+                                                    </div>
+                                                </div>
+                                            </CollapsibleContent>
+                                        </Collapsible>
                                     </div>
                                 </div>
                             </form>
-                        </div>
+                        </ScrollArea>
                         <DialogFooter className="px-6 pb-6 pt-4 border-t bg-background">
                             <Button type="button" variant="outline" onClick={() => setNewNegotiationOpen(false)}>Cancelar</Button>
                             <Button type="submit" form="new-negotiation-form" disabled={!foundProperty || !foundClient || !proposalValue || !proposalDate}>Criar Negociação</Button>
@@ -1357,3 +1415,4 @@ export default function NegotiationsPage() {
         </>
     );
 }
+
