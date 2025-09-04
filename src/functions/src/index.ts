@@ -102,10 +102,14 @@ export const createUser = onCall(async (request) => {
         let newMemberImobiliariaId: string;
 
         if (callerRole === 'Imobiliária') {
+            // Se o chamador é uma imobiliária, o novo membro pertence à sua imobiliária.
             newMemberImobiliariaId = callerData.imobiliariaId || callerUid;
         } else { // callerRole === 'Admin'
+            // Se o Admin está criando, usa o ID da imobiliária enviado no formulário.
             newMemberImobiliariaId = imobiliariaIdFromRequest;
-            // Se um Admin está criando um corretor autônomo sem imobiliária, associa ao seu próprio ID
+            
+            // Fallback: Se o Admin cria um corretor sem especificar imobiliária, associa ao ID do próprio Admin.
+            // Isso é útil para corretores autônomos gerenciados pelo Admin do sistema.
              if (!newMemberImobiliariaId && (role === 'Corretor Autônomo' || role === 'Financeiro' || role === 'Vendedor')) {
                 newMemberImobiliariaId = callerData.imobiliariaId || callerUid;
             }
@@ -158,6 +162,7 @@ export const addRoleOnCreate = beforeUserCreated(async (event) => {
         if (allUsers.users.length === 0) {
              const imobiliariaId = user.uid; // O ID da imobiliária do Admin é seu próprio UID
              await adminAuth.setCustomUserClaims(user.uid, { role: 'Admin', imobiliariaId });
+             // Também salva no documento do Firestore
              await userDocRef.set({ 
                 role: 'Admin', 
                 imobiliariaId, 
@@ -179,6 +184,7 @@ export const addRoleOnCreate = beforeUserCreated(async (event) => {
                 if (userData.role === 'Imobiliária' && !imobiliariaId) {
                     imobiliariaId = user.uid;
                     claims.imobiliariaId = imobiliariaId;
+                    // Atualiza o documento no firestore com o imobiliariaId
                     await userDocRef.update({ imobiliariaId });
                 } else if (imobiliariaId) {
                     claims.imobiliariaId = imobiliariaId;
@@ -191,6 +197,8 @@ export const addRoleOnCreate = beforeUserCreated(async (event) => {
             }
         }
         
+        // Fallback: se não encontrar o documento a tempo, define um cargo padrão.
+        // Neste caso, o usuário não estará vinculado a uma imobiliária, o que pode ser ajustado depois.
         await adminAuth.setCustomUserClaims(user.uid, { role: 'Corretor Autônomo' });
 
     } catch (error) {
@@ -406,13 +414,18 @@ export const generateContractPdf = onCall<ContractData, Promise<{pdfBase64: stri
 
 export const deleteUser = onCall(async (request) => {
     // Verifica se o usuário que está chamando a função é um admin.
-    const callerRole = request.auth?.token.role;
-    const callerId = request.auth?.token.uid;
-    const callerImobiliariaId = request.auth?.token.imobiliariaId;
-
-    if (!callerId) {
+    if (!request.auth) {
         throw new HttpsError('unauthenticated', 'Usuário não autenticado.');
     }
+    const callerId = request.auth.uid;
+    
+    const callerDocSnap = await adminDb.collection('users').doc(callerId).get();
+    if (!callerDocSnap.exists) {
+        throw new HttpsError('not-found', 'Usuário chamador não encontrado.');
+    }
+    const callerData = callerDocSnap.data()!;
+    const callerRole = callerData.role;
+    const callerImobiliariaId = callerData.imobiliariaId;
 
     const { uid: uidToDelete } = request.data;
     if (callerId === uidToDelete) {
@@ -420,8 +433,8 @@ export const deleteUser = onCall(async (request) => {
     }
 
     const userToDeleteRecord = await adminAuth.getUser(uidToDelete);
-    const userToDeleteRole = userToDeleteRecord.customClaims?.role;
-    const userToDeleteImobiliariaId = userToDeleteRecord.customClaims?.imobiliariaId;
+    const userToDeleteRole = (userToDeleteRecord.customClaims || {}).role;
+    const userToDeleteImobiliariaId = (userToDeleteRecord.customClaims || {}).imobiliariaId;
 
     // Lógica de permissão de exclusão
     if (callerRole === 'Admin') {
@@ -437,7 +450,6 @@ export const deleteUser = onCall(async (request) => {
         throw new HttpsError('permission-denied', 'Você não tem permissão para remover usuários.');
     }
 
-
     try {
         await adminAuth.deleteUser(uidToDelete);
         await adminDb.collection('users').doc(uidToDelete).delete();
@@ -448,5 +460,3 @@ export const deleteUser = onCall(async (request) => {
         throw new HttpsError('internal', 'Não foi possível remover o usuário.', error);
     }
 });
-
-    

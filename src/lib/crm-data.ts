@@ -3,10 +3,30 @@ import { db } from './firebase';
 import { collection, getDocs, addDoc, doc, setDoc, deleteDoc, writeBatch, query, where, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { addNotification } from './data';
 import { type Property } from './data';
+import { auth } from './firebase';
+
+// Helper function to get the current user's imobiliariaId
+const getImobiliariaId = async (): Promise<string> => {
+    const currentUser = auth.currentUser;
+    if (!currentUser) throw new Error("Usuário não autenticado.");
+
+    const userDocRef = doc(db, "users", currentUser.uid);
+    const userDocSnap = await getDoc(userDocRef);
+    if (!userDocSnap.exists() || !userDocSnap.data().imobiliariaId) {
+        // Fallback for the very first Admin user whose imobiliariaId is their own UID
+        if (userDocSnap.exists() && userDocSnap.data().role === 'Admin') {
+            return currentUser.uid;
+        }
+        throw new Error("Não foi possível determinar a imobiliária do usuário.");
+    }
+    return userDocSnap.data().imobiliariaId;
+};
+
 
 // Tipos para os dados de CRM
 export type Lead = {
     id: string;
+    imobiliariaId: string;
     name: string;
     email: string;
     phone: string;
@@ -23,6 +43,7 @@ export type Participant = {
 
 export type Client = {
     id: string;
+    imobiliariaId: string;
     name: string;
     email: string;
     phone: string;
@@ -41,6 +62,7 @@ export type Client = {
 
 export type Construtora = {
     id: string;
+    imobiliariaId: string;
     name: string;
     cnpj: string;
     email: string;
@@ -53,50 +75,64 @@ export type Construtora = {
 // --- FUNÇÕES DE ACESSO E MANIPULAÇÃO (FIRESTORE) ---
 
 export const getLeads = async (): Promise<Lead[]> => {
+    const imobiliariaId = await getImobiliariaId();
     const leadsCollection = collection(db, 'leads');
-    const snapshot = await getDocs(leadsCollection);
+    const q = query(leadsCollection, where("imobiliariaId", "==", imobiliariaId));
+    const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Lead));
 };
 
 export const getClients = async (): Promise<Client[]> => {
+    const imobiliariaId = await getImobiliariaId();
     const clientsCollection = collection(db, 'clients');
-    const snapshot = await getDocs(clientsCollection);
+    const q = query(clientsCollection, where("imobiliariaId", "==", imobiliariaId));
+    const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Client));
 };
 
 export const getConstrutoras = async (): Promise<Construtora[]> => {
+    const imobiliariaId = await getImobiliariaId();
     const construtorasCollection = collection(db, 'construtoras');
-    const snapshot = await getDocs(construtorasCollection);
+    const q = query(construtorasCollection, where("imobiliariaId", "==", imobiliariaId));
+    const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Construtora));
 };
 
-export const addLead = async (newLead: Omit<Lead, 'id'>): Promise<string> => {
-    const docRef = await addDoc(collection(db, 'leads'), newLead);
+export const addLead = async (newLead: Omit<Lead, 'id' | 'imobiliariaId'>): Promise<string> => {
+    const imobiliariaId = await getImobiliariaId();
+    const dataToSave = { ...newLead, imobiliariaId };
+    const docRef = await addDoc(collection(db, 'leads'), dataToSave);
     
     await addNotification({
         title: "Novo Lead!",
         description: `${newLead.name} foi adicionado como um novo lead de ${newLead.source}.`,
+        imobiliariaId,
     });
 
     return docRef.id;
 };
 
-export const addClient = async (newClient: Omit<Client, 'id'>): Promise<string> => {
-    const docRef = await addDoc(collection(db, 'clients'), newClient);
+export const addClient = async (newClient: Omit<Client, 'id' | 'imobiliariaId'>): Promise<string> => {
+    const imobiliariaId = await getImobiliariaId();
+    const dataToSave = { ...newClient, imobiliariaId };
+    const docRef = await addDoc(collection(db, 'clients'), dataToSave);
     return docRef.id;
 };
 
-export const addConstrutora = async (newConstrutora: Omit<Construtora, 'id'>): Promise<string> => {
-    const docRef = await addDoc(collection(db, 'construtoras'), newConstrutora);
+export const addConstrutora = async (newConstrutora: Omit<Construtora, 'id' | 'imobiliariaId'>): Promise<string> => {
+    const imobiliariaId = await getImobiliariaId();
+    const dataToSave = { ...newConstrutora, imobiliariaId };
+    const docRef = await addDoc(collection(db, 'construtoras'), dataToSave);
     return docRef.id;
 };
 
 export const convertLeadToClient = async (leadId: string, clientData: Omit<Client, 'id'>): Promise<void> => {
+    const imobiliariaId = await getImobiliariaId();
     const batch = writeBatch(db);
 
     // 1. Cria um novo documento de cliente com os dados do formulário
     const newClientRef = doc(collection(db, 'clients')); // Cria uma referência com ID automático
-    batch.set(newClientRef, clientData);
+    batch.set(newClientRef, { ...clientData, imobiliariaId });
 
     // 2. Remove o documento do lead original
     const leadRef = doc(db, 'leads', leadId);
@@ -106,6 +142,7 @@ export const convertLeadToClient = async (leadId: string, clientData: Omit<Clien
      await addNotification({
         title: "Lead Convertido!",
         description: `O lead ${clientData.name} foi convertido em cliente.`,
+        imobiliariaId,
     });
 
     // 4. Executa as operações em lote
@@ -113,6 +150,7 @@ export const convertLeadToClient = async (leadId: string, clientData: Omit<Clien
 };
 
 export const deleteClient = async (clientId: string): Promise<void> => {
+    const imobiliariaId = await getImobiliariaId();
     const batch = writeBatch(db);
 
     const clientRef = doc(db, 'clients', clientId);
@@ -121,12 +159,17 @@ export const deleteClient = async (clientId: string): Promise<void> => {
         throw new Error("Cliente não encontrado.");
     }
     const clientData = clientSnap.data();
+    
+    // Security check
+    if (clientData.imobiliariaId !== imobiliariaId) {
+        throw new Error("Permissão negada para excluir este cliente.");
+    }
 
     // 1. Marcar cliente para exclusão
     batch.delete(clientRef);
 
     // 2. Buscar e excluir negociações e processos de financiamento associados
-    const negotiationsQuery = query(collection(db, 'negociacoes'), where('clientId', '==', clientId));
+    const negotiationsQuery = query(collection(db, 'negociacoes'), where('clientId', '==', clientId), where('imobiliariaId', '==', imobiliariaId));
     const negotiationsSnapshot = await getDocs(negotiationsQuery);
 
     for (const negDoc of negotiationsSnapshot.docs) {
@@ -142,7 +185,7 @@ export const deleteClient = async (clientId: string): Promise<void> => {
         }
         
         // Excluir processo de financiamento, se houver
-        const financingQuery = query(collection(db, 'processosFinanciamento'), where('negotiationId', '==', negDoc.id));
+        const financingQuery = query(collection(db, 'processosFinanciamento'), where('negotiationId', '==', negDoc.id), where('imobiliariaId', '==', imobiliariaId));
         const financingSnapshot = await getDocs(financingQuery);
         financingSnapshot.forEach(finDoc => {
             batch.delete(finDoc.ref);
@@ -153,6 +196,7 @@ export const deleteClient = async (clientId: string): Promise<void> => {
     await addNotification({
         title: "Cliente Excluído",
         description: `O cliente ${clientData.name} foi removido do sistema.`,
+        imobiliariaId,
     });
     
     // 4. Executar o batch
