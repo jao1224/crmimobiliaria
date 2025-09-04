@@ -158,7 +158,7 @@ export const deleteUser = onCall(async (request) => {
             throw new HttpsError('permission-denied', 'A conta de Administrador do sistema não pode ser excluída.');
         }
         
-        // Se quem chama é um admin de imobiliária, ele só pode excluir usuários da sua imobiliária
+        // Se quem chama é um admin de imobiliária E NÃO é o Admin geral, ele só pode excluir usuários da sua imobiliária
         if (isCallerImobiliariaAdmin && !isCallerAdmin) {
             if (userToDeleteClaims.imobiliariaId !== callingUserClaims.imobiliariaId) {
                  throw new HttpsError('permission-denied', 'Você só pode excluir usuários da sua própria imobiliária.');
