@@ -127,6 +127,12 @@ export default function SettingsPage() {
 
         return () => unsubscribe();
     }, [hasPermissionForTeamTabs]);
+    
+    useEffect(() => {
+        if (user) {
+            fetchTeamData();
+        }
+    }, [user]);
 
     const fetchTeamData = async () => {
         if (!user) return;
@@ -273,9 +279,13 @@ export default function SettingsPage() {
         
         setIsSaving(true);
         try {
-            const functions = getFunctions(app);
-            const deleteUserFn = httpsCallable(functions, 'deleteUser');
-            await deleteUserFn({ uid: memberToDelete.id });
+            // Em vez de chamar a função de nuvem, que está desativada, faremos a remoção aqui (se permitido).
+            // A exclusão de usuários do Auth é uma operação privilegiada.
+            // A solução mais segura é desativar o usuário.
+            // Para uma exclusão real, o admin faria isso no Console do Firebase.
+            // Aqui, apenas removemos o documento do Firestore, o que o "desativa" na UI.
+            
+            await deleteDoc(doc(db, "users", memberToDelete.id));
 
             toast({ title: "Sucesso", description: `O usuário ${memberToDelete.name} foi removido.` });
             await fetchTeamData();
@@ -932,7 +942,7 @@ export default function SettingsPage() {
                                 <form onSubmit={handleAddMemberToTeam} className="space-y-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="memberId">Selecione um Membro</Label>
-                                        <Select value={selectedMemberId} onValueChange={setSelectedMemberId} required>
+                                        <Select name="memberId" required>
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Selecione um membro para adicionar" />
                                             </SelectTrigger>
@@ -1015,6 +1025,3 @@ export default function SettingsPage() {
         </div>
     );
 }
-
-
-    
