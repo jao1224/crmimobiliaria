@@ -90,7 +90,8 @@ export const createUser = onCall(async (request) => {
     let imobiliariaIdToAssign: string | undefined;
 
     if (callerRole === 'Admin') {
-        // Se o Admin está criando, ele pode especificar uma imobiliária, ou o membro será associado a ele mesmo.
+        // Se o Admin está criando e selecionou 'Nenhuma', usa o UID do próprio admin.
+        // Se selecionou uma imobiliária, usa o ID fornecido.
         imobiliariaIdToAssign = imobiliariaId === 'admin' ? request.auth!.token.uid : imobiliariaId;
     } else { // 'Imobiliária'
         // Se um Admin de Imobiliária está criando, o membro é sempre da sua imobiliária.
