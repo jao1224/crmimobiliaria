@@ -85,63 +85,83 @@ export const createUser = onCall(async (request) => {
     }
     
     const callerUid = request.auth.uid;
-    const callerRole = request.auth.token.role;
-    
-    // Verifica a permissão. Apenas Admins do sistema ou da Imobiliária podem criar.
-    if (callerRole !== 'Admin' && callerRole !== 'Imobiliária') {
-        throw new HttpsError('permission-denied', 'Você não tem permissão para criar usuários.');
-    }
-
     const { email, password, name, role } = request.data;
-    let imobiliariaId = request.data.imobiliariaId;
-
-    // Define o imobiliariaId para o novo usuário de forma segura
-    if (callerRole === 'Imobiliária') {
-        // Se um admin de imobiliária cria, o novo membro DEVE ser da sua imobiliária.
-        imobiliariaId = request.auth.token.imobiliariaId;
-    } else if (callerRole === 'Admin') {
-        // Se o Admin do sistema cria e não especifica uma imobiliária,
-        // o novo membro é associado à "imobiliária" do próprio Admin.
-        if (!imobiliariaId) {
-            imobiliariaId = callerUid;
-        }
-    }
-    
-    // Validação final para garantir que o imobiliariaId não é nulo
-    if (!imobiliariaId) {
-        console.error(`Falha na atribuição de imobiliariaId. CallerRole: ${callerRole}, CallerUID: ${callerUid}`);
-        throw new HttpsError('internal', 'Não foi possível determinar a imobiliária para o novo usuário.');
-    }
+    let newMemberImobiliariaId = request.data.imobiliariaId;
 
     try {
+        // Fonte da verdade: busca os dados do chamador no Firestore.
+        const callerDocRef = adminDb.collection('users').doc(callerUid);
+        const callerDocSnap = await callerDocRef.get();
+        if (!callerDocSnap.exists()) {
+            throw new HttpsError('permission-denied', 'Não foi possível encontrar os dados do seu usuário.');
+        }
+
+        const callerData = callerDocSnap.data()!;
+        const callerRole = callerData.role;
+        const callerImobiliariaId = callerData.imobiliariaId;
+
+        // Lógica de permissão
+        if (callerRole !== 'Admin' && callerRole !== 'Imobiliária') {
+            throw new HttpsError('permission-denied', 'Você não tem permissão para criar usuários.');
+        }
+
+        // Lógica de atribuição de imobiliariaId para o novo usuário
+        if (callerRole === 'Imobiliária') {
+            // Se um admin de imobiliária cria, o novo membro DEVE ser da sua imobiliária.
+            newMemberImobiliariaId = callerImobiliariaId;
+        } else if (callerRole === 'Admin') {
+            // Se o Admin do sistema cria e não especifica uma imobiliária, o novo membro é associado ao próprio Admin.
+            if (!newMemberImobiliariaId) {
+                newMemberImobiliariaId = callerUid;
+            }
+        }
+        
+        // Validação final para garantir que o imobiliariaId não é nulo/undefined
+        if (!newMemberImobiliariaId) {
+            console.error(`Falha na atribuição de imobiliariaId. CallerRole: ${callerRole}, CallerUID: ${callerUid}`);
+            throw new HttpsError('internal', 'Não foi possível determinar a imobiliária para o novo usuário.');
+        }
+
+        // Cria o usuário na autenticação
         const userRecord = await adminAuth.createUser({
             email,
             password,
             displayName: name,
         });
 
+        // Define as custom claims
         const claims = { 
             role, 
-            imobiliariaId
+            imobiliariaId: newMemberImobiliariaId
         };
-        
         await adminAuth.setCustomUserClaims(userRecord.uid, claims);
 
+        // Salva os dados no Firestore
         await adminDb.collection('users').doc(userRecord.uid).set({
             uid: userRecord.uid,
             name,
             email,
             role,
-            imobiliariaId,
+            imobiliariaId: newMemberImobiliariaId,
             createdAt: new Date().toISOString(),
         });
 
         return { success: true, uid: userRecord.uid };
     } catch (error: any) {
-        console.error('Erro detalhado ao criar usuário:', error);
-         if (error.code === 'auth/email-already-exists') {
+        console.error('Erro detalhado ao criar usuário:', {
+            code: error.code,
+            message: error.message,
+            details: error.details,
+        });
+
+        if (error instanceof HttpsError) {
+            throw error; // Re-throw HttpsError
+        }
+
+        if (error.code === 'auth/email-already-exists') {
             throw new HttpsError('already-exists', 'Este e-mail já está em uso por outra conta.');
         }
+        
         throw new HttpsError('internal', error.message || "Ocorreu um erro interno no servidor ao criar o usuário.");
     }
 });
@@ -153,8 +173,8 @@ export const addRoleOnCreate = beforeUserCreated(async (event) => {
     const userDocRef = adminDb.collection('users').doc(user.uid);
     
     try {
-        const allUsers = await adminAuth.listUsers(1);
         // Garante que o primeiro usuário seja sempre o Admin do sistema
+        const allUsers = await adminAuth.listUsers(1);
         if (allUsers.users.length === 0) {
              const imobiliariaId = user.uid; // O próprio UID do Admin é seu ID de "imobiliária"
              await adminAuth.setCustomUserClaims(user.uid, { role: 'Admin', imobiliariaId });
@@ -443,6 +463,8 @@ export const deleteUser = onCall(async (request) => {
         throw new HttpsError('internal', 'Não foi possível remover o usuário.', error);
     }
 });
+    
+
     
 
     
