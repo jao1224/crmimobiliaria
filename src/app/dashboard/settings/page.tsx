@@ -652,6 +652,10 @@ export default function SettingsPage() {
                                                     </div>
                                                 )}
                                                 <div className="space-y-2">
+                                                    <Label htmlFor="name">Nome</Label>
+                                                    <Input id="name" name="name" type="text" required />
+                                                </div>
+                                                <div className="space-y-2">
                                                     <Label htmlFor="email">Email</Label>
                                                     <Input id="email" name="email" type="email" required />
                                                 </div>
@@ -661,7 +665,7 @@ export default function SettingsPage() {
                                                 </div>
                                                 <div className="space-y-2">
                                                     <Label htmlFor="role">Função</Label>
-                                                    <Select value={selectedRole} onValueChange={setSelectedRole} required>
+                                                    <Select name="role" value={selectedRole} onValueChange={setSelectedRole} required>
                                                         <SelectTrigger>
                                                             <SelectValue placeholder="Selecione uma função" />
                                                         </SelectTrigger>
