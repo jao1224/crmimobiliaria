@@ -753,8 +753,8 @@ export default function NegotiationsPage() {
                                 Selecione um imóvel e um cliente da lista para buscar os dados.
                             </DialogDescription>
                         </DialogHeader>
-                        <form id="new-negotiation-form" onSubmit={handleAddNegotiation} className="flex-grow overflow-y-auto pr-6 pl-1">
-                            <div className="space-y-4 py-4 pl-5">
+                         <div className="flex-grow overflow-y-auto pr-6 pl-1 -mr-6">
+                            <form id="new-negotiation-form" onSubmit={handleAddNegotiation} className="pl-5 py-4 space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label>Imóvel</Label>
@@ -869,7 +869,7 @@ export default function NegotiationsPage() {
                                                     <SelectValue placeholder="Selecione um vendedor" />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    {allUsers.map(realtor => (
+                                                    {brokerUsers.map(realtor => (
                                                         <SelectItem key={realtor.id} value={realtor.id}>
                                                             {realtor.name}
                                                         </SelectItem>
@@ -948,8 +948,8 @@ export default function NegotiationsPage() {
                                         </Collapsible>
                                     </div>
                                 </div>
-                            </div>
-                        </form>
+                            </form>
+                        </div>
                         <DialogFooter className="px-6 pb-6 pt-4 border-t bg-background">
                             <Button type="button" variant="outline" onClick={() => setNewNegotiationOpen(false)}>Cancelar</Button>
                             <Button type="submit" form="new-negotiation-form" disabled={!foundProperty || !foundClient || !proposalValue || !proposalDate}>Criar Negociação</Button>
