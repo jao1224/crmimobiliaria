@@ -84,7 +84,34 @@ export const createUser = onCall(async (request) => {
         throw new HttpsError('unauthenticated', 'A requisição requer um usuário autenticado.');
     }
     
-    const { email, password, name, role, imobiliariaId } = request.data;
+    const callerUid = request.auth.uid;
+    const callerRole = request.auth.token.role;
+    
+    // Verifica a permissão. Apenas Admins do sistema ou da Imobiliária podem criar.
+    if (callerRole !== 'Admin' && callerRole !== 'Imobiliária') {
+        throw new HttpsError('permission-denied', 'Você não tem permissão para criar usuários.');
+    }
+
+    const { email, password, name, role } = request.data;
+    let imobiliariaId = request.data.imobiliariaId;
+
+    // Define o imobiliariaId para o novo usuário de forma segura
+    if (callerRole === 'Imobiliária') {
+        // Se um admin de imobiliária cria, o novo membro DEVE ser da sua imobiliária.
+        imobiliariaId = request.auth.token.imobiliariaId;
+    } else if (callerRole === 'Admin') {
+        // Se o Admin do sistema cria e não especifica uma imobiliária,
+        // o novo membro é associado à "imobiliária" do próprio Admin.
+        if (!imobiliariaId) {
+            imobiliariaId = callerUid;
+        }
+    }
+    
+    // Validação final para garantir que o imobiliariaId não é nulo
+    if (!imobiliariaId) {
+        console.error(`Falha na atribuição de imobiliariaId. CallerRole: ${callerRole}, CallerUID: ${callerUid}`);
+        throw new HttpsError('internal', 'Não foi possível determinar a imobiliária para o novo usuário.');
+    }
 
     try {
         const userRecord = await adminAuth.createUser({
@@ -93,11 +120,9 @@ export const createUser = onCall(async (request) => {
             displayName: name,
         });
 
-        // A lógica de `imobiliariaId` já é tratada no frontend e aqui apenas a recebemos.
-        // O `role` também é definido pelo frontend.
         const claims = { 
             role, 
-            imobiliariaId: imobiliariaId || request.auth.uid 
+            imobiliariaId
         };
         
         await adminAuth.setCustomUserClaims(userRecord.uid, claims);
@@ -107,7 +132,7 @@ export const createUser = onCall(async (request) => {
             name,
             email,
             role,
-            imobiliariaId: claims.imobiliariaId,
+            imobiliariaId,
             createdAt: new Date().toISOString(),
         });
 
@@ -131,13 +156,14 @@ export const addRoleOnCreate = beforeUserCreated(async (event) => {
         const allUsers = await adminAuth.listUsers(1);
         // Garante que o primeiro usuário seja sempre o Admin do sistema
         if (allUsers.users.length === 0) {
-             await adminAuth.setCustomUserClaims(user.uid, { role: 'Admin', imobiliariaId: user.uid });
-             await userDocRef.set({ role: 'Admin', imobiliariaId: user.uid }, { merge: true });
+             const imobiliariaId = user.uid; // O próprio UID do Admin é seu ID de "imobiliária"
+             await adminAuth.setCustomUserClaims(user.uid, { role: 'Admin', imobiliariaId });
+             await userDocRef.set({ role: 'Admin', imobiliariaId }, { merge: true });
              return;
         }
 
         const userDoc = await userDocRef.get();
-        if (userDoc.exists) {
+        if (userDoc.exists()) {
             const userData = userDoc.data();
             if (userData && userData.role) {
                 const claims: { [key: string]: any } = { role: userData.role };
@@ -148,10 +174,8 @@ export const addRoleOnCreate = beforeUserCreated(async (event) => {
                 if (userData.role === 'Imobiliária' && !imobiliariaId) {
                     imobiliariaId = user.uid;
                     claims.imobiliariaId = imobiliariaId;
-                    // Atualiza o documento no Firestore com o imobiliariaId
                     await userDocRef.update({ imobiliariaId: imobiliariaId });
                 } else if (imobiliariaId) {
-                    // Se o imobiliariaId já foi definido (ex: criado pelo Admin), apenas o adiciona às claims.
                     claims.imobiliariaId = imobiliariaId;
                 }
                 
@@ -419,6 +443,8 @@ export const deleteUser = onCall(async (request) => {
         throw new HttpsError('internal', 'Não foi possível remover o usuário.', error);
     }
 });
+    
+
     
 
     

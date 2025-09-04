@@ -213,28 +213,17 @@ export default function SettingsPage() {
 
     const handleAddTeamMember = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        if (!user || !userData) {
-            toast({ variant: 'destructive', title: 'Erro', description: 'Usuário não autenticado ou dados de perfil não carregados.' });
-            return;
-        }
         
         setIsSaving(true);
 
         const formData = new FormData(event.currentTarget);
-        const newMemberData: { [key: string]: any } = {
+        const newMemberData = {
             email: formData.get("email") as string,
             password: formData.get("password") as string,
             name: formData.get("name") as string,
             role: formData.get("role") as string,
+            imobiliariaId: formData.get("imobiliariaId") as string, // Pode ser null se não for admin
         };
-        
-        if (isAdmin) {
-             const selectedImobiliariaId = formData.get("imobiliariaId") as string;
-             // Se nenhum for selecionado, associa ao próprio Admin.
-             newMemberData.imobiliariaId = selectedImobiliariaId || user.uid;
-        } else {
-             newMemberData.imobiliariaId = userData.imobiliariaId;
-        }
 
         if (!newMemberData.password) {
             toast({ variant: 'destructive', title: 'Erro', description: 'O campo de senha é obrigatório.' });
@@ -245,17 +234,17 @@ export default function SettingsPage() {
         try {
             const functions = getFunctions(app);
             const createUser = httpsCallable(functions, 'createUser');
-            const result = await createUser(newMemberData) as any;
+            const result = await createUser(newMemberData);
 
-            if (result.data.success) {
+            if ((result.data as any).success) {
                 if (user) await fetchTeamData();
                 toast({ title: "Sucesso!", description: "Novo membro da equipe criado." });
                 setTeamMemberDialogOpen(false);
             } else {
-                throw new Error(result.data.error || "A função de nuvem retornou um erro.");
+                throw new Error((result.data as any).error || "A função de nuvem retornou um erro não especificado.");
             }
         } catch (error: any) {
-            console.error("Cloud function error:", error);
+            console.error("Erro na Cloud Function:", error);
             const defaultMessage = "Ocorreu um erro ao criar o usuário.";
             const errorMessage = error.details?.message || error.message || defaultMessage;
             toast({ variant: "destructive", title: "Erro na Criação", description: errorMessage });
@@ -1024,3 +1013,5 @@ export default function SettingsPage() {
         </div>
     );
 }
+
+    
