@@ -126,13 +126,13 @@ export const createUser = onCall(async (request) => {
     }
 });
 
-
 export const deleteUser = onCall(async (request) => {
-    const callingUid = request.auth?.uid;
+    const callingUid = request.auth?.token.uid;
     const callerRole = request.auth?.token.role;
     const callerImobiliariaId = request.auth?.token.imobiliariaId;
 
-    if (!callingUid || !callerRole) {
+    // 1. Validar autenticação básica
+    if (!callingUid) {
         throw new HttpsError('unauthenticated', 'Ação não autenticada.');
     }
 
@@ -140,43 +140,49 @@ export const deleteUser = onCall(async (request) => {
     if (!uidToDelete) {
         throw new HttpsError('invalid-argument', 'O ID do usuário a ser excluído é obrigatório.');
     }
+
+    // 2. Proteger contra autoexclusão
     if (uidToDelete === callingUid) {
         throw new HttpsError('invalid-argument', 'Você não pode excluir sua própria conta.');
     }
 
     try {
-        const userToDelete = await adminAuth.getUser(uidToDelete);
-        const userToDeleteClaims = userToDelete.customClaims || {};
-
         let hasPermission = false;
+        const userToDeleteRecord = await adminAuth.getUser(uidToDelete);
+        const userToDeleteRole = userToDeleteRecord.customClaims?.role;
 
+        // 3. Lógica de permissão hierárquica
         if (callerRole === 'Admin') {
-            // REGRA 1: Admin do sistema pode deletar qualquer um, exceto outro Admin.
-            if (userToDeleteClaims.role === 'Admin') {
-                 throw new HttpsError('permission-denied', 'Administradores do sistema não podem ser excluídos.');
+            // Admin do sistema não pode excluir outro Admin
+            if (userToDeleteRole === 'Admin') {
+                throw new HttpsError('permission-denied', 'Administradores do sistema não podem ser excluídos por outros administradores.');
             }
             hasPermission = true;
         } else if (callerRole === 'Imobiliária') {
-            // REGRA 2: Admin de Imobiliária só pode deletar membros da sua imobiliária
-            if (userToDeleteClaims.imobiliariaId === callerImobiliariaId) {
+            const userToDeleteImobiliariaId = userToDeleteRecord.customClaims?.imobiliariaId;
+            // Admin da imobiliária só pode excluir membros da sua própria imobiliária
+            if (userToDeleteImobiliariaId === callerImobiliariaId) {
                 hasPermission = true;
             }
         }
-
+        
+        // 4. Se não tiver permissão, lançar erro
         if (!hasPermission) {
             throw new HttpsError('permission-denied', 'Você não tem permissão para excluir este usuário.');
         }
-        
-        // Se chegou até aqui, a permissão foi concedida.
+
+        // 5. Executar a exclusão
         await adminAuth.deleteUser(uidToDelete);
         await adminDb.collection('users').doc(uidToDelete).delete();
         
         return { success: true, message: `Usuário ${uidToDelete} excluído com sucesso.` };
 
     } catch (error: any) {
+        // Se o erro já for do tipo HttpsError, apenas o relance
         if (error instanceof HttpsError) {
             throw error;
         }
+        // Para outros erros (ex: usuário não encontrado), trate como erro interno
         console.error('Error deleting user:', error);
         throw new HttpsError('internal', 'Ocorreu um erro interno ao tentar excluir o usuário.', error.message);
     }
